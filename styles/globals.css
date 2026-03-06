@@ -17,7 +17,25 @@
   --border-hover: rgba(255,255,255,0.12);
 }
 
-html, body { font-family: 'Lato', sans-serif; background: #07070f; color: #d0d0e8; -webkit-font-smoothing: antialiased; }
+/* ── Dark mode (default) ── */
+html, body { font-family: 'Lato', sans-serif; background: #07070f; color: #d0d0e8; -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; }
+
+/* ── Light mode ── */
+html.light body { background: #f0f0f8; color: #1a1a2e; }
+html.light { --border: rgba(0,0,0,0.07); --border-hover: rgba(0,0,0,0.14); --sidebar-bg: rgba(255,255,255,0.97); }
+html.light ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); }
+html.light .inp { background: rgba(235,235,245,0.9); border-color: rgba(0,0,0,0.09); color: #1a1a2e; }
+html.light .inp::placeholder { color: #9999bb; }
+html.light .skeleton { background: linear-gradient(90deg,#e4e4f0 25%,#eeeef8 50%,#e4e4f0 75%); background-size:600px 100%; }
+
+/* Light mode card backgrounds */
+html.light [style*="rgba(22,22,42"] { filter: none; }
+html.light .dark-sidebar { background: rgba(255,255,255,0.97) !important; border-right-color: rgba(0,0,0,0.07) !important; }
+html.light .text-ink-400 { color: #6666aa !important; }
+html.light .text-ink-500 { color: #8888bb !important; }
+html.light .text-ink-600 { color: #aaaacc !important; }
+html.light .text-white { color: #1a1a2e !important; }
+html.light .bg-ink-950 { background: #f0f0f8 !important; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }

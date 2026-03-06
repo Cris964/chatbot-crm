@@ -114,8 +114,8 @@ function Sidebar({ active, setActive, user, clients, selectedClient, setSelected
   ]
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-60 flex flex-col z-50"
-      style={{background:'rgba(13,13,24,0.97)', borderRight:'1px solid rgba(255,255,255,0.05)', backdropFilter:'blur(20px)'}}>
+    <aside className="fixed left-0 top-0 bottom-0 w-60 flex flex-col z-50 dark-sidebar"
+      style={{background:'var(--sidebar-bg, rgba(13,13,24,0.97))', borderRight:'1px solid var(--border)', backdropFilter:'blur(20px)'}}>
 
       {/* Logo */}
       <div className="p-5 pb-4">

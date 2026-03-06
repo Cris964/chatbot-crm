@@ -18,7 +18,14 @@ export default function App({ Component, pageProps }) {
   }, [])
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
+    const root = document.documentElement
+    if (dark) {
+      root.classList.add('dark')
+      root.classList.remove('light')
+    } else {
+      root.classList.add('light')
+      root.classList.remove('dark')
+    }
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
 
