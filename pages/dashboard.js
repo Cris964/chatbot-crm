@@ -359,130 +359,286 @@ function DashboardPage({ clientId }) {
 /* ──────────────────────────────────────────────
    CONVERSATIONS PAGE
 ────────────────────────────────────────────── */
+// Keywords that trigger human agent alert
+const HUMAN_TRIGGERS = ['asesor','humano','persona real','hablar con alguien','no entiendo','no me ayuda','quiero hablar','agente','representante','ayuda real','no funciona','me puedes comunicar']
+
+function needsHuman(messages) {
+  if (!messages?.length) return false
+  const last3 = messages.slice(-3).map(m => m.content?.toLowerCase()||'')
+  return last3.some(txt => HUMAN_TRIGGERS.some(t => txt.includes(t)))
+}
+
 function ConversationsPage({ clientId }) {
   const [convs, setConvs] = useState([])
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [readIds, setReadIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('crm_read')||'[]') } catch { return [] }
+  })
+  const [reply, setReply] = useState('')
+  const [sending, setSending] = useState(false)
+  const [alerts, setAlerts] = useState([])
   const bottomRef = useRef(null)
+
+  const markRead = (id) => {
+    setReadIds(prev => {
+      const next = [...new Set([...prev, id])]
+      localStorage.setItem('crm_read', JSON.stringify(next))
+      return next
+    })
+  }
 
   const load = useCallback(async () => {
     let q = supabase.from('conversations').select('*').order('updated_at',{ascending:false}).limit(60)
     if (clientId) q = q.eq('client_id', clientId)
     const { data } = await q
-    setConvs(data||[])
+    const list = data||[]
+    setConvs(list)
     setLoading(false)
-  }, [clientId])
+    // Detect human agent alerts
+    const newAlerts = list.filter(c => needsHuman(c.messages) && !readIds.includes('alert_'+c.id))
+    setAlerts(newAlerts)
+    // Update selected if open
+    if (selected) {
+      const updated = list.find(c => c.id===selected.id)
+      if (updated) setSelected(updated)
+    }
+  }, [clientId, readIds, selected?.id])
 
-  useEffect(() => { load() }, [load])
-  useEffect(() => { const t=setInterval(load,15000); return ()=>clearInterval(t) }, [load])
-  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}) }, [selected])
+  useEffect(() => { load() }, [clientId])
+  useEffect(() => { const t=setInterval(load,12000); return ()=>clearInterval(t) }, [clientId])
+  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}) }, [selected?.messages?.length])
+
+  const openConv = (c) => {
+    setSelected(c)
+    markRead(c.id)
+    // dismiss alert for this conv
+    setAlerts(prev => prev.filter(a => a.id !== c.id))
+  }
+
+  const dismissAlert = (id) => {
+    setAlerts(prev => prev.filter(a => a.id !== id))
+    setReadIds(prev => {
+      const next = [...new Set([...prev, 'alert_'+id])]
+      localStorage.setItem('crm_read', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const sendReply = async () => {
+    if (!reply.trim() || !selected) return
+    setSending(true)
+    const newMsg = { role: 'assistant', content: `[Asesor]: ${reply.trim()}` }
+    const updated = [...(selected.messages||[]), newMsg]
+    await supabase.from('conversations')
+      .update({ messages: updated, updated_at: new Date().toISOString() })
+      .eq('id', selected.id)
+    setSelected({...selected, messages: updated})
+    setReply('')
+    setSending(false)
+    load()
+  }
+
+  const isUnread = (c) => !readIds.includes(c.id)
 
   const filtered = convs.filter(c =>
     (c.user_name||c.user_phone||'').toLowerCase().includes(search.toLowerCase())
   )
 
+  const cardBg = 'linear-gradient(145deg,rgba(22,22,42,0.9),rgba(17,17,32,0.95))'
+  const cardBorder = '1px solid rgba(255,255,255,0.06)'
+
   return (
-    <div style={{height:'calc(100vh - 80px)'}} className="flex gap-4 fade-up">
-      {/* List */}
-      <div className="w-72 flex flex-col rounded-2xl overflow-hidden" style={{background:'linear-gradient(145deg,rgba(22,22,42,0.9),rgba(17,17,32,0.95))', border:'1px solid rgba(255,255,255,0.06)'}}>
-        <div className="p-4" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="font-bold text-white text-sm">Conversaciones</span>
-            <span className="text-[10px] text-ink-500 font-light">{filtered.length} total</span>
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-600">{I.search}</span>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar persona..."
-              className="inp w-full pl-8 pr-3 py-2.5 rounded-xl text-xs" />
-          </div>
-        </div>
+    <div style={{height:'calc(100vh - 80px)'}} className="flex flex-col gap-3 fade-up">
 
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="p-3 space-y-2">{[1,2,3,4,5].map(i=><div key={i} className="skeleton h-14 rounded-xl"/>)}</div>
-          ) : filtered.length===0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-ink-600 text-xs"><div className="text-3xl mb-2">💬</div>Sin conversaciones</div>
-          ) : filtered.map((c,i) => {
-            const name = c.user_name||c.user_phone
-            const last = c.messages?.slice(-1)[0]?.content||''
-            const unread = c.messages?.length||0
-            const isSelected = selected?.id===c.id
-            return (
-              <button key={c.id} onClick={()=>setSelected(c)}
-                className="w-full flex items-center gap-3 p-3 text-left transition-all duration-150"
-                style={{borderBottom:'1px solid rgba(255,255,255,0.03)', background: isSelected ? 'rgba(139,92,246,0.1)' : 'transparent', borderLeft: isSelected ? '2px solid #8b5cf6' : '2px solid transparent'}}>
-                <Avatar name={name} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-white truncate">{name}</div>
-                  <div className="text-[11px] text-ink-500 truncate mt-0.5">{last.substring(0,38)}{last.length>38&&'...'}</div>
-                </div>
-                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                  <span className="text-[10px] text-ink-600">{timeAgo(c.updated_at)}</span>
-                  {unread > 0 && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full text-white" style={{background:'#7c3aed'}}>{unread}</span>}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Chat viewer */}
-      <div className="flex-1 flex flex-col rounded-2xl overflow-hidden" style={{background:'linear-gradient(145deg,rgba(22,22,42,0.9),rgba(17,17,32,0.95))', border:'1px solid rgba(255,255,255,0.06)'}}>
-        {!selected ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-ink-600">
-            <div className="text-6xl mb-3 floating">💬</div>
-            <div className="text-sm font-light">Selecciona una conversación para ver el historial</div>
-          </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div className="px-5 py-4 flex items-center justify-between" style={{borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(28,28,52,0.4)'}}>
-              <div className="flex items-center gap-3">
-                <Avatar name={selected.user_name||selected.user_phone} size={38} />
-                <div>
-                  <div className="font-bold text-white text-sm">{selected.user_name||selected.user_phone}</div>
-                  <div className="text-xs text-ink-500">{selected.user_phone} · {selected.messages?.length||0} mensajes</div>
+      {/* 🚨 Human Agent Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-2 scale-in">
+          {alerts.map(a => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer"
+              style={{background:'rgba(251,113,133,0.08)', border:'1px solid rgba(251,113,133,0.25)', boxShadow:'0 0 20px rgba(251,113,133,0.08)'}}>
+              <div className="text-xl flex-shrink-0 floating">🚨</div>
+              <div className="flex-1">
+                <div className="text-sm font-bold text-rose-300">Intervención humana solicitada</div>
+                <div className="text-xs text-rose-400/70">
+                  <span className="font-bold">{a.user_name||a.user_phone}</span> necesita hablar con un asesor real
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold" style={{background:'rgba(16,185,129,0.1)', color:'#34d399', border:'1px solid rgba(16,185,129,0.2)'}}>
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 relative live-ring" />
-                Activo
+              <div className="flex gap-2">
+                <button onClick={() => openConv(a)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition"
+                  style={{background:'linear-gradient(135deg,#f43f5e,#e11d48)'}}>
+                  Ver chat
+                </button>
+                <button onClick={() => dismissAlert(a.id)}
+                  className="px-3 py-1.5 rounded-lg text-xs text-rose-400 transition hover:bg-rose-500/10">
+                  {I.close}
+                </button>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3"
-              style={{background:`repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(139,92,246,0.005) 10px, rgba(139,92,246,0.005) 20px)`}}>
-              {(selected.messages||[]).map((m,i) => (
-                <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'} fade-in`}>
-                  {m.role!=='user' && (
-                    <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-[10px] mr-2 flex-shrink-0 self-end">🤖</div>
-                  )}
-                  <div className="max-w-[70%]">
-                    <div className={`px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
-                      m.role==='user'
-                        ? 'text-white rounded-br-sm'
-                        : 'text-ink-100 rounded-bl-sm'
-                    }`}
-                    style={m.role==='user'
-                      ? {background:'linear-gradient(135deg,#7c3aed,#5b21b6)', boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}
-                      : {background:'rgba(34,34,62,0.8)', border:'1px solid rgba(255,255,255,0.06)'}}>
-                      {m.content}
-                    </div>
-                    <div className={`text-[10px] text-ink-600 mt-1 ${m.role==='user'?'text-right':'text-left'}`}>
-                      {m.role==='user'?'👤 Cliente':'🤖 Bot'}
-                    </div>
+      <div className="flex gap-4 flex-1 min-h-0">
+        {/* Conversation list */}
+        <div className="w-72 flex flex-col rounded-2xl overflow-hidden" style={{background:cardBg, border:cardBorder}}>
+          <div className="p-4" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-bold text-white text-sm">Conversaciones</span>
+              <div className="flex items-center gap-2">
+                {alerts.length > 0 && (
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full text-white" style={{background:'#f43f5e'}}>
+                    🚨 {alerts.length}
+                  </span>
+                )}
+                <span className="text-[10px] text-ink-500">{filtered.length} total</span>
+              </div>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-600">{I.search}</span>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar persona..."
+                className="inp w-full pl-8 pr-3 py-2.5 rounded-xl text-xs" />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="p-3 space-y-2">{[1,2,3,4,5].map(i=><div key={i} className="skeleton h-14 rounded-xl"/>)}</div>
+            ) : filtered.length===0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-ink-600 text-xs">
+                <div className="text-3xl mb-2">💬</div>Sin conversaciones
+              </div>
+            ) : filtered.map(c => {
+              const name = c.user_name||c.user_phone
+              const last = c.messages?.slice(-1)[0]?.content||''
+              const unread = isUnread(c)
+              const isSelected = selected?.id===c.id
+              const hasAlert = alerts.some(a=>a.id===c.id)
+              const msgCount = c.messages?.length||0
+
+              return (
+                <button key={c.id} onClick={()=>openConv(c)}
+                  className="w-full flex items-center gap-3 p-3 text-left transition-all duration-150"
+                  style={{
+                    borderBottom:'1px solid rgba(255,255,255,0.03)',
+                    background: isSelected ? 'rgba(139,92,246,0.12)' : hasAlert ? 'rgba(244,63,94,0.05)' : 'transparent',
+                    borderLeft: isSelected ? '2px solid #8b5cf6' : hasAlert ? '2px solid #f43f5e' : '2px solid transparent'
+                  }}>
+                  <div className="relative">
+                    <Avatar name={name} />
+                    {unread && !isSelected && (
+                      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-400 border-2 border-ink-900" />
+                    )}
                   </div>
-                  {m.role==='user' && (
-                    <div className="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-[10px] ml-2 flex-shrink-0 self-end">👤</div>
-                  )}
-                </div>
-              ))}
-              <div ref={bottomRef} />
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-xs truncate ${unread && !isSelected ? 'font-black text-white' : 'font-bold text-white/80'}`}>{name}</div>
+                    <div className="text-[11px] text-ink-500 truncate mt-0.5">{last.substring(0,38)}{last.length>38&&'...'}</div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span className="text-[10px] text-ink-600">{timeAgo(c.updated_at)}</span>
+                    {hasAlert && <span className="text-[9px]">🚨</span>}
+                    {unread && !isSelected && msgCount > 0 && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full text-white" style={{background:'#7c3aed'}}>{msgCount}</span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Chat panel */}
+        <div className="flex-1 flex flex-col rounded-2xl overflow-hidden min-h-0" style={{background:cardBg, border:cardBorder}}>
+          {!selected ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-ink-600">
+              <div className="text-6xl mb-3 floating">💬</div>
+              <div className="text-sm font-light">Selecciona una conversación para ver el historial</div>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              {/* Header */}
+              <div className="px-5 py-3.5 flex items-center justify-between flex-shrink-0"
+                style={{borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(28,28,52,0.5)'}}>
+                <div className="flex items-center gap-3">
+                  <Avatar name={selected.user_name||selected.user_phone} size={36} />
+                  <div>
+                    <div className="font-bold text-white text-sm">{selected.user_name||selected.user_phone}</div>
+                    <div className="text-xs text-ink-500">{selected.user_phone} · {selected.messages?.length||0} mensajes</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {needsHuman(selected.messages) && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{background:'rgba(244,63,94,0.1)', color:'#fb7185', border:'1px solid rgba(244,63,94,0.2)'}}>
+                      🚨 Requiere asesor
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{background:'rgba(16,185,129,0.1)', color:'#34d399', border:'1px solid rgba(16,185,129,0.2)'}}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 relative live-ring" />
+                    Activo
+                  </div>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+                {(selected.messages||[]).map((m,i) => {
+                  const isAdvisor = m.content?.startsWith('[Asesor]:')
+                  const displayContent = isAdvisor ? m.content.replace('[Asesor]: ','') : m.content
+                  return (
+                    <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'} fade-in`}>
+                      {m.role!=='user' && (
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] mr-2 flex-shrink-0 self-end"
+                          style={{background: isAdvisor ? 'rgba(251,191,36,0.2)' : 'rgba(139,92,246,0.2)'}}>
+                          {isAdvisor ? '👨‍💼' : '🤖'}
+                        </div>
+                      )}
+                      <div className="max-w-[70%]">
+                        <div className={`px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed`}
+                          style={m.role==='user'
+                            ? {background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', borderBottomRightRadius:4, boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}
+                            : isAdvisor
+                              ? {background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.2)', color:'#fef3c7', borderBottomLeftRadius:4}
+                              : {background:'rgba(34,34,62,0.8)', border:'1px solid rgba(255,255,255,0.06)', color:'#d0d0e8', borderBottomLeftRadius:4}}>
+                          {displayContent}
+                        </div>
+                        <div className={`text-[10px] text-ink-600 mt-1 ${m.role==='user'?'text-right':'text-left'}`}>
+                          {m.role==='user' ? '👤 Cliente' : isAdvisor ? '👨‍💼 Asesor' : '🤖 Bot'}
+                        </div>
+                      </div>
+                      {m.role==='user' && (
+                        <div className="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center text-[10px] ml-2 flex-shrink-0 self-end">👤</div>
+                      )}
+                    </div>
+                  )
+                })}
+                <div ref={bottomRef} />
+              </div>
+
+              {/* Reply box */}
+              <div className="p-3 flex-shrink-0" style={{borderTop:'1px solid rgba(255,255,255,0.05)', background:'rgba(17,17,30,0.6)'}}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] text-ink-500 font-bold uppercase tracking-widest">👨‍💼 Responder como asesor</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={reply}
+                    onChange={e=>setReply(e.target.value)}
+                    onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendReply() }}}
+                    placeholder="Escribe tu respuesta... (Enter para enviar)"
+                    className="inp flex-1 px-4 py-3 rounded-xl text-sm"
+                  />
+                  <button onClick={sendReply} disabled={!reply.trim()||sending}
+                    className="px-4 py-3 rounded-xl font-bold text-white transition flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{background:'linear-gradient(135deg,#7c3aed,#5b21b6)', boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}}>
+                    {sending ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spinning"/> : I.send}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
