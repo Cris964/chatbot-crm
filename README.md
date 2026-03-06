@@ -1,23 +1,25 @@
-# ChatBot CRM
+# BotCRM — Panel SaaS
 
-Panel de administración profesional para ChatBot SaaS.
+## Setup en Vercel
 
-## Deploy en Vercel
-
-1. Sube este código a GitHub
-2. Conecta el repo en vercel.com
-3. Agrega las variables de entorno:
+1. Sube este repo a GitHub como `chatbot-crm`
+2. Importa en vercel.com
+3. Agrega variables de entorno:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_ADMIN_USER`
+   - `NEXT_PUBLIC_ADMIN_EMAIL`
    - `NEXT_PUBLIC_ADMIN_PASS`
-4. Deploy!
+4. Deploy 🚀
 
-## Funciones
-- Login con usuario y contraseña
-- Dashboard con estadísticas en tiempo real
-- Ver conversaciones en vivo
-- Gestionar pedidos y estados
-- Editar prompt del bot desde el panel
-- Agregar y gestionar clientes
-- Dark/Light mode
+## SQL adicional para Supabase
+
+```sql
+-- Agregar columnas de login para clientes
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS client_password TEXT;
+```
+
+## Multi-tenant
+
+- Admin: ve todos los clientes y puede filtrar
+- Cliente: solo ve sus propias conversaciones, pedidos y configuración

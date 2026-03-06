@@ -1,12 +1,20 @@
 import '../styles/globals.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
+
+export const AuthCtx = createContext(null)
+export const useAuth = () => useContext(AuthCtx)
 
 export default function App({ Component, pageProps }) {
   const [dark, setDark] = useState(true)
+  const [user, setUser] = useState(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    if (saved) setDark(saved === 'dark')
+    const t = localStorage.getItem('theme') ?? 'dark'
+    const u = localStorage.getItem('crm_user')
+    setDark(t === 'dark')
+    if (u) try { setUser(JSON.parse(u)) } catch {}
+    setReady(true)
   }, [])
 
   useEffect(() => {
@@ -14,5 +22,14 @@ export default function App({ Component, pageProps }) {
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
 
-  return <Component {...pageProps} toggleTheme={() => setDark(!dark)} dark={dark} />
+  const login = u => { setUser(u); localStorage.setItem('crm_user', JSON.stringify(u)) }
+  const logout = () => { setUser(null); localStorage.removeItem('crm_user') }
+
+  if (!ready) return null
+
+  return (
+    <AuthCtx.Provider value={{ user, login, logout }}>
+      <Component {...pageProps} toggleTheme={() => setDark(d => !d)} dark={dark} />
+    </AuthCtx.Provider>
+  )
 }
