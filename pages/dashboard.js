@@ -429,11 +429,34 @@ function ConversationsPage({ clientId }) {
   const sendReply = async () => {
     if (!reply.trim() || !selected) return
     setSending(true)
-    const newMsg = { role: 'assistant', content: `[Asesor]: ${reply.trim()}` }
+    const text = reply.trim()
+    const newMsg = { role: 'assistant', content: `[Asesor]: ${text}` }
     const updated = [...(selected.messages||[]), newMsg]
+
+    // 1. Guardar en Supabase
     await supabase.from('conversations')
       .update({ messages: updated, updated_at: new Date().toISOString() })
       .eq('id', selected.id)
+
+    // 2. Enviar a WhatsApp via Railway
+    try {
+      const res = await fetch('https://chatbot-saas-production-d1b7.up.railway.app/send-advisor-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: selected.client_id,
+          userPhone: selected.user_phone,
+          message: text,
+          advisorName: 'Asesor'
+        })
+      })
+      if (!res.ok) console.error('Error enviando a WhatsApp:', await res.text())
+      else console.log('✅ Mensaje enviado a WhatsApp')
+    } catch (err) {
+      console.error('Error conectando con Railway:', err.message)
+      alert('⚠️ Mensaje guardado pero no se pudo enviar a WhatsApp. Verifica la conexión.')
+    }
+
     setSelected({...selected, messages: updated})
     setReply('')
     setSending(false)
