@@ -438,23 +438,21 @@ function ConversationsPage({ clientId }) {
       .update({ messages: updated, updated_at: new Date().toISOString() })
       .eq('id', selected.id)
 
-    // 2. Enviar a WhatsApp via Railway
+    // 2. Enviar a WhatsApp via API route de Next.js (evita CORS)
     try {
-      const res = await fetch('https://chatbot-saas-production-d1b7.up.railway.app/send-advisor-message', {
+      const res = await fetch('/api/send-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: selected.client_id,
           userPhone: selected.user_phone,
-          message: text,
-          advisorName: 'Asesor'
+          message: text
         })
       })
-      if (!res.ok) console.error('Error enviando a WhatsApp:', await res.text())
-      else console.log('✅ Mensaje enviado a WhatsApp')
+      const data = await res.json()
+      if (!data.success) console.error('Error WhatsApp:', data.error)
     } catch (err) {
-      console.error('Error conectando con Railway:', err.message)
-      alert('⚠️ Mensaje guardado pero no se pudo enviar a WhatsApp. Verifica la conexión.')
+      console.error('Error:', err.message)
     }
 
     setSelected({...selected, messages: updated})
