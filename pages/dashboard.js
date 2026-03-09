@@ -364,6 +364,10 @@ const HUMAN_TRIGGERS = ['asesor','humano','persona real','hablar con alguien','n
 
 function needsHuman(messages) {
   if (!messages?.length) return false
+  // Si el último mensaje es del asesor, ya está atendido
+  const lastMsg = messages[messages.length - 1]
+  if (lastMsg?.content?.startsWith('[Asesor]')) return false
+  // Buscar trigger en últimos 3 mensajes del cliente
   const last3 = messages.slice(-3).map(m => m.content?.toLowerCase()||'')
   return last3.some(txt => HUMAN_TRIGGERS.some(t => txt.includes(t)))
 }
@@ -396,8 +400,11 @@ function ConversationsPage({ clientId }) {
     const list = data||[]
     setConvs(list)
     setLoading(false)
-    // Detect human agent alerts
-    const newAlerts = list.filter(c => needsHuman(c.messages) && !readIds.includes('alert_'+c.id))
+    // Detect human agent alerts — usar campo DB o keywords
+    const newAlerts = list.filter(c => 
+      (c.needs_human === true || needsHuman(c.messages)) && 
+      !readIds.includes('alert_'+c.id)
+    )
     setAlerts(newAlerts)
     // Update selected if open
     if (selected) {
@@ -410,11 +417,17 @@ function ConversationsPage({ clientId }) {
   useEffect(() => { const t=setInterval(load,12000); return ()=>clearInterval(t) }, [clientId])
   useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}) }, [selected?.messages?.length])
 
-  const openConv = (c) => {
+  const openConv = async (c) => {
     setSelected(c)
     markRead(c.id)
-    // dismiss alert for this conv
+    // Quitar alerta de pantalla
     setAlerts(prev => prev.filter(a => a.id !== c.id))
+    // Marcar en Supabase que el asesor ya tomó el chat
+    if (needsHuman(c.messages)) {
+      await supabase.from('conversations')
+        .update({ needs_human: false, updated_at: new Date().toISOString() })
+        .eq('id', c.id)
+    }
   }
 
   const dismissAlert = (id) => {
@@ -591,9 +604,12 @@ function ConversationsPage({ clientId }) {
                 </div>
                 <div className="flex items-center gap-2">
                   {needsHuman(selected.messages) && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{background:'rgba(244,63,94,0.1)', color:'#fb7185', border:'1px solid rgba(244,63,94,0.2)'}}>
-                      🚨 Requiere asesor
-                    </div>
+                    <button
+                      onClick={() => openConv(selected)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition hover:opacity-80"
+                      style={{background:'rgba(244,63,94,0.15)', color:'#fb7185', border:'1px solid rgba(244,63,94,0.3)'}}>
+                      🚨 Tomar chat
+                    </button>
                   )}
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{background:'rgba(16,185,129,0.1)', color:'#34d399', border:'1px solid rgba(16,185,129,0.2)'}}>
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 relative live-ring" />
