@@ -372,6 +372,21 @@ function needsHuman(messages) {
   return last3.some(txt => HUMAN_TRIGGERS.some(t => txt.includes(t)))
 }
 
+// El asesor está activo si el último mensaje fue suyo (y no hay marcador BOT_ACTIVO)
+function advisorIsActive(messages) {
+  if (!messages?.length) return false
+  const last = messages[messages.length - 1]
+  if (last?.content?.includes('[BOT_ACTIVO]')) return false
+  // Buscar hacia atrás el último mensaje no-system
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]
+    if (m.content?.includes('[BOT_ACTIVO]')) return false
+    if (m.content?.startsWith('[Asesor]')) return true
+    if (m.role === 'user') return false
+  }
+  return false
+}
+
 function ConversationsPage({ clientId }) {
   const [convs, setConvs] = useState([])
   const [selected, setSelected] = useState(null)
@@ -609,6 +624,28 @@ function ConversationsPage({ clientId }) {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition hover:opacity-80"
                       style={{background:'rgba(244,63,94,0.15)', color:'#fb7185', border:'1px solid rgba(244,63,94,0.3)'}}>
                       🚨 Tomar chat
+                    </button>
+                  )}
+                  {/* Botón devolver al bot — aparece cuando el asesor está activo */}
+                  {advisorIsActive(selected.messages) && (
+                    <button
+                      onClick={async () => {
+                        // Insertar mensaje especial que le dice al bot que puede responder de nuevo
+                        await supabase.from('conversations')
+                          .update({ needs_human: false, updated_at: new Date().toISOString() })
+                          .eq('id', selected.id)
+                        // Agregar marcador al historial
+                        const marker = { role: 'system', content: '[BOT_ACTIVO]: El asesor terminó. El bot puede responder de nuevo.' }
+                        const updated = [...(selected.messages||[]), marker]
+                        await supabase.from('conversations')
+                          .update({ messages: updated })
+                          .eq('id', selected.id)
+                        setSelected({...selected, messages: updated})
+                        load()
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition hover:opacity-80"
+                      style={{background:'rgba(124,58,237,0.15)', color:'#a78bfa', border:'1px solid rgba(124,58,237,0.3)'}}>
+                      🤖 Devolver al bot
                     </button>
                   )}
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{background:'rgba(16,185,129,0.1)', color:'#34d399', border:'1px solid rgba(16,185,129,0.2)'}}>
