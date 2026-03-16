@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Building, Users, Shield, Link2, Bell, Palette, Globe,
   Mail, Save, Plus, MoreHorizontal, Trash2, Edit, Crown,
-  MessageSquare, Key, Database, Zap
+  MessageSquare, Key, Database, Zap, CheckCircle2
 } from 'lucide-react'
 
 const settingsNav = [
@@ -46,6 +46,31 @@ const roles = [
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState('workspace')
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  // Workspace Form State
+  const [workspaceData, setWorkspaceData] = useState({
+    companyName: 'NexusCRM Demo',
+    slug: 'nexuscrm-demo',
+    email: 'admin@nexuscrm.com',
+    timezone: 'America/Bogota (UTC-5)'
+  })
+
+  const handleWorkspaceChange = (e) => {
+    setWorkspaceData({ ...workspaceData, [e.target.name]: e.target.value })
+  }
+
+  const handleSaveWorkspace = () => {
+    setIsSaving(true)
+    setShowSuccess(false)
+    // Simulate API call to save settings
+    setTimeout(() => {
+      setIsSaving(false)
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
+    }, 1000)
+  }
 
   return (
     <div className="page-content">
@@ -77,19 +102,19 @@ export default function Settings() {
 
                 <div className="form-group">
                   <label className="form-label">Nombre de la empresa</label>
-                  <input className="form-input" defaultValue="NexusCRM Demo" />
+                  <input className="form-input" name="companyName" value={workspaceData.companyName} onChange={handleWorkspaceChange} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Slug</label>
-                  <input className="form-input" defaultValue="nexuscrm-demo" style={{ fontFamily: 'monospace' }} />
+                  <input className="form-input" name="slug" value={workspaceData.slug} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Email de contacto</label>
-                  <input className="form-input" defaultValue="admin@nexuscrm.com" />
+                  <input className="form-input" name="email" value={workspaceData.email} onChange={handleWorkspaceChange} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Zona horaria</label>
-                  <input className="form-input" defaultValue="America/Bogota (UTC-5)" />
+                  <input className="form-input" name="timezone" value={workspaceData.timezone} onChange={handleWorkspaceChange} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Plan actual</label>
@@ -100,7 +125,27 @@ export default function Settings() {
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>Renovación: Dic 31, 2026</span>
                   </div>
                 </div>
-                <button className="btn btn-primary mt-4"><Save size={16} /> Guardar Cambios</button>
+                
+                <div className="flex items-center gap-4 mt-4">
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={handleSaveWorkspace}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <div className="spinner" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Save size={16} />
+                    )}
+                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+
+                  {showSuccess && (
+                    <span className="badge emerald" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', animation: 'slideUp 0.3s ease-out' }}>
+                      <CheckCircle2 size={16} /> Guardado exitosamente
+                    </span>
+                  )}
+                </div>
               </div>
             </>
           )}
