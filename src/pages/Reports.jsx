@@ -1,0 +1,283 @@
+import { useState } from 'react'
+import {
+  BarChart3, Calendar, Download, Filter, TrendingUp, TrendingDown,
+  Users, DollarSign, Clock, Target, ArrowUpRight, ArrowDownRight
+} from 'lucide-react'
+import {
+  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts'
+
+const conversionData = [
+  { stage: 'Nuevos', value: 2847, fill: '#6366f1' },
+  { stage: 'Contactados', value: 1823, fill: '#06b6d4' },
+  { stage: 'Interesados', value: 945, fill: '#8b5cf6' },
+  { stage: 'Negociación', value: 423, fill: '#f59e0b' },
+  { stage: 'Cerrados', value: 156, fill: '#10b981' },
+]
+
+const salesByPeriod = [
+  { month: 'Ene', actual: 42000, objetivo: 45000 },
+  { month: 'Feb', actual: 38000, objetivo: 45000 },
+  { month: 'Mar', actual: 55000, objetivo: 50000 },
+  { month: 'Abr', actual: 49000, objetivo: 50000 },
+  { month: 'May', actual: 62000, objetivo: 55000 },
+  { month: 'Jun', actual: 58000, objetivo: 55000 },
+  { month: 'Jul', actual: 71000, objetivo: 60000 },
+  { month: 'Ago', actual: 68000, objetivo: 60000 },
+  { month: 'Sep', actual: 79000, objetivo: 65000 },
+  { month: 'Oct', actual: 85000, objetivo: 70000 },
+  { month: 'Nov', actual: 91000, objetivo: 75000 },
+  { month: 'Dic', actual: 98000, objetivo: 80000 },
+]
+
+const responseTimeData = [
+  { day: 'Lun', tiempo: 4.2 },
+  { day: 'Mar', tiempo: 3.8 },
+  { day: 'Mié', tiempo: 5.1 },
+  { day: 'Jue', tiempo: 3.5 },
+  { day: 'Vie', tiempo: 4.8 },
+  { day: 'Sáb', tiempo: 7.2 },
+  { day: 'Dom', tiempo: 8.5 },
+]
+
+const sourceAnalysis = [
+  { source: 'WhatsApp', leads: 996, conversion: 28, revenue: '$285,000', color: '#25d366' },
+  { source: 'Instagram', leads: 712, conversion: 22, revenue: '$178,000', color: '#e1306c' },
+  { source: 'Formularios', leads: 569, conversion: 31, revenue: '$215,000', color: '#6366f1' },
+  { source: 'Facebook', leads: 342, conversion: 18, revenue: '$89,000', color: '#0084ff' },
+  { source: 'Email', leads: 228, conversion: 35, revenue: '$124,000', color: '#f59e0b' },
+]
+
+const vendorPerformance = [
+  { name: 'Ana Rodríguez', deals: 23, conversion: '32%', revenue: '$45,200', response: '2.3 min', satisfaction: 96, avatar: 'AR', bg: '#ec4899' },
+  { name: 'Miguel Torres', deals: 19, conversion: '28%', revenue: '$38,700', response: '3.1 min', satisfaction: 94, avatar: 'MT', bg: '#6366f1' },
+  { name: 'Laura Méndez', deals: 17, conversion: '25%', revenue: '$34,100', response: '2.8 min', satisfaction: 98, avatar: 'LM', bg: '#06b6d4' },
+  { name: 'Diego Salazar', deals: 14, conversion: '21%', revenue: '$28,500', response: '4.2 min', satisfaction: 91, avatar: 'DS', bg: '#f59e0b' },
+]
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: 'rgba(22, 22, 31, 0.95)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '10px',
+        padding: '12px 16px',
+        backdropFilter: 'blur(12px)'
+      }}>
+        <p style={{ color: '#a1a1b5', fontSize: '0.78rem', marginBottom: 6 }}>{label}</p>
+        {payload.map((p, i) => (
+          <p key={i} style={{ color: p.color, fontSize: '0.85rem', fontWeight: 600 }}>
+            {p.name}: {typeof p.value === 'number' ? (p.value >= 1000 ? `$${p.value.toLocaleString()}` : p.value) : p.value}
+          </p>
+        ))}
+      </div>
+    )
+  }
+  return null
+}
+
+export default function Reports() {
+  const [period, setPeriod] = useState('year')
+
+  return (
+    <div className="page-content">
+      <div className="page-header animate-slideUp">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="page-title">Reportes y Analítica</h1>
+            <p className="page-subtitle">Análisis completo del rendimiento comercial</p>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex gap-2" style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 3, border: '1px solid var(--border-default)' }}>
+              {['week', 'month', 'quarter', 'year'].map(p => (
+                <button
+                  key={p}
+                  className={`btn btn-sm ${period === p ? '' : 'btn-ghost'}`}
+                  style={period === p ? { background: 'var(--primary-600)', color: 'white' } : {}}
+                  onClick={() => setPeriod(p)}
+                >
+                  {p === 'week' ? 'Semana' : p === 'month' ? 'Mes' : p === 'quarter' ? 'Trimestre' : 'Año'}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-secondary"><Download size={16} /> Exportar</button>
+          </div>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="stats-grid">
+        <div className="stat-card purple animate-slideUp stagger-1">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Tasa de Conversión</span>
+            <div className="stat-card-icon purple"><Target size={20} /></div>
+          </div>
+          <div className="stat-card-value">24.8%</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +3.2% vs periodo anterior</div>
+        </div>
+        <div className="stat-card emerald animate-slideUp stagger-2">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Revenue</span>
+            <div className="stat-card-icon emerald"><DollarSign size={20} /></div>
+          </div>
+          <div className="stat-card-value">$796K</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +18.4% vs 2025</div>
+        </div>
+        <div className="stat-card cyan animate-slideUp stagger-3">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Tiempo de Respuesta</span>
+            <div className="stat-card-icon cyan"><Clock size={20} /></div>
+          </div>
+          <div className="stat-card-value">3.8 min</div>
+          <div className="stat-card-change positive"><ArrowDownRight size={14} /> -1.2 min (mejora)</div>
+        </div>
+        <div className="stat-card amber animate-slideUp stagger-4">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Leads Nuevos</span>
+            <div className="stat-card-icon amber"><Users size={20} /></div>
+          </div>
+          <div className="stat-card-value">2,847</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +12.5%</div>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="reports-grid">
+        <div className="chart-card animate-slideUp stagger-3">
+          <div className="card-header">
+            <h3 className="card-title">Embudo de Conversión</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={conversionData} barSize={40}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="stage" stroke="#6b6b80" tick={{ fontSize: 11 }} />
+              <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {conversionData.map((entry, index) => (
+                  <Cell key={index} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card animate-slideUp stagger-4">
+          <div className="card-header">
+            <h3 className="card-title">Ventas vs Objetivo</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={salesByPeriod}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="month" stroke="#6b6b80" tick={{ fontSize: 11 }} />
+              <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} tickFormatter={v => `$${v/1000}k`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2.5} dot={{ fill: '#10b981', r: 4 }} name="Actual" />
+              <Line type="monotone" dataKey="objetivo" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Objetivo" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="reports-grid">
+        <div className="chart-card animate-slideUp stagger-5">
+          <div className="card-header">
+            <h3 className="card-title">Tiempo de Respuesta Promedio</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={responseTimeData}>
+              <defs>
+                <linearGradient id="responseGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="day" stroke="#6b6b80" tick={{ fontSize: 11 }} />
+              <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} tickFormatter={v => `${v} min`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="tiempo" stroke="#06b6d4" strokeWidth={2.5} fill="url(#responseGradient)" name="Tiempo" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card animate-slideUp stagger-6">
+          <div className="card-header">
+            <h3 className="card-title">Análisis por Fuente</h3>
+          </div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Fuente</th>
+                <th>Leads</th>
+                <th>Conversión</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sourceAnalysis.map((s, i) => (
+                <tr key={i}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color }} />
+                      <span style={{ fontWeight: 600 }}>{s.source}</span>
+                    </div>
+                  </td>
+                  <td>{s.leads.toLocaleString()}</td>
+                  <td><span className={`badge ${s.conversion >= 30 ? 'emerald' : s.conversion >= 20 ? 'amber' : 'rose'}`}>{s.conversion}%</span></td>
+                  <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>{s.revenue}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Vendor Performance */}
+      <div className="chart-card animate-slideUp" style={{ marginTop: 0 }}>
+        <div className="card-header">
+          <h3 className="card-title">Rendimiento de Vendedores</h3>
+        </div>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Vendedor</th>
+              <th>Deals Cerrados</th>
+              <th>Conversión</th>
+              <th>Revenue</th>
+              <th>Tiempo Resp.</th>
+              <th>Satisfacción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vendorPerformance.map((v, i) => (
+              <tr key={i}>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <div className="avatar sm" style={{ background: v.bg }}>{v.avatar}</div>
+                    <span style={{ fontWeight: 600 }}>{v.name}</span>
+                  </div>
+                </td>
+                <td style={{ fontWeight: 700 }}>{v.deals}</td>
+                <td><span className="badge emerald">{v.conversion}</span></td>
+                <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>{v.revenue}</td>
+                <td>{v.response}</td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <div style={{ width: 48, height: 5, background: 'var(--bg-active)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ width: `${v.satisfaction}%`, height: '100%', background: v.satisfaction >= 95 ? '#10b981' : '#f59e0b', borderRadius: 99 }} />
+                    </div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{v.satisfaction}%</span>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}

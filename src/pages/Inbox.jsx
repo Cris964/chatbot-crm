@@ -1,0 +1,236 @@
+import { useState } from 'react'
+import {
+  Search, Filter, MoreVertical, Send, Paperclip, Smile,
+  Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
+  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown
+} from 'lucide-react'
+
+const channels = ['Todos', 'WhatsApp', 'Instagram', 'Messenger', 'Email']
+
+const conversations = [
+  { id: 1, name: 'María González', preview: '¡Hola! Estoy interesada en el plan enterprise...', time: '2 min', channel: 'whatsapp', unread: true, avatar: 'MG', bg: '#10b981', tags: [{ label: 'Compra', color: 'emerald' }], intent: 'compra', botHandled: false },
+  { id: 2, name: 'Juan Pérez', preview: 'El chatbot no puede resolver mi problema, quisiera hablar con un agente', time: '5 min', channel: 'whatsapp', unread: true, avatar: 'JP', bg: '#6366f1', tags: [{ label: 'Escalado', color: 'rose' }], intent: 'soporte', botHandled: false },
+  { id: 3, name: 'Ana Rodríguez', preview: '¿Cuáles son los precios del plan profesional?', time: '12 min', channel: 'instagram', unread: true, avatar: 'AR', bg: '#ec4899', tags: [{ label: 'Interesado', color: 'amber' }], intent: 'consulta', botHandled: true },
+  { id: 4, name: 'Carlos Medina', preview: 'Perfecto, procedan con el envío a la dirección que les pasé', time: '18 min', channel: 'messenger', unread: false, avatar: 'CM', bg: '#f59e0b', tags: [{ label: 'Despacho', color: 'cyan' }], intent: 'despacho', botHandled: true },
+  { id: 5, name: 'Laura Sánchez', preview: 'Me gustaría agendar una demo del producto', time: '25 min', channel: 'email', unread: false, avatar: 'LS', bg: '#8b5cf6', tags: [{ label: 'Demo', color: 'violet' }], intent: 'demo', botHandled: true },
+  { id: 6, name: 'Roberto Díaz', preview: 'Necesito cambiar mi método de pago', time: '38 min', channel: 'whatsapp', unread: false, avatar: 'RD', bg: '#06b6d4', tags: [], intent: 'soporte', botHandled: true },
+  { id: 7, name: 'Patricia Morales', preview: '¿Tienen descuentos para equipos grandes?', time: '45 min', channel: 'instagram', unread: false, avatar: 'PM', bg: '#f43f5e', tags: [{ label: 'Ventas', color: 'purple' }], intent: 'consulta', botHandled: true },
+  { id: 8, name: 'Fernando Castro', preview: 'Gracias por la información, lo voy a revisar', time: '1 h', channel: 'messenger', unread: false, avatar: 'FC', bg: '#10b981', tags: [], intent: 'info', botHandled: true },
+]
+
+const selectedMessages = [
+  { id: 1, sender: 'bot', text: '¡Hola María! 👋 Bienvenida a NexusCRM. Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?', time: '10:32 AM' },
+  { id: 2, sender: 'client', text: '¡Hola! Estoy interesada en el plan enterprise para mi empresa. Somos un equipo de 50 personas.', time: '10:33 AM' },
+  { id: 3, sender: 'bot', text: 'Excelente elección, María. El plan Enterprise incluye:\n\n✅ Usuarios ilimitados\n✅ Integraciones premium\n✅ Soporte prioritario 24/7\n✅ API personalizada\n✅ Onboarding dedicado\n\n¿Te gustaría conocer los precios o agendar una demo personalizada?', time: '10:33 AM' },
+  { id: 4, sender: 'client', text: 'Sí, me gustaría saber los precios y si hay descuento por volumen para 50 usuarios.', time: '10:35 AM' },
+  { id: 5, sender: 'bot', text: '🤖 He detectado una intención de compra. Permíteme conectarte con un asesor especializado que pueda darte una cotización personalizada.', time: '10:35 AM' },
+  { id: 6, sender: 'agent', text: '¡Hola María! Soy Ana, tu asesora comercial. Encantada de ayudarte con la cotización del plan Enterprise.\n\nPara 50 usuarios, les puedo ofrecer un descuento especial del 20%. ¿Te gustaría que te envíe una propuesta detallada?', time: '10:38 AM' },
+  { id: 7, sender: 'client', text: '¡Sí, por favor! Me encantaría recibir la propuesta. Mi correo es maria@empresa.com', time: '10:40 AM' },
+]
+
+function ChannelIcon({ channel }) {
+  const icons = {
+    whatsapp: '💬',
+    instagram: '📷',
+    messenger: '💭',
+    email: '📧',
+  }
+  return <span>{icons[channel] || '💬'}</span>
+}
+
+export default function Inbox() {
+  const [selectedConv, setSelectedConv] = useState(conversations[0])
+  const [activeChannel, setActiveChannel] = useState('Todos')
+
+  const filtered = activeChannel === 'Todos'
+    ? conversations
+    : conversations.filter(c => c.channel.toLowerCase() === activeChannel.toLowerCase())
+
+  return (
+    <div className="inbox-layout">
+      {/* Left Panel - Conversations List */}
+      <div className="inbox-sidebar">
+        <div className="inbox-sidebar-header">
+          <div className="flex items-center justify-between">
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Inbox</h2>
+            <div className="flex gap-2">
+              <button className="btn btn-ghost btn-sm"><Filter size={16} /></button>
+            </div>
+          </div>
+          <div className="inbox-search">
+            <Search size={16} />
+            <input type="text" placeholder="Buscar conversaciones..." />
+          </div>
+        </div>
+
+        <div className="inbox-tabs">
+          {channels.map(ch => (
+            <button
+              key={ch}
+              className={`inbox-tab ${activeChannel === ch ? 'active' : ''}`}
+              onClick={() => setActiveChannel(ch)}
+            >
+              {ch}
+            </button>
+          ))}
+        </div>
+
+        <div className="conversation-list">
+          {filtered.map(conv => (
+            <div
+              key={conv.id}
+              className={`conversation-item ${selectedConv.id === conv.id ? 'active' : ''} ${conv.unread ? 'unread' : ''}`}
+              onClick={() => setSelectedConv(conv)}
+            >
+              <div className="conv-avatar" style={{ background: conv.bg }}>
+                {conv.avatar}
+                <div className={`channel-icon ${conv.channel}`}>
+                  <ChannelIcon channel={conv.channel} />
+                </div>
+              </div>
+              <div className="conv-content">
+                <div className="conv-header">
+                  <span className="conv-name">{conv.name}</span>
+                  <span className="conv-time">{conv.time}</span>
+                </div>
+                <p className="conv-preview">{conv.preview}</p>
+                <div className="conv-tags">
+                  {conv.tags.map((tag, i) => (
+                    <span key={i} className={`conv-tag badge ${tag.color}`}>{tag.label}</span>
+                  ))}
+                  {conv.botHandled && <span className="conv-tag badge neutral">🤖 Bot</span>}
+                  {!conv.botHandled && <span className="conv-tag badge rose">👤 Humano</span>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Center Panel - Chat */}
+      <div className="chat-area">
+        <div className="chat-header">
+          <div className="conv-avatar" style={{ background: selectedConv.bg, width: 36, height: 36, fontSize: '0.85rem' }}>
+            {selectedConv.avatar}
+          </div>
+          <div>
+            <h3 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{selectedConv.name}</h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+              {selectedConv.channel === 'whatsapp' ? 'WhatsApp Business' :
+               selectedConv.channel === 'instagram' ? 'Instagram DM' :
+               selectedConv.channel === 'messenger' ? 'Facebook Messenger' : 'Email'}
+              {' '} • En línea
+            </span>
+          </div>
+          <div className="ml-auto flex gap-2">
+            {!selectedConv.botHandled && (
+              <span className="badge rose" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertTriangle size={12} /> Requiere atención
+              </span>
+            )}
+            <button className="btn btn-ghost btn-sm"><Phone size={16} /></button>
+            <button className="btn btn-ghost btn-sm"><Video size={16} /></button>
+            <button className="btn btn-ghost btn-sm"><Star size={16} /></button>
+            <button className="btn btn-ghost btn-sm"><MoreVertical size={16} /></button>
+          </div>
+        </div>
+
+        <div className="chat-messages">
+          {selectedMessages.map(msg => (
+            <div key={msg.id}>
+              {msg.sender === 'bot' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)' }}>
+                  <Bot size={12} /> Chatbot IA
+                </div>
+              )}
+              {msg.sender === 'agent' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-emerald)' }}>
+                  <UserCheck size={12} /> Ana Rodríguez (Agente)
+                </div>
+              )}
+              <div className={`message-bubble ${msg.sender === 'client' ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
+                <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
+                <div className="message-time">{msg.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="chat-input-area">
+          <button className="btn btn-ghost"><Paperclip size={18} /></button>
+          <input type="text" placeholder="Escribe un mensaje..." />
+          <button className="btn btn-ghost"><Smile size={18} /></button>
+          <button className="btn btn-primary" style={{ padding: '8px 14px' }}><Send size={18} /></button>
+        </div>
+      </div>
+
+      {/* Right Panel - Contact Info */}
+      <div className="contact-panel">
+        <div className="contact-panel-header">
+          <div className="avatar xl" style={{ background: selectedConv.bg }}>
+            {selectedConv.avatar}
+          </div>
+          <h3>{selectedConv.name}</h3>
+          <p>Lead • Interesado en Plan Enterprise</p>
+        </div>
+
+        <div className="contact-section">
+          <div className="contact-section-title">Información de Contacto</div>
+          <div className="contact-detail">
+            <Mail size={16} /> maria@empresa.com
+          </div>
+          <div className="contact-detail">
+            <Phone size={16} /> +57 301 234 5678
+          </div>
+          <div className="contact-detail">
+            <MapPin size={16} /> Bogotá, Colombia
+          </div>
+          <div className="contact-detail">
+            <Calendar size={16} /> Lead desde Mar 10, 2026
+          </div>
+        </div>
+
+        <div className="contact-section">
+          <div className="contact-section-title">Etiquetas</div>
+          <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+            <span className="badge emerald">Potencial Alto</span>
+            <span className="badge purple">Enterprise</span>
+            <span className="badge amber">Cotización</span>
+          </div>
+        </div>
+
+        <div className="contact-section">
+          <div className="contact-section-title">Pipeline</div>
+          <div className="card" style={{ padding: 14 }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>Negociación</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$62,500</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 2 }}>Prob. cierre: 75%</div>
+          </div>
+        </div>
+
+        <div className="contact-section">
+          <div className="contact-section-title">Historial de Compras</div>
+          <div className="contact-detail">
+            <ShoppingBag size={16} />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>Plan Profesional</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>$2,400 • Ene 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="contact-section">
+          <div className="contact-section-title">Inteligencia IA</div>
+          <div className="card" style={{ padding: 14, background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--primary-300)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Bot size={14} /> Análisis IA
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Alta probabilidad de conversión. El cliente muestra interés activo en el plan Enterprise con presupuesto confirmado. Se recomienda enviar propuesta personalizada antes de 24h.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
