@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
@@ -41,6 +41,32 @@ function ChannelIcon({ channel }) {
 export default function Inbox() {
   const [selectedConv, setSelectedConv] = useState(conversations[0])
   const [activeChannel, setActiveChannel] = useState('Todos')
+  const [messages, setMessages] = useState(selectedMessages)
+  const [newMessage, setNewMessage] = useState('')
+  const messagesEndRef = useRef(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, selectedConv])
+
+  const handleSendMessage = (e) => {
+    e?.preventDefault()
+    if (!newMessage.trim()) return
+    
+    const newMsg = {
+      id: Date.now(),
+      sender: 'agent',
+      text: newMessage,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    
+    setMessages([...messages, newMsg])
+    setNewMessage('')
+  }
 
   const filtered = activeChannel === 'Todos'
     ? conversations
@@ -135,8 +161,8 @@ export default function Inbox() {
           </div>
         </div>
 
-        <div className="chat-messages">
-          {selectedMessages.map(msg => (
+        <div className="chat-messages" style={{ overflowY: 'auto', flex: 1 }}>
+          {messages.map(msg => (
             <div key={msg.id}>
               {msg.sender === 'bot' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)' }}>
@@ -154,14 +180,20 @@ export default function Inbox() {
               </div>
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="chat-input-area">
-          <button className="btn btn-ghost"><Paperclip size={18} /></button>
-          <input type="text" placeholder="Escribe un mensaje..." />
-          <button className="btn btn-ghost"><Smile size={18} /></button>
-          <button className="btn btn-primary" style={{ padding: '8px 14px' }}><Send size={18} /></button>
-        </div>
+        <form className="chat-input-area" onSubmit={handleSendMessage}>
+          <button type="button" className="btn btn-ghost"><Paperclip size={18} /></button>
+          <input 
+            type="text" 
+            placeholder="Escribe un mensaje..." 
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+          />
+          <button type="button" className="btn btn-ghost"><Smile size={18} /></button>
+          <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}><Send size={18} /></button>
+        </form>
       </div>
 
       {/* Right Panel - Contact Info */}
