@@ -1,19 +1,32 @@
 import { useState } from 'react'
-import { Sparkles, Mail, Lock, ArrowRight, Sun } from 'lucide-react'
+import { Sparkles, Mail, Lock, ArrowRight, Sun, AlertCircle } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
+    setError(null)
+    
+    // First try to authenticate against Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setError(error.message)
       setIsLoading(false)
-      onLogin()
-    }, 1200)
+      return
+    }
+
+    setIsLoading(false)
+    onLogin(data.session)
   }
 
   return (
@@ -65,6 +78,13 @@ export default function Login({ onLogin }) {
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>Ingresa a tu panel de control</p>
         </div>
+
+        {error && (
+          <div style={{ padding: '12px', background: 'rgba(244, 63, 94, 0.1)', color: 'var(--accent-rose)', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertCircle size={16} />
+            {error === 'Invalid login credentials' ? 'Correo o contraseña incorrectos' : error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>

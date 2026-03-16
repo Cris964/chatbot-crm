@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
-  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown
+  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const channels = ['Todos', 'WhatsApp', 'Instagram', 'Messenger', 'Email']
 
@@ -35,14 +36,16 @@ function ChannelIcon({ channel }) {
     messenger: '💭',
     email: '📧',
   }
-  return <span>{icons[channel] || '💬'}</span>
+  return <span>{icons[channel?.toLowerCase()] || '💬'}</span>
 }
 
 export default function Inbox() {
-  const [selectedConv, setSelectedConv] = useState(conversations[0])
+  const [conversationsList, setConversationsList] = useState([])
+  const [selectedConv, setSelectedConv] = useState(null)
   const [activeChannel, setActiveChannel] = useState('Todos')
-  const [messages, setMessages] = useState(selectedMessages)
+  const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -53,10 +56,102 @@ export default function Inbox() {
     scrollToBottom()
   }, [messages, selectedConv])
 
-  const handleSendMessage = (e) => {
+  useEffect(() => {
+    fetchConversations()
+
+    // Realtime listener for new conversations or updates
+    const convSub = supabase
+      .channel('public:conversations')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        fetchConversations()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(convSub)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedConv) {
+      fetchMessages(selectedConv.id)
+
+      // Realtime listener for new messages in this conversation
+      const msgSub = supabase
+        .channel(`public:outbox:${selectedConv.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'outbox', filter: `conversation_id=eq.${selectedConv.id}` }, (payload) => {
+          const newMsg = payload.new
+          setMessages(prev => [...prev, {
+            id: newMsg.id,
+            sender: newMsg.status === 'received' ? 'client' : (newMsg.is_bot ? 'bot' : 'agent'),
+            text: newMsg.message,
+            time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }])
+          scrollToBottom()
+        })
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(msgSub)
+      }
+    }
+  }, [selectedConv])
+
+  const fetchConversations = async () => {
+    setIsLoading(true)
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('*, clients(*)')
+      .order('updated_at', { ascending: false })
+
+    if (!error && data) {
+      // Map Supabase data to expected UI format
+      const mapped = data.map(conv => ({
+        id: conv.id,
+        name: conv.clients?.name || conv.client_phone || 'Desconocido',
+        preview: conv.last_message || 'Inició conversación...',
+        time: new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        channel: conv.channel || 'whatsapp',
+        unread: conv.status === 'open',
+        avatar: (conv.clients?.name || conv.client_phone || 'D').substring(0, 2).toUpperCase(),
+        bg: '#6366f1', // Default color, can be randomized
+        tags: [],
+        intent: 'consulta',
+        botHandled: conv.status === 'open' ? false : true,
+        phone: conv.client_phone,
+        client: conv.clients
+      }))
+      setConversationsList(mapped)
+      if (mapped.length > 0 && !selectedConv) {
+        setSelectedConv(mapped[0])
+      }
+    }
+    setIsLoading(false)
+  }
+
+  const fetchMessages = async (conversationId) => {
+    const { data, error } = await supabase
+      .from('outbox')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+
+    if (!error && data) {
+      const mappedMsgs = data.map(msg => ({
+        id: msg.id,
+        sender: msg.status === 'received' ? 'client' : (msg.is_bot ? 'bot' : 'agent'),
+        text: msg.message,
+        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }))
+      setMessages(mappedMsgs)
+    }
+  }
+
+  const handleSendMessage = async (e) => {
     e?.preventDefault()
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !selectedConv) return
     
+    // Optimistic UI update
     const newMsg = {
       id: Date.now(),
       sender: 'agent',
@@ -65,12 +160,37 @@ export default function Inbox() {
     }
     
     setMessages([...messages, newMsg])
+    const sentText = newMessage
     setNewMessage('')
+
+    // Insert into Supabase
+    await supabase.from('outbox').insert([
+      {
+        conversation_id: selectedConv.id,
+        phone_number_id: selectedConv.phone || 'UNKNOWN',
+        message: sentText,
+        status: 'pending', // Will be picked up by the backend to actually send via WhatsApp
+        is_bot: false
+      }
+    ])
+    
+    // Update conversation last message
+    await supabase.from('conversations').update({
+      last_message: sentText,
+      updated_at: new Date().toISOString()
+    }).eq('id', selectedConv.id)
+    
+    // Refresh conversation list to show new last message
+    fetchConversations()
   }
 
   const filtered = activeChannel === 'Todos'
-    ? conversations
-    : conversations.filter(c => c.channel.toLowerCase() === activeChannel.toLowerCase())
+    ? conversationsList
+    : conversationsList.filter(c => c.channel?.toLowerCase() === activeChannel.toLowerCase())
+
+  if (isLoading && conversationsList.length === 0) {
+    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyItems: 'center', width: '100%', padding: '2rem' }}>Cargando conversaciones...</div>
+  }
 
   return (
     <div className="inbox-layout">
@@ -197,72 +317,49 @@ export default function Inbox() {
       </div>
 
       {/* Right Panel - Contact Info */}
-      <div className="contact-panel">
-        <div className="contact-panel-header">
-          <div className="avatar xl" style={{ background: selectedConv.bg }}>
-            {selectedConv.avatar}
+      {selectedConv && (
+        <div className="contact-panel">
+          <div className="contact-panel-header">
+            <div className="avatar xl" style={{ background: selectedConv.bg }}>
+              {selectedConv.avatar}
+            </div>
+            <h3>{selectedConv.name}</h3>
+            <p>Lead • {selectedConv.phone || 'Sin télefono'}</p>
           </div>
-          <h3>{selectedConv.name}</h3>
-          <p>Lead • Interesado en Plan Enterprise</p>
-        </div>
 
-        <div className="contact-section">
-          <div className="contact-section-title">Información de Contacto</div>
-          <div className="contact-detail">
-            <Mail size={16} /> maria@empresa.com
+          <div className="contact-section">
+            <div className="contact-section-title">Información de Contacto</div>
+            <div className="contact-detail">
+              <Mail size={16} /> {selectedConv.client?.email || 'N/A'}
+            </div>
+            <div className="contact-detail">
+              <Phone size={16} /> {selectedConv.phone || 'N/A'}
+            </div>
+            <div className="contact-detail">
+              <MapPin size={16} /> No registrada
+            </div>
           </div>
-          <div className="contact-detail">
-            <Phone size={16} /> +57 301 234 5678
-          </div>
-          <div className="contact-detail">
-            <MapPin size={16} /> Bogotá, Colombia
-          </div>
-          <div className="contact-detail">
-            <Calendar size={16} /> Lead desde Mar 10, 2026
-          </div>
-        </div>
 
-        <div className="contact-section">
-          <div className="contact-section-title">Etiquetas</div>
-          <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
-            <span className="badge emerald">Potencial Alto</span>
-            <span className="badge purple">Enterprise</span>
-            <span className="badge amber">Cotización</span>
+          <div className="contact-section">
+            <div className="contact-section-title">Etiquetas</div>
+            <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+              <span className="badge emerald">WhatsApp</span>
+            </div>
           </div>
-        </div>
 
-        <div className="contact-section">
-          <div className="contact-section-title">Pipeline</div>
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>Negociación</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$62,500</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 2 }}>Prob. cierre: 75%</div>
-          </div>
-        </div>
-
-        <div className="contact-section">
-          <div className="contact-section-title">Historial de Compras</div>
-          <div className="contact-detail">
-            <ShoppingBag size={16} />
-            <div>
-              <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>Plan Profesional</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>$2,400 • Ene 2026</div>
+          <div className="contact-section">
+            <div className="contact-section-title">Inteligencia IA</div>
+            <div className="card" style={{ padding: 14, background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--primary-300)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Bot size={14} /> Resumen Histórico
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                El chatbot ha manejado esta conversación. El cliente interactuó a través del canal {selectedConv.channel}.
+              </p>
             </div>
           </div>
         </div>
-
-        <div className="contact-section">
-          <div className="contact-section-title">Inteligencia IA</div>
-          <div className="card" style={{ padding: 14, background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
-            <div style={{ fontSize: '0.78rem', color: 'var(--primary-300)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Bot size={14} /> Análisis IA
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Alta probabilidad de conversión. El cliente muestra interés activo en el plan Enterprise con presupuesto confirmado. Se recomienda enviar propuesta personalizada antes de 24h.
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

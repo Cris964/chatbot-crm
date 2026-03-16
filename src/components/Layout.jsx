@@ -5,6 +5,7 @@ import {
   DollarSign, Truck, Zap, BarChart3, Settings, Search,
   Bell, Menu, ChevronLeft, Sparkles, LogOut, HelpCircle, User
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const navItems = [
   { label: 'PRINCIPAL', items: [
@@ -44,9 +45,9 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleLogout = () => {
-    // Basic logout simulation, usually clears token and auth state
-    window.location.href = '/login'
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate('/login')
   }
 
   return (

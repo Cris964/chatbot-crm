@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { supabase } from './lib/supabase'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Inbox from './pages/Inbox'
@@ -14,11 +15,30 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [session, setSession] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setIsLoading(false)
+    })
+
+    // Listen for changes on auth state (log in, log out, etc.)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Protected Route Wrapper
   const ProtectedRoute = ({ children }) => {
-    if (!isAuthenticated) return <Navigate to="/login" replace />
+    if (isLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando...</div>
+    if (!session) return <Navigate to="/login" replace />
     return children
   }
 
@@ -27,7 +47,7 @@ function App() {
       <Route 
         path="/login" 
         element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={() => setIsAuthenticated(true)} />
+          session ? <Navigate to="/dashboard" replace /> : <Login onLogin={(session) => setSession(session)} />
         } 
       />
       
