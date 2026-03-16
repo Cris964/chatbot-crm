@@ -81,6 +81,21 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Reports() {
   const [period, setPeriod] = useState('year')
 
+  // Derived data based on period selection to simulate interactivity
+  const multiplier = period === 'week' ? 0.05 : period === 'month' ? 0.1 : period === 'quarter' ? 0.3 : 1
+  
+  const currentConversionData = conversionData.map(d => ({ ...d, value: Math.round(d.value * multiplier) }))
+  
+  const currentSalesData = period === 'year' ? salesByPeriod : period === 'quarter' ? salesByPeriod.slice(-3) : period === 'month' ? salesByPeriod.slice(-1) : salesByPeriod.slice(-1).map(s => ({...s, actual: s.actual/4, objetivo: s.objetivo/4}))
+
+  const getKPI = (baseValue) => {
+    if (typeof baseValue === 'string') {
+      const num = parseInt(baseValue.replace(/[^0-9]/g, ''))
+      return `$${Math.round(num * multiplier).toLocaleString()}${baseValue.includes('K') ? 'K' : ''}`
+    }
+    return Math.round(baseValue * multiplier).toLocaleString()
+  }
+
   return (
     <div className="page-content">
       <div className="page-header animate-slideUp">
@@ -114,7 +129,7 @@ export default function Reports() {
             <span className="stat-card-label">Tasa de Conversión</span>
             <div className="stat-card-icon purple"><Target size={20} /></div>
           </div>
-          <div className="stat-card-value">24.8%</div>
+          <div className="stat-card-value">{period === 'year' ? '24.8%' : period === 'quarter' ? '26.1%' : period === 'month' ? '28.4%' : '22.5%'}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> +3.2% vs periodo anterior</div>
         </div>
         <div className="stat-card emerald animate-slideUp stagger-2">
@@ -122,7 +137,7 @@ export default function Reports() {
             <span className="stat-card-label">Revenue</span>
             <div className="stat-card-icon emerald"><DollarSign size={20} /></div>
           </div>
-          <div className="stat-card-value">$796K</div>
+          <div className="stat-card-value">{getKPI('796K')}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> +18.4% vs 2025</div>
         </div>
         <div className="stat-card cyan animate-slideUp stagger-3">
@@ -130,7 +145,7 @@ export default function Reports() {
             <span className="stat-card-label">Tiempo de Respuesta</span>
             <div className="stat-card-icon cyan"><Clock size={20} /></div>
           </div>
-          <div className="stat-card-value">3.8 min</div>
+          <div className="stat-card-value">{period === 'year' ? '3.8' : period === 'quarter' ? '3.2' : period === 'month' ? '2.8' : '2.1'} min</div>
           <div className="stat-card-change positive"><ArrowDownRight size={14} /> -1.2 min (mejora)</div>
         </div>
         <div className="stat-card amber animate-slideUp stagger-4">
@@ -138,7 +153,7 @@ export default function Reports() {
             <span className="stat-card-label">Leads Nuevos</span>
             <div className="stat-card-icon amber"><Users size={20} /></div>
           </div>
-          <div className="stat-card-value">2,847</div>
+          <div className="stat-card-value">{getKPI(2847)}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> +12.5%</div>
         </div>
       </div>
@@ -150,13 +165,13 @@ export default function Reports() {
             <h3 className="card-title">Embudo de Conversión</h3>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={conversionData} barSize={40}>
+            <BarChart data={currentConversionData} barSize={40}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="stage" stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {conversionData.map((entry, index) => (
+                {currentConversionData.map((entry, index) => (
                   <Cell key={index} fill={entry.fill} />
                 ))}
               </Bar>
@@ -169,7 +184,7 @@ export default function Reports() {
             <h3 className="card-title">Ventas vs Objetivo</h3>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={salesByPeriod}>
+            <LineChart data={currentSalesData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="month" stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} tickFormatter={v => `$${v/1000}k`} />

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Search, Filter, Plus, Mail, Phone, MapPin, Calendar,
   MoreHorizontal, ExternalLink, DollarSign, ShoppingBag,
@@ -21,6 +22,15 @@ const purchases = [
 ]
 
 export default function Clients() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedClient, setSelectedClient] = useState(clients[0])
+  
+  const filteredClients = clients.filter(client => 
+    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    client.company.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="page-content">
       <div className="page-header animate-slideUp">
@@ -38,8 +48,13 @@ export default function Clients() {
 
       <div className="filters-bar animate-slideUp stagger-1">
         <div className="header-search" style={{ maxWidth: 280 }}>
-          <Search />
-          <input type="text" placeholder="Buscar clientes..." />
+          <Search size={16} />
+          <input 
+            type="text" 
+            placeholder="Buscar clientes, correos..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <button className="filter-btn">Estado <ChevronDown size={13} /></button>
         <button className="filter-btn">Etiqueta <ChevronDown size={13} /></button>
@@ -49,8 +64,13 @@ export default function Clients() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Client Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {clients.map((client, i) => (
-            <div key={client.id} className={`card animate-slideUp stagger-${Math.min(i + 1, 6)}`} style={{ cursor: 'pointer' }}>
+          {filteredClients.map((client, i) => (
+            <div 
+              key={client.id} 
+              className={`card animate-slideUp stagger-${Math.min(i + 1, 6)} ${selectedClient?.id === client.id ? 'border-primary' : ''}`} 
+              style={{ cursor: 'pointer', borderColor: selectedClient?.id === client.id ? 'var(--primary-500)' : 'var(--border-default)' }}
+              onClick={() => setSelectedClient(client)}
+            >
               <div style={{ display: 'flex', gap: 14 }}>
                 <div className="avatar lg" style={{ background: client.bg }}>{client.avatar}</div>
                 <div style={{ flex: 1 }}>
@@ -105,40 +125,41 @@ export default function Clients() {
 
         {/* Client Detail / Purchase History */}
         <div>
-          <div className="card animate-slideUp stagger-2" style={{ position: 'sticky', top: 0 }}>
-            <div className="card-header">
-              <h3 className="card-title">Detalle del Cliente</h3>
-              <button className="btn btn-ghost btn-sm"><ExternalLink size={16} /></button>
-            </div>
+          {selectedClient ? (
+            <div className="card animate-slideUp stagger-2" style={{ position: 'sticky', top: 0 }}>
+              <div className="card-header">
+                <h3 className="card-title">Detalle del Cliente</h3>
+                <button className="btn btn-ghost btn-sm"><ExternalLink size={16} /></button>
+              </div>
 
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div className="avatar xl" style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)', margin: '0 auto 10px' }}>MG</div>
-              <h3 style={{ fontWeight: 800, fontSize: '1.2rem' }}>María González</h3>
-              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>TechCorp SA • Bogotá, Colombia</p>
-            </div>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div className="avatar xl" style={{ background: selectedClient.bg, margin: '0 auto 10px' }}>{selectedClient.avatar}</div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.2rem' }}>{selectedClient.name}</h3>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>{selectedClient.company} • {selectedClient.location}</p>
+              </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-              <div className="card" style={{ textAlign: 'center', padding: 14 }}>
-                <DollarSign size={20} style={{ color: 'var(--accent-emerald)', margin: '0 auto 6px' }} />
-                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>$125,400</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Valor Total</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                <div className="card" style={{ textAlign: 'center', padding: 14 }}>
+                  <DollarSign size={20} style={{ color: 'var(--accent-emerald)', margin: '0 auto 6px' }} />
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{selectedClient.ltv}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Valor Total</div>
+                </div>
+                <div className="card" style={{ textAlign: 'center', padding: 14 }}>
+                  <ShoppingBag size={20} style={{ color: 'var(--primary-400)', margin: '0 auto 6px' }} />
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{selectedClient.purchases}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Compras</div>
+                </div>
+                <div className="card" style={{ textAlign: 'center', padding: 14 }}>
+                  <MessageSquare size={20} style={{ color: 'var(--accent-cyan)', margin: '0 auto 6px' }} />
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Math.floor(Math.random() * 30) + 5}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Conversaciones</div>
+                </div>
+                <div className="card" style={{ textAlign: 'center', padding: 14 }}>
+                  <Star size={20} style={{ color: 'var(--accent-amber)', margin: '0 auto 6px' }} />
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{selectedClient.tags[0] || 'Regular'}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Categoría</div>
+                </div>
               </div>
-              <div className="card" style={{ textAlign: 'center', padding: 14 }}>
-                <ShoppingBag size={20} style={{ color: 'var(--primary-400)', margin: '0 auto 6px' }} />
-                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>8</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Compras</div>
-              </div>
-              <div className="card" style={{ textAlign: 'center', padding: 14 }}>
-                <MessageSquare size={20} style={{ color: 'var(--accent-cyan)', margin: '0 auto 6px' }} />
-                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>24</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Conversaciones</div>
-              </div>
-              <div className="card" style={{ textAlign: 'center', padding: 14 }}>
-                <Star size={20} style={{ color: 'var(--accent-amber)', margin: '0 auto 6px' }} />
-                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>VIP</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Categoría</div>
-              </div>
-            </div>
 
             <div style={{ marginBottom: 20 }}>
               <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 12 }}>Historial de Compras</h4>
@@ -166,6 +187,11 @@ export default function Clients() {
               <button className="btn btn-secondary btn-sm" style={{ flex: 1 }}><Phone size={14} /> Llamar</button>
             </div>
           </div>
+          ) : (
+            <div className="card" style={{ position: 'sticky', top: 0, padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+              Selecciona un cliente para ver sus detalles
+            </div>
+          )}
         </div>
       </div>
     </div>

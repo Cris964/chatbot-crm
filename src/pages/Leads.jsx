@@ -44,7 +44,25 @@ function ScoreBadge({ score }) {
 }
 
 export default function Leads() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('Todos')
+  const [isAddingLead, setIsAddingLead] = useState(false)
+  const [leads, setLeads] = useState(leadsData)
   const [selected, setSelected] = useState([])
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          lead.company.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesTab = activeTab === 'Todos' || lead.source === activeTab
+    return matchesSearch && matchesTab
+  })
+
+  const handleAddLead = () => {
+    setIsAddingLead(true)
+    setTimeout(() => setIsAddingLead(false), 1000)
+    // In a real app this would open a modal
+  }
 
   const toggleSelect = (id) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -61,19 +79,41 @@ export default function Leads() {
           <div className="flex gap-2">
             <button className="btn btn-secondary"><Upload size={16} /> Importar</button>
             <button className="btn btn-secondary"><Download size={16} /> Exportar</button>
-            <button className="btn btn-primary"><Plus size={16} /> Nuevo Lead</button>
+            <button className="btn btn-primary" onClick={handleAddLead}>
+              {isAddingLead ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Plus size={16} />}
+              {isAddingLead ? 'Añadiendo...' : 'Nuevo Lead'}
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Tabs for filtering by source */}
+      <div className="tabs animate-slideUp stagger-2" style={{ marginBottom: 20 }}>
+        {['Todos', 'WhatsApp', 'Instagram', 'Formulario', 'Facebook', 'Email'].map(tab => (
+          <button
+            key={tab}
+            className={`tab ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* Filters Bar */}
       <div className="filters-bar animate-slideUp stagger-1">
-        <div className="header-search" style={{ maxWidth: 280 }}>
-          <Search />
-          <input type="text" placeholder="Buscar leads..." />
+        <div className="flex gap-3">
+          <div className="search-bar" style={{ minWidth: 260 }}>
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, email, empresa..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button className="btn btn-secondary border-btn"><Filter size={16} /> Filtros</button>
         </div>
-        <button className="filter-btn"><Filter size={15} /> Filtros</button>
-        <button className="filter-btn">Fuente <ChevronDown size={13} /></button>
         <button className="filter-btn">Etapa <ChevronDown size={13} /></button>
         <button className="filter-btn">Prioridad <ChevronDown size={13} /></button>
         <button className="filter-btn">Asignado <ChevronDown size={13} /></button>
@@ -105,8 +145,8 @@ export default function Leads() {
             </tr>
           </thead>
           <tbody>
-            {leadsData.map((lead) => (
-              <tr key={lead.id} style={{ cursor: 'pointer' }}>
+            {filteredLeads.map((lead) => (
+              <tr key={lead.id} className="table-row-hover" style={{ cursor: 'pointer' }}>
                 <td onClick={() => toggleSelect(lead.id)}>
                   {selected.includes(lead.id)
                     ? <CheckSquare size={18} style={{ color: 'var(--primary-400)' }} />
@@ -141,10 +181,17 @@ export default function Leads() {
             ))}
           </tbody>
         </table>
+        {filteredLeads.length === 0 && (
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            No se encontraron leads con la búsqueda "{searchQuery}"
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center justify-between mt-4" style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>
-        <span>Mostrando 8 de 2,847 leads</span>
+      <div className="pagination" style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
+          Mostrando <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>1-{filteredLeads.length}</span> de <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{filteredLeads.length}</span> leads
+        </div>
         <div className="flex gap-2">
           <button className="btn btn-ghost btn-sm">← Anterior</button>
           <button className="btn btn-sm" style={{ background: 'var(--primary-600)', color: 'white', borderRadius: 'var(--radius-sm)' }}>1</button>

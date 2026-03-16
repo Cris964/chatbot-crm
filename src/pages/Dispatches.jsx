@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Truck, Package, MapPin, CheckCircle, Clock, AlertCircle,
   Search, Filter, Plus, MoreHorizontal, Eye, ArrowRight,
@@ -44,6 +45,15 @@ function DispatchStatusBar({ status }) {
 }
 
 export default function Dispatches() {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredDispatches = dispatches.filter(d => 
+    d.tracking.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.carrier.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.sale.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="page-content">
       <div className="page-header animate-slideUp">
@@ -73,8 +83,13 @@ export default function Dispatches() {
 
       <div className="filters-bar animate-slideUp stagger-2">
         <div className="header-search" style={{ maxWidth: 280 }}>
-          <Search />
-          <input type="text" placeholder="Buscar despacho..." />
+          <Search size={16} />
+          <input 
+            type="text" 
+            placeholder="Buscar por tracking, cliente..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <button className="filter-btn">Estado <ChevronDown size={13} /></button>
         <button className="filter-btn">Transportadora <ChevronDown size={13} /></button>
@@ -82,7 +97,7 @@ export default function Dispatches() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {dispatches.map((d, i) => (
+        {filteredDispatches.map((d, i) => (
           <div key={d.id} className={`card animate-slideUp stagger-${Math.min(i + 1, 6)}`}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
               <div className="avatar md" style={{ background: d.bg, marginTop: 2 }}>{d.avatar}</div>
@@ -136,6 +151,11 @@ export default function Dispatches() {
             </div>
           </div>
         ))}
+        {filteredDispatches.length === 0 && (
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            No se encontraron despachos con "{searchQuery}"
+          </div>
+        )}
       </div>
     </div>
   )

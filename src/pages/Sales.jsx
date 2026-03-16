@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
   Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search
@@ -35,6 +36,14 @@ function getPaymentBadge(status) {
 }
 
 export default function Sales() {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredSales = sales.filter(sale => 
+    sale.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    sale.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    sale.product.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="page-content">
       <div className="page-header animate-slideUp">
@@ -107,9 +116,14 @@ export default function Sales() {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ fontWeight: 700 }}>Historial de Ventas</h3>
           <div className="flex gap-2">
-            <div className="header-search" style={{ maxWidth: 220 }}>
-              <Search />
-              <input type="text" placeholder="Buscar venta..." />
+            <div className="search-bar" style={{ maxWidth: 220 }}>
+              <Search size={16} />
+              <input 
+                type="text" 
+                placeholder="Buscar venta..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <button className="filter-btn"><Filter size={14} /> Filtros</button>
           </div>
@@ -128,8 +142,8 @@ export default function Sales() {
             </tr>
           </thead>
           <tbody>
-            {sales.map(sale => (
-              <tr key={sale.id}>
+            {filteredSales.map((sale) => (
+              <tr key={sale.id} className="table-row-hover">
                 <td><span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>{sale.id}</span></td>
                 <td>
                   <div className="flex items-center gap-2">
@@ -155,6 +169,11 @@ export default function Sales() {
             ))}
           </tbody>
         </table>
+        {filteredSales.length === 0 && (
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            No se encontraron ventas con "{searchQuery}"
+          </div>
+        )}
       </div>
     </div>
   )
