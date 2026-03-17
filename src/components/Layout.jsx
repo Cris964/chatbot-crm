@@ -104,7 +104,7 @@ export default function Layout({ session }) {
             style={{ cursor: 'pointer', padding: '12px', borderRadius: 'var(--radius-md)', transition: 'background 0.2s', background: showProfileMenu ? 'var(--bg-active)' : 'transparent' }}
           >
             <div className="avatar" style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}>
-              {session?.user?.email?.substring(0, 2).toUpperCase() || 'CA'}
+              {session?.user?.email?.substring(0, 2)?.toUpperCase() || 'CA'}
             </div>
             <div className="user-info">
               <div className="user-name">{session?.user?.email?.split('@')[0] || 'Usuario'}</div>

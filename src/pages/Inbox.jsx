@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
-  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck
+  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -237,7 +237,7 @@ export default function Inbox() {
           {filtered.map(conv => (
             <div
               key={conv.id}
-              className={`conversation-item ${selectedConv.id === conv.id ? 'active' : ''} ${conv.unread ? 'unread' : ''}`}
+              className={`conversation-item ${selectedConv?.id === conv.id ? 'active' : ''} ${conv.unread ? 'unread' : ''}`}
               onClick={() => setSelectedConv(conv)}
             >
               <div className="conv-avatar" style={{ background: conv.bg }}>
@@ -267,65 +267,79 @@ export default function Inbox() {
 
       {/* Center Panel - Chat */}
       <div className="chat-area">
-        <div className="chat-header">
-          <div className="conv-avatar" style={{ background: selectedConv.bg, width: 36, height: 36, fontSize: '0.85rem' }}>
-            {selectedConv.avatar}
-          </div>
-          <div>
-            <h3 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{selectedConv.name}</h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-              {selectedConv.channel === 'whatsapp' ? 'WhatsApp Business' :
-               selectedConv.channel === 'instagram' ? 'Instagram DM' :
-               selectedConv.channel === 'messenger' ? 'Facebook Messenger' : 'Email'}
-              {' '} • En línea
-            </span>
-          </div>
-          <div className="ml-auto flex gap-2">
-            {!selectedConv.botHandled && (
-              <span className="badge rose" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <AlertTriangle size={12} /> Requiere atención
-              </span>
-            )}
-            <button className="btn btn-ghost btn-sm"><Phone size={16} /></button>
-            <button className="btn btn-ghost btn-sm"><Video size={16} /></button>
-            <button className="btn btn-ghost btn-sm"><Star size={16} /></button>
-            <button className="btn btn-ghost btn-sm"><MoreVertical size={16} /></button>
-          </div>
-        </div>
-
-        <div className="chat-messages" style={{ overflowY: 'auto', flex: 1 }}>
-          {messages.map(msg => (
-            <div key={msg.id}>
-              {msg.sender === 'bot' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)' }}>
-                  <Bot size={12} /> Chatbot IA
-                </div>
-              )}
-              {msg.sender === 'agent' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-emerald)' }}>
-                  <UserCheck size={12} /> Ana Rodríguez (Agente)
-                </div>
-              )}
-              <div className={`message-bubble ${msg.sender === 'client' ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
-                <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
-                <div className="message-time">{msg.time}</div>
+        {selectedConv ? (
+          <>
+            <div className="chat-header">
+              <div className="conv-avatar" style={{ background: selectedConv.bg, width: 36, height: 36, fontSize: '0.85rem' }}>
+                {selectedConv.avatar}
+              </div>
+              <div>
+                <h3 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{selectedConv.name}</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                  {selectedConv.channel === 'whatsapp' ? 'WhatsApp Business' :
+                   selectedConv.channel === 'instagram' ? 'Instagram DM' :
+                   selectedConv.channel === 'messenger' ? 'Facebook Messenger' : 'Email'}
+                  {' '} • En línea
+                </span>
+              </div>
+              <div className="ml-auto flex gap-2">
+                {!selectedConv.botHandled && (
+                  <span className="badge rose" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <AlertTriangle size={12} /> Requiere atención
+                  </span>
+                )}
+                <button className="btn btn-ghost btn-sm"><Phone size={16} /></button>
+                <button className="btn btn-ghost btn-sm"><Video size={16} /></button>
+                <button className="btn btn-ghost btn-sm"><Star size={16} /></button>
+                <button className="btn btn-ghost btn-sm"><MoreVertical size={16} /></button>
               </div>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
 
-        <form className="chat-input-area" onSubmit={handleSendMessage}>
-          <button type="button" className="btn btn-ghost"><Paperclip size={18} /></button>
-          <input 
-            type="text" 
-            placeholder="Escribe un mensaje..." 
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-          />
-          <button type="button" className="btn btn-ghost"><Smile size={18} /></button>
-          <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}><Send size={18} /></button>
-        </form>
+            <div className="chat-messages" style={{ overflowY: 'auto', flex: 1 }}>
+              {messages.map(msg => (
+                <div key={msg.id}>
+                  {msg.sender === 'bot' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)' }}>
+                      <Bot size={12} /> Chatbot IA
+                    </div>
+                  )}
+                  {msg.sender === 'agent' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-emerald)' }}>
+                      <UserCheck size={12} /> Ana Rodríguez (Agente)
+                    </div>
+                  )}
+                  <div className={`message-bubble ${msg.sender === 'client' ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
+                    <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
+                    <div className="message-time">{msg.time}</div>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <form className="chat-input-area" onSubmit={handleSendMessage}>
+              <button type="button" className="btn btn-ghost"><Paperclip size={18} /></button>
+              <input 
+                type="text" 
+                placeholder="Escribe un mensaje..." 
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+              />
+              <button type="button" className="btn btn-ghost"><Smile size={18} /></button>
+              <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}><Send size={18} /></button>
+            </form>
+          </>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', gap: 16 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MessageSquare size={32} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ color: 'var(--text-main)', marginBottom: 4 }}>No hay conversaciones seleccionadas</h3>
+              <p style={{ fontSize: '0.9rem' }}>Selecciona un chat de la lista o espera nuevos mensajes.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right Panel - Contact Info */}
