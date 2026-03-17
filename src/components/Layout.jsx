@@ -26,7 +26,7 @@ const navItems = [
   ]},
 ]
 
-export default function Layout() {
+export default function Layout({ session }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -104,10 +104,10 @@ export default function Layout() {
             style={{ cursor: 'pointer', padding: '12px', borderRadius: 'var(--radius-md)', transition: 'background 0.2s', background: showProfileMenu ? 'var(--bg-active)' : 'transparent' }}
           >
             <div className="avatar" style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}>
-              CA
+              {session?.user?.email?.substring(0, 2).toUpperCase() || 'CA'}
             </div>
             <div className="user-info">
-              <div className="user-name">Carlos Arango</div>
+              <div className="user-name">{session?.user?.email?.split('@')[0] || 'Usuario'}</div>
               <div className="user-role">Administrador</div>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function Layout() {
               animation: 'scaleIn 0.2s ease-out'
             }}>
               <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-default)', marginBottom: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>carlos@nexuscrm.com</div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{session?.user?.email}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Plan Enterprise</div>
               </div>
               <button 
@@ -226,7 +226,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <Outlet />
+        <Outlet context={{ session }} />
       </div>
     </div>
   )

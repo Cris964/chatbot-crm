@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
@@ -40,6 +41,7 @@ function ChannelIcon({ channel }) {
 }
 
 export default function Inbox() {
+  const { session } = useOutletContext()
   const [conversationsList, setConversationsList] = useState([])
   const [selectedConv, setSelectedConv] = useState(null)
   const [activeChannel, setActiveChannel] = useState('Todos')
@@ -62,7 +64,12 @@ export default function Inbox() {
     // Realtime listener for new conversations or updates
     const convSub = supabase
       .channel('public:conversations')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'conversations',
+        filter: `user_id=eq.${session.user.id}`
+      }, () => {
         fetchConversations()
       })
       .subscribe()
@@ -102,6 +109,7 @@ export default function Inbox() {
     const { data, error } = await supabase
       .from('conversations')
       .select('*, clients(*)')
+      .eq('user_id', session.user.id)
       .order('updated_at', { ascending: false })
 
     if (!error && data) {
@@ -169,8 +177,9 @@ export default function Inbox() {
         conversation_id: selectedConv.id,
         phone_number_id: selectedConv.phone || 'UNKNOWN',
         message: sentText,
-        status: 'pending', // Will be picked up by the backend to actually send via WhatsApp
-        is_bot: false
+        status: 'pending', 
+        is_bot: false,
+        user_id: session.user.id
       }
     ])
     
