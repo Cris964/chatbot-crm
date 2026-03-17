@@ -9,25 +9,26 @@ import { supabase } from '../lib/supabase'
 
 const navItems = [
   { label: 'PRINCIPAL', items: [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/inbox', icon: MessageSquare, label: 'Inbox', badge: 12 },
   ]},
   { label: 'GESTIÓN', items: [
     { to: '/leads', icon: Users, label: 'Leads' },
-    { to: '/clients', icon: UserCircle, label: 'Clientes' },
+    { to: '/clientes', icon: UserCircle, label: 'Clientes' },
     { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
-    { to: '/sales', icon: DollarSign, label: 'Ventas' },
-    { to: '/dispatches', icon: Truck, label: 'Despachos' },
+    { to: '/ventas', icon: DollarSign, label: 'Ventas' },
+    { to: '/despachos', icon: Truck, label: 'Despachos' },
   ]},
   { label: 'SISTEMA', items: [
-    { to: '/automations', icon: Zap, label: 'Automatizaciones' },
-    { to: '/reports', icon: BarChart3, label: 'Reportes' },
-    { to: '/settings', icon: Settings, label: 'Configuración' },
+    { to: '/automatizaciones', icon: Zap, label: 'Automatizaciones' },
+    { to: '/reportes', icon: BarChart3, label: 'Reportes' },
+    { to: '/configuracion', icon: Settings, label: 'Configuración' },
   ]},
 ]
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const location = useLocation()
@@ -35,6 +36,11 @@ export default function Layout() {
   
   const profileRef = useRef(null)
   const notifRef = useRef(null)
+
+  useEffect(() => {
+    // Close mobile menu when route changes
+    setMobileOpen(false)
+  }, [location.pathname])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -52,8 +58,13 @@ export default function Layout() {
 
   return (
     <div className="app-layout">
+      {/* Sidebar Overlay (Mobile Only) */}
+      {mobileOpen && (
+        <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <Sparkles />
@@ -144,8 +155,11 @@ export default function Layout() {
       {/* Main */}
       <div className="main-content">
         <header className="top-header">
-          <button className="header-toggle" onClick={() => setCollapsed(!collapsed)}>
+          <button className="header-toggle desktop-only" onClick={() => setCollapsed(!collapsed)}>
             {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
+          </button>
+          <button className="header-toggle mobile-only" onClick={() => setMobileOpen(true)}>
+            <Menu size={20} />
           </button>
 
           <div className="header-search">

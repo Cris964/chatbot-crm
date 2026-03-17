@@ -19,8 +19,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    console.log('App: Initializing auth state...')
     // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error('App: Error getting session:', error)
+      console.log('App: Session loaded:', session ? 'Yes' : 'No')
       setSession(session)
       setIsLoading(false)
     })
@@ -29,6 +32,7 @@ function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('App: Auth state changed:', _event, session ? 'Yes' : 'No')
       setSession(session)
     })
 
@@ -55,15 +59,36 @@ function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="inbox" element={<Inbox />} />
+        
+        {/* Management Routes (Spanish & English Aliases) */}
         <Route path="leads" element={<Leads />} />
-        <Route path="pipeline" element={<Pipeline />} />
         <Route path="clientes" element={<Clients />} />
+        <Route path="clients" element={<Navigate to="/clientes" replace />} />
+        
+        <Route path="pipeline" element={<Pipeline />} />
+        
         <Route path="ventas" element={<Sales />} />
+        <Route path="sales" element={<Navigate to="/ventas" replace />} />
+        
         <Route path="despachos" element={<Dispatches />} />
+        <Route path="dispatches" element={<Navigate to="/despachos" replace />} />
+        
+        {/* System Routes */}
         <Route path="automatizaciones" element={<Automations />} />
+        <Route path="automations" element={<Navigate to="/automatizaciones" replace />} />
+        
         <Route path="reportes" element={<Reports />} />
+        <Route path="reports" element={<Navigate to="/reportes" replace />} />
+        
         <Route path="configuracion" element={<Settings />} />
+        <Route path="settings" element={<Navigate to="/configuracion" replace />} />
+
+        {/* Catch-all for internal routes */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
+      
+      {/* Absolute Catch-all */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
