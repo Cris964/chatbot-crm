@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase'
 const navItems = [
   { label: 'PRINCIPAL', items: [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/inbox', icon: MessageSquare, label: 'Inbox', badge: 12 },
+    { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
   ]},
   { label: 'GESTIÓN', items: [
     { to: '/leads', icon: Users, label: 'Leads' },
