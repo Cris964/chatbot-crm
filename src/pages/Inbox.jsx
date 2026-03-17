@@ -59,6 +59,8 @@ export default function Inbox() {
   }, [messages, selectedConv])
 
   useEffect(() => {
+    if (!session?.user?.id) return
+
     fetchConversations()
 
     // Realtime listener for new conversations or updates
@@ -77,7 +79,7 @@ export default function Inbox() {
     return () => {
       supabase.removeChannel(convSub)
     }
-  }, [])
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (selectedConv) {
@@ -105,6 +107,7 @@ export default function Inbox() {
   }, [selectedConv])
 
   const fetchConversations = async () => {
+    if (!session?.user?.id) return
     setIsLoading(true)
     const { data, error } = await supabase
       .from('conversations')
