@@ -145,10 +145,6 @@ export default function Inbox() {
     setIsLoading(false)
   }
 
-      setMessages(mappedMsgs)
-    }
-  }
-
   const handleSendMessage = async (e) => {
     e?.preventDefault()
     if (!newMessage.trim() || !selectedConv) return
