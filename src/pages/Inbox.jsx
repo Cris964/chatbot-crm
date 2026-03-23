@@ -171,10 +171,9 @@ export default function Inbox() {
 
     // Insert into Supabase Outbox for real delivery
     // phone_number_id MUST be the business ID (1074951269024593)
-    // selectedConv.phone is the recipient (customer)
+    // SelectedConv.phone is the recipient (customer)
     await supabase.from('outbox').insert([
       {
-        conversation_id: selectedConv.id,
         phone_number_id: selectedConv.client?.phone_number_id || '1074951269024593',
         message: sentText,
         status: 'pending', 
