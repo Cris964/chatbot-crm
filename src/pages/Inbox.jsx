@@ -269,7 +269,48 @@ export default function Inbox() {
                   {' '} • En línea
                 </span>
               </div>
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto flex gap-3 items-center">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 20, border: '1px solid var(--border-default)' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: selectedConv.botHandled ? 'var(--accent-violet)' : 'var(--text-tertiary)' }}>
+                    {selectedConv.botHandled ? 'BOT ACTIVO' : 'BOT DESACTIVADO'}
+                  </span>
+                  <button 
+                    onClick={async () => {
+                      const newStatus = selectedConv.botHandled ? 'open' : 'closed' // closed means bot-handled
+                      const { error } = await supabase
+                        .from('conversations')
+                        .update({ status: newStatus })
+                        .eq('id', selectedConv.id)
+                      
+                      if (!error) {
+                        setSelectedConv({...selectedConv, botHandled: !selectedConv.botHandled})
+                        // Also update in the list
+                        setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !c.botHandled} : c))
+                      }
+                    }}
+                    style={{
+                      width: 32,
+                      height: 18,
+                      borderRadius: 10,
+                      background: selectedConv.botHandled ? 'var(--accent-violet)' : 'var(--bg-active)',
+                      border: 'none',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: '50%',
+                      background: 'white',
+                      position: 'absolute',
+                      top: 2,
+                      left: selectedConv.botHandled ? 16 : 2,
+                      transition: 'all 0.2s'
+                    }} />
+                  </button>
+                </div>
                 {!selectedConv.botHandled && (
                   <span className="badge rose" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <AlertTriangle size={12} /> Requiere atención

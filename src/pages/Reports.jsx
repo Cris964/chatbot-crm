@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import {
   BarChart3, Calendar, Download, Filter, TrendingUp, TrendingDown,
   Users, DollarSign, Clock, Target, ArrowUpRight, ArrowDownRight
@@ -37,21 +39,42 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function Reports() {
+  const { session } = useOutletContext()
   const [period, setPeriod] = useState('year')
+  const [metrics, setMetrics] = useState({
+    leads: 0,
+    revenue: 0,
+    conversion: '0%',
+    avgResponse: '0 min'
+  })
 
-  // Derived data based on period selection to simulate interactivity
-  const multiplier = period === 'week' ? 0.05 : period === 'month' ? 0.1 : period === 'quarter' ? 0.3 : 1
-  
-  const currentConversionData = conversionData.map(d => ({ ...d, value: Math.round(d.value * multiplier) }))
-  
-  const currentSalesData = period === 'year' ? salesByPeriod : period === 'quarter' ? salesByPeriod.slice(-3) : period === 'month' ? salesByPeriod.slice(-1) : salesByPeriod.slice(-1).map(s => ({...s, actual: s.actual/4, objetivo: s.objetivo/4}))
-
-  const getKPI = (baseValue) => {
-    if (typeof baseValue === 'string') {
-      const num = parseInt(baseValue.replace(/[^0-9]/g, ''))
-      return `$${Math.round(num * multiplier).toLocaleString()}${baseValue.includes('K') ? 'K' : ''}`
+  useEffect(() => {
+    if (session?.user) {
+      fetchReportMetrics()
     }
-    return Math.round(baseValue * multiplier).toLocaleString()
+  }, [session, period])
+
+  const fetchReportMetrics = async () => {
+    // Lead Count
+    const { count: leadCount } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
+
+    // Total Revenue
+    const { data: revData } = await supabase
+      .from('clients')
+      .select('revenue')
+      .eq('user_id', session.user.id)
+    
+    const totalRev = revData?.reduce((acc, curr) => acc + (curr.revenue || 0), 0) || 0
+
+    setMetrics({
+      leads: leadCount || 0,
+      revenue: totalRev,
+      conversion: leadCount > 0 ? '12.5%' : '0%', // Mocked for now
+      avgResponse: '2.5 min' // Mocked
+    })
   }
 
   return (

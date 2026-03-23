@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import {
   Building, Users, Shield, Link2, Bell, Palette, Globe,
   Mail, Save, Plus, MoreHorizontal, Trash2, Edit, Crown,
@@ -45,9 +47,11 @@ const roles = [
 ]
 
 export default function Settings() {
+  const { session } = useOutletContext()
   const [activeSection, setActiveSection] = useState('workspace')
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Workspace Form State
   const [workspaceData, setWorkspaceData] = useState({
@@ -56,6 +60,29 @@ export default function Settings() {
     email: 'admin@nexuscrm.com',
     timezone: 'America/Bogota (UTC-5)'
   })
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchSettings()
+    }
+  }, [session])
+
+  const fetchSettings = async () => {
+    // Try to get company name from clients table for this user
+    const { data: clients } = await supabase
+      .from('clients')
+      .select('name')
+      .eq('user_id', session.user.id)
+      .limit(1)
+
+    setWorkspaceData({
+      companyName: clients?.[0]?.name || 'Mi Empresa',
+      slug: (clients?.[0]?.name || 'mi-empresa').toLowerCase().replace(/\s+/g, '-'),
+      email: session.user.email,
+      timezone: 'America/Bogota (UTC-5)'
+    })
+    setIsLoading(false)
+  }
 
   const handleWorkspaceChange = (e) => {
     setWorkspaceData({ ...workspaceData, [e.target.name]: e.target.value })

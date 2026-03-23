@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
   Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search
