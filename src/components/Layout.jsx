@@ -3,26 +3,24 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquare, Users, UserCircle, Kanban,
   DollarSign, Truck, Zap, BarChart3, Settings, Search,
-  Bell, Menu, ChevronLeft, Sparkles, LogOut, HelpCircle, User
+  Bell, Menu, ChevronLeft, Sparkles, LogOut, HelpCircle, User,
+  X, Clock, MessageCircle, Shield, ChevronRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const navItems = [
   { label: 'PRINCIPAL', items: [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
   ]},
   { label: 'GESTIÓN', items: [
     { to: '/leads', icon: Users, label: 'Leads' },
-    { to: '/clientes', icon: UserCircle, label: 'Clientes' },
+    { to: '/clients', icon: UserCircle, label: 'Clientes' },
     { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
-    { to: '/ventas', icon: DollarSign, label: 'Ventas' },
-    { to: '/despachos', icon: Truck, label: 'Despachos' },
   ]},
   { label: 'SISTEMA', items: [
-    { to: '/automatizaciones', icon: Zap, label: 'Automatizaciones' },
-    { to: '/reportes', icon: BarChart3, label: 'Reportes' },
-    { to: '/configuracion', icon: Settings, label: 'Configuración' },
+    { to: '/reports', icon: BarChart3, label: 'Reportes' },
+    { to: '/settings', icon: Settings, label: 'Configuración' },
   ]},
 ]
 
@@ -31,6 +29,7 @@ export default function Layout({ session }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showNotifMenu, setShowNotifMenu] = useState(false)
+  const [activeModal, setActiveModal] = useState(null) // 'ia' | 'help' | null
   const location = useLocation()
   const navigate = useNavigate()
   
@@ -128,14 +127,14 @@ export default function Layout({ session }) {
               <button 
                 className="btn btn-ghost" 
                 style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--text-secondary)' }}
-                onClick={() => { setShowProfileMenu(false); navigate('/configuracion'); }}
+                onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
               >
                 <User size={16} /> Ver Perfil
               </button>
               <button 
                 className="btn btn-ghost" 
                 style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--text-secondary)' }}
-                onClick={() => { setShowProfileMenu(false); navigate('/configuracion'); }}
+                onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
               >
                 <Settings size={16} /> Ajustes
               </button>
@@ -168,7 +167,7 @@ export default function Layout({ session }) {
           </div>
 
           <div className="header-actions">
-            <button className="header-action-btn" title="Ayuda">
+            <button className="header-action-btn" title="Ayuda" onClick={() => setActiveModal('help')}>
               <HelpCircle size={20} />
             </button>
             
@@ -220,7 +219,7 @@ export default function Layout({ session }) {
               )}
             </div>
 
-            <button className="header-action-btn" title="IA Assistant">
+            <button className="header-action-btn" title="IA Assistant" onClick={() => setActiveModal('ia')}>
               <Sparkles size={20} />
             </button>
           </div>
@@ -228,6 +227,79 @@ export default function Layout({ session }) {
 
         <Outlet context={{ session }} />
       </div>
+
+      {/* IA Assistant Modal / Panel */}
+      {activeModal === 'ia' && (
+        <div className="modal-overlay" onClick={() => setActiveModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="card animate-slideLeft" onClick={e => e.stopPropagation()} style={{ width: 400, height: '100%', borderRadius: 0, display: 'flex', flexDirection: 'column' }}>
+            <div className="card-header" style={{ padding: 20, borderBottom: '1px solid var(--border-default)' }}>
+              <div className="flex items-center gap-2">
+                <div style={{ background: 'var(--primary-600)', color: 'white', padding: 8, borderRadius: 10 }}>
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 className="card-title">Nexus AI</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Tu asistente inteligente activo</p>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+            <div style={{ flex: 1, padding: 20, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="card" style={{ background: 'var(--bg-active)', border: 'none' }}>
+                <p style={{ fontSize: '0.88rem', lineHeight: 1.5 }}>¡Hola! Soy tu asistente Nexus AI. ¿En qué puedo ayudarte a optimizar tu flujo de ventas hoy?</p>
+              </div>
+              <div style={{ marginTop: 'auto' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>Sugerencias:</p>
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn btn-secondary btn-sm" onClick={() => alert('Analizando...')}>Resumir mis leads</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => alert('Generando...')}>Escribir email de seguimiento</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => alert('Revisando...')}>¿Qué tareas tengo hoy?</button>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: 20, borderTop: '1px solid var(--border-default)' }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input type="text" className="input" placeholder="Pregunta algo a la IA..." style={{ flex: 1 }} />
+                <button className="btn btn-primary btn-sm">Enviar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {activeModal === 'help' && (
+        <div className="modal-overlay" onClick={() => setActiveModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card animate-scaleIn" onClick={e => e.stopPropagation()} style={{ width: 500, maxWidth: '90%' }}>
+            <div className="card-header">
+              <h3 className="card-title">Centro de Ayuda</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+            <div style={{ padding: '0 20px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 10 }}>
+                <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => alert('Documentación')}>
+                  <Clock size={24} style={{ color: 'var(--primary-400)', marginBottom: 8 }} />
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Documentación</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Guías paso a paso para usar NexusCRM</p>
+                </div>
+                <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => alert('Soporte')}>
+                  <MessageCircle size={24} style={{ color: 'var(--accent-emerald)', marginBottom: 8 }} />
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Soporte Técnico</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Chatea con nuestro equipo de soporte</p>
+                </div>
+              </div>
+              <div className="card" style={{ marginTop: 16, padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Shield size={24} style={{ color: 'var(--accent-amber)' }} />
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Seguridad y Privacidad</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Configura tu cuenta y protege tus datos</p>
+                </div>
+                <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

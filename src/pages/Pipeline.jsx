@@ -5,61 +5,12 @@ import {
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
 const pipelineStages = [
-  {
-    id: 'nuevo',
-    title: 'Nuevo Lead',
-    color: '#6366f1',
-    deals: [
-      { id: 1, title: 'Software CRM para Retail', company: 'Retail Co', value: '$12,000', probability: 25, assigned: { avatar: 'AR', bg: '#ec4899' }, days: 2 },
-      { id: 2, title: 'Implementación ERP', company: 'LogisTech', value: '$45,000', probability: 15, assigned: { avatar: 'MT', bg: '#6366f1' }, days: 1 },
-      { id: 3, title: 'Consultoría Digital', company: 'StartUp IO', value: '$8,500', probability: 20, assigned: { avatar: 'LM', bg: '#06b6d4' }, days: 3 },
-    ]
-  },
-  {
-    id: 'contactado',
-    title: 'Contactado',
-    color: '#06b6d4',
-    deals: [
-      { id: 4, title: 'Plataforma E-commerce', company: 'Fashion Plus', value: '$28,000', probability: 40, assigned: { avatar: 'DS', bg: '#f59e0b' }, days: 5 },
-      { id: 5, title: 'App Mobile B2B', company: 'Industrial SA', value: '$35,000', probability: 35, assigned: { avatar: 'AR', bg: '#ec4899' }, days: 4 },
-    ]
-  },
-  {
-    id: 'interesado',
-    title: 'Interesado',
-    color: '#8b5cf6',
-    deals: [
-      { id: 6, title: 'Suite de Analytics', company: 'Data Corp', value: '$52,000', probability: 60, assigned: { avatar: 'MT', bg: '#6366f1' }, days: 8 },
-      { id: 7, title: 'Chatbot IA', company: 'TechCorp SA', value: '$18,500', probability: 55, assigned: { avatar: 'LM', bg: '#06b6d4' }, days: 7 },
-      { id: 8, title: 'Integración API', company: 'Global Net', value: '$22,000', probability: 50, assigned: { avatar: 'DS', bg: '#f59e0b' }, days: 6 },
-    ]
-  },
-  {
-    id: 'negociacion',
-    title: 'Negociación',
-    color: '#f59e0b',
-    deals: [
-      { id: 9, title: 'Plan Enterprise', company: 'TechCorp SA', value: '$62,500', probability: 75, assigned: { avatar: 'AR', bg: '#ec4899' }, days: 12 },
-      { id: 10, title: 'Migración Cloud', company: 'CloudsDev', value: '$48,000', probability: 80, assigned: { avatar: 'MT', bg: '#6366f1' }, days: 10 },
-    ]
-  },
-  {
-    id: 'cerrada',
-    title: 'Venta Cerrada',
-    color: '#10b981',
-    deals: [
-      { id: 11, title: 'CRM Profesional', company: 'Digital Co', value: '$15,800', probability: 100, assigned: { avatar: 'LM', bg: '#06b6d4' }, days: 18 },
-      { id: 12, title: 'Pack Starter Anual', company: 'Media Plus', value: '$9,200', probability: 100, assigned: { avatar: 'DS', bg: '#f59e0b' }, days: 15 },
-    ]
-  },
-  {
-    id: 'perdida',
-    title: 'Venta Perdida',
-    color: '#f43f5e',
-    deals: [
-      { id: 13, title: 'Solución On-premise', company: 'OldTech SL', value: '$32,000', probability: 0, assigned: { avatar: 'AR', bg: '#ec4899' }, days: 20 },
-    ]
-  },
+  { id: 'nuevo', title: 'Nuevo Lead', color: '#6366f1', deals: [] },
+  { id: 'contactado', title: 'Contactado', color: '#06b6d4', deals: [] },
+  { id: 'interesado', title: 'Interesado', color: '#8b5cf6', deals: [] },
+  { id: 'negociacion', title: 'Negociación', color: '#f59e0b', deals: [] },
+  { id: 'cerrada', title: 'Venta Cerrada', color: '#10b981', deals: [] },
+  { id: 'perdida', title: 'Venta Perdida', color: '#f43f5e', deals: [] },
 ]
 
 function getProbabilityColor(p) {

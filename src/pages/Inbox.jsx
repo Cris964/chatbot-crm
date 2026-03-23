@@ -9,27 +9,6 @@ import { supabase } from '../lib/supabase'
 
 const channels = ['Todos', 'WhatsApp', 'Instagram', 'Messenger', 'Email']
 
-const conversations = [
-  { id: 1, name: 'María González', preview: '¡Hola! Estoy interesada en el plan enterprise...', time: '2 min', channel: 'whatsapp', unread: true, avatar: 'MG', bg: '#10b981', tags: [{ label: 'Compra', color: 'emerald' }], intent: 'compra', botHandled: false },
-  { id: 2, name: 'Juan Pérez', preview: 'El chatbot no puede resolver mi problema, quisiera hablar con un agente', time: '5 min', channel: 'whatsapp', unread: true, avatar: 'JP', bg: '#6366f1', tags: [{ label: 'Escalado', color: 'rose' }], intent: 'soporte', botHandled: false },
-  { id: 3, name: 'Ana Rodríguez', preview: '¿Cuáles son los precios del plan profesional?', time: '12 min', channel: 'instagram', unread: true, avatar: 'AR', bg: '#ec4899', tags: [{ label: 'Interesado', color: 'amber' }], intent: 'consulta', botHandled: true },
-  { id: 4, name: 'Carlos Medina', preview: 'Perfecto, procedan con el envío a la dirección que les pasé', time: '18 min', channel: 'messenger', unread: false, avatar: 'CM', bg: '#f59e0b', tags: [{ label: 'Despacho', color: 'cyan' }], intent: 'despacho', botHandled: true },
-  { id: 5, name: 'Laura Sánchez', preview: 'Me gustaría agendar una demo del producto', time: '25 min', channel: 'email', unread: false, avatar: 'LS', bg: '#8b5cf6', tags: [{ label: 'Demo', color: 'violet' }], intent: 'demo', botHandled: true },
-  { id: 6, name: 'Roberto Díaz', preview: 'Necesito cambiar mi método de pago', time: '38 min', channel: 'whatsapp', unread: false, avatar: 'RD', bg: '#06b6d4', tags: [], intent: 'soporte', botHandled: true },
-  { id: 7, name: 'Patricia Morales', preview: '¿Tienen descuentos para equipos grandes?', time: '45 min', channel: 'instagram', unread: false, avatar: 'PM', bg: '#f43f5e', tags: [{ label: 'Ventas', color: 'purple' }], intent: 'consulta', botHandled: true },
-  { id: 8, name: 'Fernando Castro', preview: 'Gracias por la información, lo voy a revisar', time: '1 h', channel: 'messenger', unread: false, avatar: 'FC', bg: '#10b981', tags: [], intent: 'info', botHandled: true },
-]
-
-const selectedMessages = [
-  { id: 1, sender: 'bot', text: '¡Hola María! 👋 Bienvenida a NexusCRM. Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?', time: '10:32 AM' },
-  { id: 2, sender: 'client', text: '¡Hola! Estoy interesada en el plan enterprise para mi empresa. Somos un equipo de 50 personas.', time: '10:33 AM' },
-  { id: 3, sender: 'bot', text: 'Excelente elección, María. El plan Enterprise incluye:\n\n✅ Usuarios ilimitados\n✅ Integraciones premium\n✅ Soporte prioritario 24/7\n✅ API personalizada\n✅ Onboarding dedicado\n\n¿Te gustaría conocer los precios o agendar una demo personalizada?', time: '10:33 AM' },
-  { id: 4, sender: 'client', text: 'Sí, me gustaría saber los precios y si hay descuento por volumen para 50 usuarios.', time: '10:35 AM' },
-  { id: 5, sender: 'bot', text: '🤖 He detectado una intención de compra. Permíteme conectarte con un asesor especializado que pueda darte una cotización personalizada.', time: '10:35 AM' },
-  { id: 6, sender: 'agent', text: '¡Hola María! Soy Ana, tu asesora comercial. Encantada de ayudarte con la cotización del plan Enterprise.\n\nPara 50 usuarios, les puedo ofrecer un descuento especial del 20%. ¿Te gustaría que te envíe una propuesta detallada?', time: '10:38 AM' },
-  { id: 7, sender: 'client', text: '¡Sí, por favor! Me encantaría recibir la propuesta. Mi correo es maria@empresa.com', time: '10:40 AM' },
-]
-
 function ChannelIcon({ channel }) {
   const icons = {
     whatsapp: '💬',
