@@ -89,10 +89,18 @@ export default function Inbox() {
     if (!session?.user?.id) return
     setIsLoading(true)
     console.log('Fetching conversations for user:', session.user.id)
+    // Two-step fetch for maximum reliability
+    const { data: userClients } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', session.user.id)
+    
+    const clientIds = userClients?.map(c => c.id) || []
+    
     const { data, error } = await supabase
       .from('conversations')
-      .select('*, clients!inner(*)')
-      .eq('clients.user_id', session.user.id)
+      .select('*, clients(*)')
+      .in('client_id', clientIds)
       .order('updated_at', { ascending: false })
     
     if (error) console.error('Supabase error:', error)
