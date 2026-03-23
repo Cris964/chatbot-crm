@@ -36,10 +36,35 @@ export default function Dispatches() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dispatchesList, setDispatchesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [newDispatch, setNewDispatch] = useState({
+    name: '',
+    sku: '',
+    quantity: 1
+  })
 
   useEffect(() => {
     fetchDispatches()
   }, [])
+
+  const handleAddDispatch = async (e) => {
+    e.preventDefault()
+    const { error } = await supabase
+      .from('inventory')
+      .insert([{
+        name: newDispatch.name,
+        sku: newDispatch.sku,
+        stock: newDispatch.quantity,
+        created_at: new Date().toISOString()
+      }])
+    
+    if (!error) {
+      setShowModal(false)
+      fetchDispatches()
+    } else {
+      alert('Error: ' + error.message)
+    }
+  }
 
   const fetchDispatches = async () => {
     const { data, error } = await supabase
@@ -83,10 +108,45 @@ export default function Dispatches() {
           </div>
           <div className="flex gap-2">
             <button className="btn btn-secondary"><Filter size={16} /> Filtros</button>
-            <button className="btn btn-primary"><Plus size={16} /> Nuevo Despacho</button>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> Nuevo Despacho</button>
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)} style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)'
+        }}>
+          <div className="modal-content animate-slideUp" onClick={e => e.stopPropagation()} style={{
+            background: 'var(--bg-secondary)', padding: '24px', borderRadius: '16px',
+            width: '100%', maxWidth: '400px', border: '1px solid var(--border-default)'
+          }}>
+            <h2 style={{ marginBottom: 16 }}>Nuevo Despacho</h2>
+            <form onSubmit={handleAddDispatch} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6 }}>Producto</label>
+                <input 
+                  type="text" className="input" placeholder="Nombre del producto" required
+                  value={newDispatch.name} onChange={e => setNewDispatch({...newDispatch, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6 }}>SKU / Tracking</label>
+                <input 
+                  type="text" className="input" placeholder="Referencia" required
+                  value={newDispatch.sku} onChange={e => setNewDispatch({...newDispatch, sku: e.target.value})}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                <button type="button" className="btn btn-ghost flex-1" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary flex-1">Crear Despacho</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="stats-grid">
         {stats.map((stat, i) => (

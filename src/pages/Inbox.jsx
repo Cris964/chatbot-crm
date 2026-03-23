@@ -123,12 +123,12 @@ export default function Inbox() {
       // Map Supabase data to expected UI format
       const mapped = data.map(conv => ({
         id: conv.id,
-        name: conv.clients?.name || conv.client_phone || 'Desconocido',
+        name: conv.clients?.name || (conv.client_phone ? `Cliente (${conv.client_phone})` : 'Desconocido'),
         preview: conv.last_message || 'Inició conversación...',
         time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
         channel: conv.channel || 'whatsapp',
         unread: conv.status === 'open',
-        avatar: (conv.clients?.name || conv.client_phone || 'D').substring(0, 2).toUpperCase(),
+        avatar: (conv.clients?.name || 'C').substring(0, 2).toUpperCase(),
         bg: '#6366f1', // Default color, can be randomized
         tags: [],
         intent: 'consulta',

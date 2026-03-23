@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <p style={{ color: '#a1a1b5', fontSize: '0.78rem', marginBottom: 6 }}>{label}</p>
         {payload.map((p, i) => (
           <p key={i} style={{ color: p.color, fontSize: '0.85rem', fontWeight: 600 }}>
-            {p.name}: {typeof p.value === 'number' ? (p.value >= 1000 ? `$${p.value.toLocaleString()}` : p.value) : p.value}
+            {p.name}: {typeof p.value === 'number' ? `$${p.value.toLocaleString()}` : p.value}
           </p>
         ))}
       </div>
@@ -110,7 +110,7 @@ export default function Reports() {
             <span className="stat-card-label">Tasa de Conversión</span>
             <div className="stat-card-icon purple"><Target size={20} /></div>
           </div>
-          <div className="stat-card-value">{period === 'year' ? '24.8%' : period === 'quarter' ? '26.1%' : period === 'month' ? '28.4%' : '22.5%'}</div>
+          <div className="stat-card-value">{metrics.conversion}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> +3.2% vs periodo anterior</div>
         </div>
         <div className="stat-card emerald animate-slideUp stagger-2">
@@ -118,15 +118,15 @@ export default function Reports() {
             <span className="stat-card-label">Revenue</span>
             <div className="stat-card-icon emerald"><DollarSign size={20} /></div>
           </div>
-          <div className="stat-card-value">{getKPI('796K')}</div>
-          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +18.4% vs 2025</div>
+          <div className="stat-card-value">${metrics.revenue.toLocaleString()}</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> Actualizado hoy</div>
         </div>
-        <div className="stat-card cyan animate-slideUp stagger-3">
+        <div className="stat-card sky animate-slideUp stagger-3">
           <div className="stat-card-header">
             <span className="stat-card-label">Tiempo de Respuesta</span>
-            <div className="stat-card-icon cyan"><Clock size={20} /></div>
+            <div className="stat-card-icon sky"><Clock size={20} /></div>
           </div>
-          <div className="stat-card-value">{period === 'year' ? '3.8' : period === 'quarter' ? '3.2' : period === 'month' ? '2.8' : '2.1'} min</div>
+          <div className="stat-card-value">{metrics.avgResponse}</div>
           <div className="stat-card-change positive"><ArrowDownRight size={14} /> -1.2 min (mejora)</div>
         </div>
         <div className="stat-card amber animate-slideUp stagger-4">
@@ -134,7 +134,7 @@ export default function Reports() {
             <span className="stat-card-label">Leads Nuevos</span>
             <div className="stat-card-icon amber"><Users size={20} /></div>
           </div>
-          <div className="stat-card-value">{getKPI(2847)}</div>
+          <div className="stat-card-value">{metrics.leads}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> +12.5%</div>
         </div>
       </div>

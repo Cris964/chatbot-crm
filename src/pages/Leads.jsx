@@ -89,12 +89,35 @@ export default function Leads() {
       created_at: new Date().toISOString()
     }
 
-    const { error } = await supabase
+    const { error: insertError } = await supabase
       .from('leads')
       .insert([leadToInsert])
 
-    if (error) {
-      alert('Error al añadir lead: ' + error.message)
+    if (insertError && insertError.code === 'PGRST204') {
+      // Table doesn't exist, fallback to clients
+      const { error: clientError } = await supabase
+        .from('clients')
+        .insert([{
+          name: newLead.name,
+          email: newLead.email,
+          phone: newLead.phone,
+          user_id: session.user.id,
+          revenue: 0,
+          created_at: new Date().toISOString()
+        }])
+      
+      if (clientError) {
+        alert('Error al añadir (fallback): ' + clientError.message)
+      } else {
+        setShowModal(false)
+        setNewLead({
+          name: '', email: '', phone: '', company: '',
+          source: 'WhatsApp', stage: 'Nuevo', priority: 'Media', value: ''
+        })
+        fetchLeads()
+      }
+    } else if (insertError) {
+      alert('Error al añadir lead: ' + insertError.message)
     } else {
       setShowModal(false)
       setNewLead({
