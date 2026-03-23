@@ -76,11 +76,13 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     setIsLoading(true)
     
-    // Fetch Leads Count
-    const { count: leadCount } = await supabase
+    // Fetch Leads Count (Fall back to 0 if table missing)
+    const { count: leadCount, error: leadError } = await supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', session.user.id)
+    
+    if (leadError) console.warn('Leads table missing, using 0')
 
     // Fetch Clients Count
     const { count: clientCount } = await supabase
@@ -88,16 +90,16 @@ export default function Dashboard() {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', session.user.id)
 
-    // Fetch Total Revenue/LTV from clients
+    // Fetch Total Revenue from clients (Avoid ltv column)
     const { data: clientData } = await supabase
       .from('clients')
-      .select('ltv')
+      .select('*')
       .eq('user_id', session.user.id)
 
     let totalRevenue = 0
     if (clientData) {
       totalRevenue = clientData.reduce((acc, client) => {
-        const val = parseFloat((client.ltv || '$0').replace(/[^0-9.]/g, ''))
+        const val = parseFloat((client.revenue || '$0').replace(/[^0-9.]/g, ''))
         return acc + (isNaN(val) ? 0 : val)
       }, 0)
     }
