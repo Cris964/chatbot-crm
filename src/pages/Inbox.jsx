@@ -139,6 +139,13 @@ export default function Inbox() {
         }
       })
       setConversationsList(mapped)
+      
+      // Temporary diagnostic for outbox table
+      const { data: outSamples } = await supabase.from('outbox').select('*').limit(1)
+      if (outSamples && outSamples.length > 0) {
+        console.log('SCHEMA DIAGNOSTIC - Outbox Columns:', Object.keys(outSamples[0]))
+      }
+
       if (mapped.length > 0 && !selectedConv) {
         setSelectedConv(mapped[0])
       }
@@ -163,15 +170,17 @@ export default function Inbox() {
     setNewMessage('')
 
     // Insert into Supabase Outbox for real delivery
+    // phone_number_id MUST be the business ID (1074951269024593)
+    // selectedConv.phone is the recipient (customer)
     await supabase.from('outbox').insert([
       {
         conversation_id: selectedConv.id,
-        phone_number_id: selectedConv.phone || 'UNKNOWN', // This usually needs a sender ID, but we use the mapped phone for now
+        phone_number_id: selectedConv.client?.phone_number_id || '1074951269024593',
         message: sentText,
         status: 'pending', 
         is_bot: false,
         user_id: session.user.id,
-        phone: selectedConv.phone // Fallback for some systems
+        phone: selectedConv.phone 
       }
     ])
     
