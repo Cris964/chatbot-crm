@@ -119,20 +119,8 @@ export default function Inbox() {
     if (error) console.error('Supabase error:', error)
     console.log('Fetched data:', data)
 
-    if (!error && data) {
-      // Map Supabase data to expected UI format
-      const mapped = data.map(conv => {
         const clientName = conv.clients?.name
-        const contactEmail = conv.clients?.email
-        
-        // Robust masking: if the client name or email matches the admin/workspace
-        const isAdmin = (clientName?.toLowerCase().includes('naturel') || 
-                         contactEmail?.toLowerCase().includes('naturel') ||
-                         contactEmail?.toLowerCase().includes('admin'))
-
-        const displayName = (clientName && !isAdmin)
-          ? clientName 
-          : (conv.client_phone ? `Cliente (${conv.client_phone})` : 'Cliente Nuevo')
+        const displayName = clientName || (conv.client_phone ? `Cliente (${conv.client_phone})` : 'Cliente Nuevo')
 
         return {
           id: conv.id,
@@ -292,16 +280,16 @@ export default function Inbox() {
                   </span>
                   <button 
                     onClick={async () => {
-                      const newStatus = selectedConv.botHandled ? 'open' : 'closed' // closed means bot-handled
+                      const isCurrentlyBot = selectedConv.botHandled
+                      const newStatus = isCurrentlyBot ? 'agent' : 'bot'
                       const { error } = await supabase
                         .from('conversations')
                         .update({ status: newStatus })
                         .eq('id', selectedConv.id)
                       
                       if (!error) {
-                        setSelectedConv({...selectedConv, botHandled: !selectedConv.botHandled})
-                        // Also update in the list
-                        setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !c.botHandled} : c))
+                        setSelectedConv({...selectedConv, botHandled: !isCurrentlyBot})
+                        setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !isCurrentlyBot} : c))
                       }
                     }}
                     style={{

@@ -91,7 +91,7 @@ export default function Layout({ session }) {
             <div className="logo-icon">
               <Sparkles size={18} />
             </div>
-            {!collapsed && <span className="logo-text">{workspaceName}</span>}
+            {!collapsed && <span className="logo-text">Nexus CRM</span>}
           </div>
         </div>
 
