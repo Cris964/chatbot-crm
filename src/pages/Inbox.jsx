@@ -67,7 +67,7 @@ export default function Inbox() {
         id: i,
         sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
         text: m.content || m.text,
-        time: new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
       })))
 
       // Realtime listener for updates to this conversation (which contains the JSONB messages)
@@ -86,7 +86,7 @@ export default function Inbox() {
               id: i,
               sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
               text: m.content || m.text,
-              time: new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              time: updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
             })))
           }
         })
@@ -125,7 +125,7 @@ export default function Inbox() {
         id: conv.id,
         name: conv.clients?.name || conv.client_phone || 'Desconocido',
         preview: conv.last_message || 'Inició conversación...',
-        time: new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
         channel: conv.channel || 'whatsapp',
         unread: conv.status === 'open',
         avatar: (conv.clients?.name || conv.client_phone || 'D').substring(0, 2).toUpperCase(),
@@ -145,20 +145,6 @@ export default function Inbox() {
     setIsLoading(false)
   }
 
-  const fetchMessages = async (conversationId) => {
-    const { data, error } = await supabase
-      .from('outbox')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-
-    if (!error && data) {
-      const mappedMsgs = data.map(msg => ({
-        id: msg.id,
-        sender: msg.status === 'received' ? 'client' : (msg.is_bot ? 'bot' : 'agent'),
-        text: msg.message,
-        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }))
       setMessages(mappedMsgs)
     }
   }
