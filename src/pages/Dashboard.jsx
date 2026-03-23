@@ -109,15 +109,15 @@ export default function Dashboard() {
       conversion: leadCount > 0 ? ((clientCount / leadCount) * 100).toFixed(1) : 0
     })
 
-    // Diagnostic: Check table columns
-    const { data: clientSample } = await supabase.from('clients').select('*').limit(1)
-    if (clientSample && clientSample[0]) {
-      console.log('DEBUG: Clients table columns:', Object.keys(clientSample[0]))
+    // MASTER DIAGNOSTIC
+    console.log('--- MASTER DIAGNOSTIC START ---')
+    const tables = ['clients', 'conversations', 'orders', 'outbox', 'inventory']
+    for (const table of tables) {
+      const { data, error } = await supabase.from(table).select('*').limit(5)
+      if (error) console.error(`Error in ${table}:`, error)
+      else console.log(`Data from ${table}:`, data)
     }
-    const { data: convSample } = await supabase.from('conversations').select('*').limit(1)
-    if (convSample && convSample[0]) {
-      console.log('DEBUG: Conversations table columns:', Object.keys(convSample[0]))
-    }
+    console.log('--- MASTER DIAGNOSTIC END ---')
     
     setIsLoading(false)
   }
