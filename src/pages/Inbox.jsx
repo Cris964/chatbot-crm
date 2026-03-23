@@ -91,8 +91,8 @@ export default function Inbox() {
     console.log('Fetching conversations for user:', session.user.id)
     const { data, error } = await supabase
       .from('conversations')
-      .select('*, clients(*)')
-      .or(`user_id.eq.${session.user.id},user_id.is.null`)
+      .select('*, clients!inner(*)')
+      .eq('clients.user_id', session.user.id)
       .order('updated_at', { ascending: false })
     
     if (error) console.error('Supabase error:', error)
