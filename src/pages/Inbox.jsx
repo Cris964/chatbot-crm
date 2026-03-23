@@ -121,11 +121,7 @@ export default function Inbox() {
       if (data[0].clients) {
         console.log('SCHEMA DIAGNOSTIC - Client Columns:', Object.keys(data[0].clients))
       }
-      // Map Supabase data to expected UI format
-      const mapped = data.map(conv => {
-        const clientName = conv.clients?.name
-        console.log(`Conv ${conv.id} | Phone: ${conv.client_phone} | Client Join Name: ${clientName}`)
-        const displayName = clientName || (conv.client_phone ? `Cl: ${conv.client_phone}` : 'Cliente Nuevo')
+        const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
 
         return {
           id: conv.id,
@@ -133,16 +129,16 @@ export default function Inbox() {
           preview: conv.last_message || 'Inició conversación...',
           time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
           channel: conv.channel || 'whatsapp',
-          unread: conv.status === 'open',
+          unread: false, // unread logic can be refined later if needed
           avatar: displayName.substring(0, 2).toUpperCase(),
           bg: '#6366f1',
           tags: [],
           intent: 'consulta',
-          botHandled: conv.status === 'bot' || conv.status === 'open',
-          phone: conv.client_phone,
+          botHandled: !conv.needs_human,
+          phone: conv.user_phone,
           client: conv.clients,
           rawMessages: conv.messages || [],
-          status: conv.status
+          needs_human: conv.needs_human
         }
       })
       setConversationsList(mapped)
@@ -283,25 +279,23 @@ export default function Inbox() {
                   <span style={{ fontSize: '0.72rem', fontWeight: 600, color: selectedConv.botHandled ? 'var(--accent-violet)' : 'var(--text-tertiary)' }}>
                     {selectedConv.botHandled ? 'BOT ACTIVO' : 'BOT DESACTIVADO'}
                   </span>
-                  <button 
-                    onClick={async () => {
-                      const isCurrentlyBot = selectedConv.botHandled
-                      const newStatus = isCurrentlyBot ? 'closed' : 'open'
-                      
-                      console.log('Attempting to update status to:', newStatus, 'for ID:', selectedConv.id)
-                      const { error } = await supabase
-                        .from('conversations')
-                        .update({ status: newStatus })
-                        .eq('id', selectedConv.id)
-                      
-                      if (!error) {
-                        setSelectedConv({...selectedConv, botHandled: !isCurrentlyBot, status: newStatus})
-                        setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !isCurrentlyBot, status: newStatus} : c))
-                      } else {
-                        console.error('Update error detailed:', error)
-                        alert('Error Supabase (Status 400): ' + JSON.stringify(error))
-                      }
-                    }}
+                    <button 
+                      onClick={async () => {
+                        const newNeedsHuman = !selectedConv.needs_human
+                        
+                        const { error } = await supabase
+                          .from('conversations')
+                          .update({ needs_human: newNeedsHuman })
+                          .eq('id', selectedConv.id)
+                        
+                        if (!error) {
+                          setSelectedConv({...selectedConv, needs_human: newNeedsHuman, botHandled: !newNeedsHuman})
+                          setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, needs_human: newNeedsHuman, botHandled: !newNeedsHuman} : c))
+                        } else {
+                          console.error('Update error:', error)
+                          alert('Error al actualizar bot: ' + error.message)
+                        }
+                      }}
                     style={{
                       width: 32,
                       height: 18,
