@@ -13,6 +13,8 @@ function getPaymentBadge(status) {
   return map[status] || 'neutral'
 }
 
+export default function Sales() {
+  const [searchQuery, setSearchQuery] = useState('')
   const [salesList, setSalesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
