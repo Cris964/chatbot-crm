@@ -116,11 +116,12 @@ export default function Inbox() {
       .in('client_id', clientIds)
       .order('updated_at', { ascending: false })
     
-    if (error) console.error('Supabase error:', error)
-    console.log('Fetched data:', data)
-
+    if (!error && data) {
+      // Map Supabase data to expected UI format
+      const mapped = data.map(conv => {
         const clientName = conv.clients?.name
-        const displayName = clientName || (conv.client_phone ? `Cliente (${conv.client_phone})` : 'Cliente Nuevo')
+        console.log(`Conv ${conv.id} client info:`, conv.clients)
+        const displayName = clientName || (conv.client_phone ? `Cl: ${conv.client_phone}` : 'Cliente Nuevo')
 
         return {
           id: conv.id,
@@ -133,11 +134,11 @@ export default function Inbox() {
           bg: '#6366f1',
           tags: [],
           intent: 'consulta',
-          botHandled: conv.status === 'open' ? false : true,
+          botHandled: conv.status === 'bot' || conv.status === 'open',
           phone: conv.client_phone,
           client: conv.clients,
           rawMessages: conv.messages || [],
-          isAdminRecord: isAdmin
+          status: conv.status
         }
       })
       setConversationsList(mapped)
@@ -281,15 +282,21 @@ export default function Inbox() {
                   <button 
                     onClick={async () => {
                       const isCurrentlyBot = selectedConv.botHandled
-                      const newStatus = isCurrentlyBot ? 'agent' : 'bot'
+                      // If botHandled is true (status is 'bot' or 'open'), we set to 'closed' or 'human'
+                      const newStatus = isCurrentlyBot ? 'closed' : 'bot'
+                      
+                      console.log('Updating status to:', newStatus)
                       const { error } = await supabase
                         .from('conversations')
                         .update({ status: newStatus })
                         .eq('id', selectedConv.id)
                       
                       if (!error) {
-                        setSelectedConv({...selectedConv, botHandled: !isCurrentlyBot})
-                        setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !isCurrentlyBot} : c))
+                        setSelectedConv({...selectedConv, botHandled: !isCurrentlyBot, status: newStatus})
+                        setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !isCurrentlyBot, status: newStatus} : c))
+                      } else {
+                        console.error('Update error:', error)
+                        alert('Error al actualizar bot: ' + error.message)
                       }
                     }}
                     style={{
