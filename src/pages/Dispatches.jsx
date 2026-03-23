@@ -31,14 +31,43 @@ function DispatchStatusBar({ status }) {
   )
 }
 
-export default function Dispatches() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [dispatchesList, setDispatchesList] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const filteredDispatches = dispatches.filter(d => 
+  useEffect(() => {
+    fetchDispatches()
+  }, [])
+
+  const fetchDispatches = async () => {
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('*')
+      .limit(20)
+    
+    if (!error && data) {
+      const mapped = data.map(d => ({
+        id: `INV-${d.id}`,
+        sale: d.order_id || 'N/A',
+        client: d.name || 'Stock Item',
+        company: 'Nexus Inventory',
+        product: d.name,
+        address: 'Bodega Central',
+        carrier: 'Interno',
+        tracking: d.sku || 'N/A',
+        status: 'entregado',
+        estimated: new Date(d.created_at).toLocaleDateString(),
+        avatar: (d.name || 'I').substring(0,2).toUpperCase(),
+        bg: '#6366f1'
+      }))
+      setDispatchesList(mapped)
+    }
+    setIsLoading(false)
+  }
+
+  const filteredDispatches = dispatchesList.filter(d => 
     d.tracking.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.carrier.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.sale.toLowerCase().includes(searchQuery.toLowerCase())
+    d.product.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (

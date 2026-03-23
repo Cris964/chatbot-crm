@@ -13,11 +13,37 @@ function getPaymentBadge(status) {
   return map[status] || 'neutral'
 }
 
-export default function Sales() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [salesList, setSalesList] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const filteredSales = sales.filter(sale => 
-    sale.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  useEffect(() => {
+    fetchSales()
+  }, [])
+
+  const fetchSales = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .limit(20)
+    
+    if (!error && data) {
+      setSalesList(data.map(d => ({
+        id: d.id,
+        client: d.client_name || 'Cliente',
+        product: d.items?.[0]?.name || 'Producto',
+        amount: `$${(d.total || 0).toLocaleString()}`,
+        date: new Date(d.created_at).toLocaleDateString(),
+        payment: 'Pagado',
+        method: 'Transferencia',
+        avatar: (d.client_name || 'C').substring(0,2).toUpperCase(),
+        bg: '#10b981'
+      })))
+    }
+    setIsLoading(false)
+  }
+
+  const filteredSales = salesList.filter(sale => 
+    sale.id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
     sale.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
     sale.product.toLowerCase().includes(searchQuery.toLowerCase())
   )
