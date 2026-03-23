@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 import {
   Truck, Package, MapPin, CheckCircle, Clock, AlertCircle,
   Search, Filter, Plus, MoreHorizontal, Eye, ArrowRight,
@@ -31,6 +32,8 @@ function DispatchStatusBar({ status }) {
   )
 }
 
+export default function Dispatches() {
+  const [searchQuery, setSearchQuery] = useState('')
   const [dispatchesList, setDispatchesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
