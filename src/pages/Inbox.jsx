@@ -116,7 +116,11 @@ export default function Inbox() {
       .in('client_id', clientIds)
       .order('updated_at', { ascending: false })
     
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
+      console.log('SCHEMA DIAGNOSTIC - Conv Columns:', Object.keys(data[0]))
+      if (data[0].clients) {
+        console.log('SCHEMA DIAGNOSTIC - Client Columns:', Object.keys(data[0].clients))
+      }
       // Map Supabase data to expected UI format
       const mapped = data.map(conv => {
         const clientName = conv.clients?.name
