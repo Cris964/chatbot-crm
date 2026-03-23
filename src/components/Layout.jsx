@@ -39,6 +39,24 @@ export default function Layout({ session }) {
   
   const profileRef = useRef(null)
   const notifRef = useRef(null)
+  const [workspaceName, setWorkspaceName] = useState('NexusCRM')
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchProfile()
+    }
+  }, [session])
+
+  const fetchProfile = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('company_name')
+      .eq('id', session.user.id)
+      .single()
+    if (data?.company_name) {
+      setWorkspaceName(data.company_name)
+    }
+  }
 
   useEffect(() => {
     // Close mobile menu when route changes
@@ -70,11 +88,10 @@ export default function Layout({ session }) {
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <Sparkles />
-          </div>
-          <div className="sidebar-brand">
-            <h1>NexusCRM</h1>
-            <span>Plataforma SaaS</span>
+            <div className="logo-icon">
+              <Sparkles size={18} />
+            </div>
+            {!collapsed && <span className="logo-text">{workspaceName}</span>}
           </div>
         </div>
 

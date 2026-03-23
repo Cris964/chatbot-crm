@@ -110,7 +110,6 @@ export default function Sales() {
           <div className="stat-card-value">$0</div>
           <div className="stat-card-change" style={{ color: 'var(--text-tertiary)' }}>No hay deudas</div>
         </div>
-        </div>
       </div>
 
       <div className="chart-card animate-slideUp stagger-3" style={{ marginBottom: 24 }}>
