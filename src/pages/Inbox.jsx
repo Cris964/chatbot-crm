@@ -120,6 +120,7 @@ export default function Inbox() {
       // Map Supabase data to expected UI format
       const mapped = data.map(conv => {
         const clientName = conv.clients?.name
+        console.log(`Conv ${conv.id} | Phone: ${conv.client_phone} | Client Join Name: ${clientName}`)
         const displayName = clientName || (conv.client_phone ? `Cl: ${conv.client_phone}` : 'Cliente Nuevo')
 
         return {
@@ -281,10 +282,9 @@ export default function Inbox() {
                   <button 
                     onClick={async () => {
                       const isCurrentlyBot = selectedConv.botHandled
-                      // If botHandled is true (status is 'bot' or 'open'), we set to 'closed' or 'human'
-                      const newStatus = isCurrentlyBot ? 'closed' : 'bot'
+                      const newStatus = isCurrentlyBot ? 'closed' : 'open'
                       
-                      console.log('Updating status to:', newStatus)
+                      console.log('Attempting to update status to:', newStatus, 'for ID:', selectedConv.id)
                       const { error } = await supabase
                         .from('conversations')
                         .update({ status: newStatus })
@@ -294,8 +294,8 @@ export default function Inbox() {
                         setSelectedConv({...selectedConv, botHandled: !isCurrentlyBot, status: newStatus})
                         setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, botHandled: !isCurrentlyBot, status: newStatus} : c))
                       } else {
-                        console.error('Update error:', error)
-                        alert('Error al actualizar bot: ' + error.message)
+                        console.error('Update error detailed:', error)
+                        alert('Error Supabase (Status 400): ' + JSON.stringify(error))
                       }
                     }}
                     style={{
