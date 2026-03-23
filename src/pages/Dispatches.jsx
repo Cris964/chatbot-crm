@@ -5,21 +5,8 @@ import {
   Calendar, Phone, ChevronDown
 } from 'lucide-react'
 
-const stats = [
-  { label: 'En Preparación', value: 8, icon: Package, color: 'purple', bg: 'rgba(99, 102, 241, 0.12)' },
-  { label: 'Enviados', value: 15, icon: Truck, color: 'cyan', bg: 'rgba(6, 182, 212, 0.12)' },
-  { label: 'En Tránsito', value: 12, icon: MapPin, color: 'amber', bg: 'rgba(245, 158, 11, 0.12)' },
-  { label: 'Entregados', value: 142, icon: CheckCircle, color: 'emerald', bg: 'rgba(16, 185, 129, 0.12)' },
-]
-
-const dispatches = [
-  { id: 'DSP-2048', sale: 'INV-1042', client: 'María González', company: 'TechCorp SA', product: 'Hardware Kit Enterprise', address: 'Cra 15 #93-75, Bogotá', carrier: 'Servientrega', tracking: 'SE-2026031242', status: 'en_transito', estimated: 'Mar 16, 2026', avatar: 'MG', bg: '#10b981' },
-  { id: 'DSP-2047', sale: 'INV-1041', client: 'Roberto Díaz', company: 'CloudsDev', product: 'Server Rack x2', address: 'Calle 52 #35-12, Bucaramanga', carrier: 'Coordinadora', tracking: 'CO-2026031098', status: 'enviado', estimated: 'Mar 17, 2026', avatar: 'RD', bg: '#06b6d4' },
-  { id: 'DSP-2046', sale: 'INV-1040', client: 'Ana Rodríguez', company: 'Digital Co', product: 'Pack Licencias USB', address: 'Av 6N #28-45, Cali', carrier: 'Inter Rapidísimo', tracking: 'IR-2026030855', status: 'preparando', estimated: 'Mar 18, 2026', avatar: 'AR', bg: '#ec4899' },
-  { id: 'DSP-2045', sale: 'INV-1039', client: 'Fernando Castro', company: 'LogisTech', product: 'ERP Starter Kit', address: 'Cra 43A #18-45, Medellín', carrier: 'Servientrega', tracking: 'SE-2026030712', status: 'entregado', estimated: 'Mar 12, 2026', confirmed: 'Mar 12, 2026', avatar: 'FC', bg: '#f59e0b' },
-  { id: 'DSP-2044', sale: 'INV-1038', client: 'Laura Sánchez', company: 'Media Plus', product: 'Dispositivos IoT x5', address: 'Calle 85 #15-30, Bogotá', carrier: 'DHL', tracking: 'DHL-2026030588', status: 'entregado', estimated: 'Mar 10, 2026', confirmed: 'Mar 10, 2026', avatar: 'LS', bg: '#8b5cf6' },
-  { id: 'DSP-2043', sale: 'INV-1037', client: 'Carlos Medina', company: 'Global Net', product: 'API Hardware Module', address: 'Cra 54 #72-35, Barranquilla', carrier: 'Coordinadora', tracking: 'CO-2026030321', status: 'en_transito', estimated: 'Mar 15, 2026', avatar: 'CM', bg: '#f43f5e' },
-]
+const stats = []
+const dispatches = []
 
 const statusSteps = ['preparando', 'enviado', 'en_transito', 'entregado']
 const statusLabels = { preparando: 'Preparando', enviado: 'Enviado', en_transito: 'En Tránsito', entregado: 'Entregado' }

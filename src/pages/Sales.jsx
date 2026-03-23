@@ -5,30 +5,8 @@ import {
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const monthlyData = [
-  { month: 'Ene', ventas: 42000 },
-  { month: 'Feb', ventas: 38000 },
-  { month: 'Mar', ventas: 55000 },
-  { month: 'Abr', ventas: 49000 },
-  { month: 'May', ventas: 62000 },
-  { month: 'Jun', ventas: 58000 },
-  { month: 'Jul', ventas: 71000 },
-  { month: 'Ago', ventas: 68000 },
-  { month: 'Sep', ventas: 79000 },
-  { month: 'Oct', ventas: 85000 },
-  { month: 'Nov', ventas: 91000 },
-  { month: 'Dic', ventas: 98000 },
-]
-
-const sales = [
-  { id: 'INV-1042', client: 'TechCorp SA', contact: 'María González', product: 'Plan Enterprise Anual', amount: '$24,000', date: 'Mar 12, 2026', payment: 'Pagado', method: 'Transferencia', avatar: 'MG', bg: '#10b981' },
-  { id: 'INV-1041', client: 'CloudsDev', contact: 'Roberto Díaz', product: 'Migración Cloud', amount: '$48,000', date: 'Mar 10, 2026', payment: 'Parcial', method: 'Tarjeta', avatar: 'RD', bg: '#06b6d4' },
-  { id: 'INV-1040', client: 'Digital Co', contact: 'Ana Rodríguez', product: 'CRM Profesional', amount: '$15,800', date: 'Mar 8, 2026', payment: 'Pagado', method: 'Transferencia', avatar: 'AR', bg: '#ec4899' },
-  { id: 'INV-1039', client: 'LogisTech', contact: 'Fernando Castro', product: 'ERP Implementación', amount: '$45,000', date: 'Mar 5, 2026', payment: 'Pendiente', method: '-', avatar: 'FC', bg: '#f59e0b' },
-  { id: 'INV-1038', client: 'Media Plus', contact: 'Laura Sánchez', product: 'Pack Starter Anual', amount: '$9,200', date: 'Mar 3, 2026', payment: 'Pagado', method: 'PayPal', avatar: 'LS', bg: '#8b5cf6' },
-  { id: 'INV-1037', client: 'Global Net', contact: 'Carlos Medina', product: 'Integración API', amount: '$22,000', date: 'Mar 1, 2026', payment: 'Pagado', method: 'Transferencia', avatar: 'CM', bg: '#f43f5e' },
-  { id: 'INV-1036', client: 'StartUp IO', contact: 'Juan Pérez', product: 'Consultoría Digital', amount: '$8,500', date: 'Feb 28, 2026', payment: 'Vencido', method: '-', avatar: 'JP', bg: '#6366f1' },
-]
+const monthlyData = []
+const sales = []
 
 function getPaymentBadge(status) {
   const map = { 'Pagado': 'emerald', 'Parcial': 'amber', 'Pendiente': 'violet', 'Vencido': 'rose' }
