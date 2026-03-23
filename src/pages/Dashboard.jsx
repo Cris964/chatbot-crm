@@ -76,13 +76,8 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     setIsLoading(true)
     
-    // Fetch Leads Count (Fall back to 0 if table missing)
-    const { count: leadCount, error: leadError } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-    
-    if (leadError) console.warn('Leads table missing, using 0')
+    // Lead count is 0 as the table 'leads' doesn't exist (using clients instead)
+    const leadCount = 0
 
     // Fetch Clients Count
     const { count: clientCount } = await supabase

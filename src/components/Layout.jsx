@@ -41,15 +41,6 @@ export default function Layout({ session }) {
   const notifRef = useRef(null)
   const [workspaceName, setWorkspaceName] = useState('CRM')
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchProfile()
-    }
-  }, [session])
-
-  // Fetch Lead metric (Mocked since table doesn't exist)
-  const leadCount = 0
-
   const fetchProfile = async () => {
     const { data } = await supabase
       .from('profiles')
