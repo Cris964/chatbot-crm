@@ -62,25 +62,38 @@ export default function Inbox() {
 
   useEffect(() => {
     if (selectedConv) {
-      fetchMessages(selectedConv.id)
+      // Initialize messages from the conversation object
+      setMessages((selectedConv.rawMessages || []).map((m, i) => ({
+        id: i,
+        sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
+        text: m.content || m.text,
+        time: new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })))
 
-      // Realtime listener for new messages in this conversation
-      const msgSub = supabase
-        .channel(`public:outbox:${selectedConv.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'outbox', filter: `conversation_id=eq.${selectedConv.id}` }, (payload) => {
-          const newMsg = payload.new
-          setMessages(prev => [...prev, {
-            id: newMsg.id,
-            sender: newMsg.status === 'received' ? 'client' : (newMsg.is_bot ? 'bot' : 'agent'),
-            text: newMsg.message,
-            time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }])
-          scrollToBottom()
+      // Realtime listener for updates to this conversation (which contains the JSONB messages)
+      const convUpdateSub = supabase
+        .channel(`public:conversations:${selectedConv.id}`)
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'conversations', 
+          filter: `id=eq.${selectedConv.id}` 
+        }, (payload) => {
+          console.log('Conversation updated:', payload.new)
+          const updatedConv = payload.new
+          if (updatedConv.messages) {
+            setMessages(updatedConv.messages.map((m, i) => ({
+              id: i,
+              sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
+              text: m.content || m.text,
+              time: new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            })))
+          }
         })
         .subscribe()
 
       return () => {
-        supabase.removeChannel(msgSub)
+        supabase.removeChannel(convUpdateSub)
       }
     }
   }, [selectedConv])
@@ -121,7 +134,8 @@ export default function Inbox() {
         intent: 'consulta',
         botHandled: conv.status === 'open' ? false : true,
         phone: conv.client_phone,
-        client: conv.clients
+        client: conv.clients,
+        rawMessages: conv.messages || []
       }))
       setConversationsList(mapped)
       if (mapped.length > 0 && !selectedConv) {
