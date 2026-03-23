@@ -177,7 +177,6 @@ export default function Inbox() {
         phone_number_id: selectedConv.client?.phone_number_id || '1074951269024593',
         message: sentText,
         status: 'pending', 
-        is_bot: false,
         user_id: session.user.id,
         phone: selectedConv.phone 
       }
