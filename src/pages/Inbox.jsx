@@ -120,8 +120,6 @@ export default function Inbox() {
       // Map Supabase data to expected UI format
       const mapped = data.map(conv => {
         const clientName = conv.clients?.name
-        console.log(`Conv        const clientName = conv.clients?.name
-        console.log(`Conv ${conv.id} client info:`, conv.clients)
         const displayName = clientName || (conv.client_phone ? `Cl: ${conv.client_phone}` : 'Cliente Nuevo')
 
         return {
