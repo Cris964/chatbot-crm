@@ -117,10 +117,7 @@ export default function Inbox() {
       .order('updated_at', { ascending: false })
     
     if (!error && data && data.length > 0) {
-      console.log('SCHEMA DIAGNOSTIC - Conv Columns:', Object.keys(data[0]))
-      if (data[0].clients) {
-        console.log('SCHEMA DIAGNOSTIC - Client Columns:', Object.keys(data[0].clients))
-      }
+      const mapped = data.map(conv => {
         const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
 
         return {
@@ -129,7 +126,7 @@ export default function Inbox() {
           preview: conv.last_message || 'Inició conversación...',
           time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
           channel: conv.channel || 'whatsapp',
-          unread: false, // unread logic can be refined later if needed
+          unread: false,
           avatar: displayName.substring(0, 2).toUpperCase(),
           bg: '#6366f1',
           tags: [],
