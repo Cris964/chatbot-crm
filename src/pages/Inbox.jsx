@@ -162,22 +162,24 @@ export default function Inbox() {
     const sentText = newMessage
     setNewMessage('')
 
-    // Insert into Supabase
+    // Insert into Supabase Outbox for real delivery
     await supabase.from('outbox').insert([
       {
         conversation_id: selectedConv.id,
-        phone_number_id: selectedConv.phone || 'UNKNOWN',
+        phone_number_id: selectedConv.phone || 'UNKNOWN', // This usually needs a sender ID, but we use the mapped phone for now
         message: sentText,
         status: 'pending', 
         is_bot: false,
-        user_id: session.user.id
+        user_id: session.user.id,
+        phone: selectedConv.phone // Fallback for some systems
       }
     ])
     
-    // Update conversation last message
+    // Update conversation last message and set to human mode (needs_human = true)
     await supabase.from('conversations').update({
       last_message: sentText,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      needs_human: true 
     }).eq('id', selectedConv.id)
     
     // Refresh conversation list to show new last message
@@ -287,7 +289,7 @@ export default function Inbox() {
                         
                         if (!error) {
                           setSelectedConv({...selectedConv, needs_human: newNeedsHuman, botHandled: !newNeedsHuman})
-                          setConversationsList(prev => prev.map(c => c.id === selectedConv.id ? {...c, needs_human: newNeedsHuman, botHandled: !newNeedsHuman} : c))
+                          setConversationsList(prev => prev.map(c => (c.id === selectedConv.id ? {...c, needs_human: newNeedsHuman, botHandled: !newNeedsHuman} : c)))
                         } else {
                           console.error('Update error:', error)
                           alert('Error al actualizar bot: ' + error.message)
