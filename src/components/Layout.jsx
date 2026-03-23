@@ -15,12 +15,16 @@ const navItems = [
   ]},
   { label: 'GESTIÓN', items: [
     { to: '/leads', icon: Users, label: 'Leads' },
-    { to: '/clients', icon: UserCircle, label: 'Clientes' },
+    { to: '/clientes', icon: UserCircle, label: 'Clientes' },
     { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
+    { to: '/ventas', icon: DollarSign, label: 'Ventas' },
+    { to: '/despachos', icon: Truck, label: 'Despachos' },
   ]},
   { label: 'SISTEMA', items: [
-    { to: '/reports', icon: BarChart3, label: 'Reportes' },
-    { to: '/settings', icon: Settings, label: 'Configuración' },
+    { to: '/automatizaciones', icon: Zap, label: 'Automatizaciones' },
+    { to: '/reportes', icon: BarChart3, label: 'Reportes' },
+    { to: '/usuarios', icon: User, label: 'Usuarios' },
+    { to: '/configuracion', icon: Settings, label: 'Configuración' },
   ]},
 ]
 

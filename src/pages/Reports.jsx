@@ -8,53 +8,11 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 
-const conversionData = [
-  { stage: 'Nuevos', value: 2847, fill: '#6366f1' },
-  { stage: 'Contactados', value: 1823, fill: '#06b6d4' },
-  { stage: 'Interesados', value: 945, fill: '#8b5cf6' },
-  { stage: 'Negociación', value: 423, fill: '#f59e0b' },
-  { stage: 'Cerrados', value: 156, fill: '#10b981' },
-]
-
-const salesByPeriod = [
-  { month: 'Ene', actual: 42000, objetivo: 45000 },
-  { month: 'Feb', actual: 38000, objetivo: 45000 },
-  { month: 'Mar', actual: 55000, objetivo: 50000 },
-  { month: 'Abr', actual: 49000, objetivo: 50000 },
-  { month: 'May', actual: 62000, objetivo: 55000 },
-  { month: 'Jun', actual: 58000, objetivo: 55000 },
-  { month: 'Jul', actual: 71000, objetivo: 60000 },
-  { month: 'Ago', actual: 68000, objetivo: 60000 },
-  { month: 'Sep', actual: 79000, objetivo: 65000 },
-  { month: 'Oct', actual: 85000, objetivo: 70000 },
-  { month: 'Nov', actual: 91000, objetivo: 75000 },
-  { month: 'Dic', actual: 98000, objetivo: 80000 },
-]
-
-const responseTimeData = [
-  { day: 'Lun', tiempo: 4.2 },
-  { day: 'Mar', tiempo: 3.8 },
-  { day: 'Mié', tiempo: 5.1 },
-  { day: 'Jue', tiempo: 3.5 },
-  { day: 'Vie', tiempo: 4.8 },
-  { day: 'Sáb', tiempo: 7.2 },
-  { day: 'Dom', tiempo: 8.5 },
-]
-
-const sourceAnalysis = [
-  { source: 'WhatsApp', leads: 996, conversion: 28, revenue: '$285,000', color: '#25d366' },
-  { source: 'Instagram', leads: 712, conversion: 22, revenue: '$178,000', color: '#e1306c' },
-  { source: 'Formularios', leads: 569, conversion: 31, revenue: '$215,000', color: '#6366f1' },
-  { source: 'Facebook', leads: 342, conversion: 18, revenue: '$89,000', color: '#0084ff' },
-  { source: 'Email', leads: 228, conversion: 35, revenue: '$124,000', color: '#f59e0b' },
-]
-
-const vendorPerformance = [
-  { name: 'Ana Rodríguez', deals: 23, conversion: '32%', revenue: '$45,200', response: '2.3 min', satisfaction: 96, avatar: 'AR', bg: '#ec4899' },
-  { name: 'Miguel Torres', deals: 19, conversion: '28%', revenue: '$38,700', response: '3.1 min', satisfaction: 94, avatar: 'MT', bg: '#6366f1' },
-  { name: 'Laura Méndez', deals: 17, conversion: '25%', revenue: '$34,100', response: '2.8 min', satisfaction: 98, avatar: 'LM', bg: '#06b6d4' },
-  { name: 'Diego Salazar', deals: 14, conversion: '21%', revenue: '$28,500', response: '4.2 min', satisfaction: 91, avatar: 'DS', bg: '#f59e0b' },
-]
+const conversionData = []
+const salesByPeriod = []
+const responseTimeData = []
+const sourceAnalysis = []
+const vendorPerformance = []
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {

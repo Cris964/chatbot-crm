@@ -12,6 +12,7 @@ import Dispatches from './pages/Dispatches'
 import Automations from './pages/Automations'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import UsersPage from './pages/Users'
 import Login from './pages/Login'
 
 function App() {
@@ -79,6 +80,8 @@ function App() {
         
         <Route path="reportes" element={<Reports />} />
         <Route path="reports" element={<Navigate to="/reportes" replace />} />
+        
+        <Route path="usuarios" element={<UsersPage />} />
         
         <Route path="configuracion" element={<Settings />} />
         <Route path="settings" element={<Navigate to="/configuracion" replace />} />

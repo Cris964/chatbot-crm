@@ -108,6 +108,16 @@ export default function Dashboard() {
       revenue: totalRevenue,
       conversion: leadCount > 0 ? ((clientCount / leadCount) * 100).toFixed(1) : 0
     })
+
+    // Diagnostic: Check table columns
+    const { data: clientSample } = await supabase.from('clients').select('*').limit(1)
+    if (clientSample && clientSample[0]) {
+      console.log('DEBUG: Clients table columns:', Object.keys(clientSample[0]))
+    }
+    const { data: convSample } = await supabase.from('conversations').select('*').limit(1)
+    if (convSample && convSample[0]) {
+      console.log('DEBUG: Conversations table columns:', Object.keys(convSample[0]))
+    }
     
     setIsLoading(false)
   }
