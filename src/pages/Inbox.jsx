@@ -178,7 +178,6 @@ export default function Inbox() {
         user_phone: selectedConv.phone, 
         message: sentText,
         status: 'pending', 
-        is_bot: false,
         user_id: session.user.id
       }
     ])
