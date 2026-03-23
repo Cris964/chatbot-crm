@@ -88,11 +88,15 @@ export default function Inbox() {
   const fetchConversations = async () => {
     if (!session?.user?.id) return
     setIsLoading(true)
+    console.log('Fetching conversations for user:', session.user.id)
     const { data, error } = await supabase
       .from('conversations')
       .select('*, clients(*)')
-      .eq('user_id', session.user.id)
+      .or(`user_id.eq.${session.user.id},user_id.is.null`)
       .order('updated_at', { ascending: false })
+    
+    if (error) console.error('Supabase error:', error)
+    console.log('Fetched data:', data)
 
     if (!error && data) {
       // Map Supabase data to expected UI format
