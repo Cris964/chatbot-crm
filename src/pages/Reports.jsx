@@ -77,6 +77,13 @@ export default function Reports() {
     })
   }
 
+  // Prevent crashes from undefined variables used in charts
+  const currentConversionData = []
+  const currentSalesData = []
+  const responseTimeData = []
+  const sourceAnalysis = []
+  const vendorPerformance = []
+
   return (
     <div className="page-content">
       <div className="page-header animate-slideUp">
