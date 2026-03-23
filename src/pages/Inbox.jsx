@@ -121,22 +121,37 @@ export default function Inbox() {
 
     if (!error && data) {
       // Map Supabase data to expected UI format
-      const mapped = data.map(conv => ({
-        id: conv.id,
-        name: conv.clients?.name || (conv.client_phone ? `Cliente (${conv.client_phone})` : 'Desconocido'),
-        preview: conv.last_message || 'Inició conversación...',
-        time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-        channel: conv.channel || 'whatsapp',
-        unread: conv.status === 'open',
-        avatar: (conv.clients?.name || 'C').substring(0, 2).toUpperCase(),
-        bg: '#6366f1', // Default color, can be randomized
-        tags: [],
-        intent: 'consulta',
-        botHandled: conv.status === 'open' ? false : true,
-        phone: conv.client_phone,
-        client: conv.clients,
-        rawMessages: conv.messages || []
-      }))
+      const mapped = data.map(conv => {
+        const clientName = conv.clients?.name
+        const contactEmail = conv.clients?.email
+        
+        // Robust masking: if the client name or email matches the admin/workspace
+        const isAdmin = (clientName?.toLowerCase().includes('naturel') || 
+                         contactEmail?.toLowerCase().includes('naturel') ||
+                         contactEmail?.toLowerCase().includes('admin'))
+
+        const displayName = (clientName && !isAdmin)
+          ? clientName 
+          : (conv.client_phone ? `Cliente (${conv.client_phone})` : 'Cliente Nuevo')
+
+        return {
+          id: conv.id,
+          name: displayName,
+          preview: conv.last_message || 'Inició conversación...',
+          time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          channel: conv.channel || 'whatsapp',
+          unread: conv.status === 'open',
+          avatar: displayName.substring(0, 2).toUpperCase(),
+          bg: '#6366f1',
+          tags: [],
+          intent: 'consulta',
+          botHandled: conv.status === 'open' ? false : true,
+          phone: conv.client_phone,
+          client: conv.clients,
+          rawMessages: conv.messages || [],
+          isAdminRecord: isAdmin
+        }
+      })
       setConversationsList(mapped)
       if (mapped.length > 0 && !selectedConv) {
         setSelectedConv(mapped[0])
@@ -261,7 +276,8 @@ export default function Inbox() {
                 {selectedConv.avatar}
               </div>
               <div>
-                <h3 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{selectedConv.name}</h3>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{selectedConv.name}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{selectedConv.isAdminRecord ? 'Lead de Prueba' : (selectedConv.client?.email || 'Sin correo')}</div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                   {selectedConv.channel === 'whatsapp' ? 'WhatsApp Business' :
                    selectedConv.channel === 'instagram' ? 'Instagram DM' :

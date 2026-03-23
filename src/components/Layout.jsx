@@ -39,7 +39,7 @@ export default function Layout({ session }) {
   
   const profileRef = useRef(null)
   const notifRef = useRef(null)
-  const [workspaceName, setWorkspaceName] = useState('NexusCRM')
+  const [workspaceName, setWorkspaceName] = useState('CRM')
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -301,7 +301,7 @@ export default function Layout({ session }) {
                 <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => alert('Documentación')}>
                   <Clock size={24} style={{ color: 'var(--primary-400)', marginBottom: 8 }} />
                   <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Documentación</h4>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Guías paso a paso para usar NexusCRM</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Guías paso a paso para usar el sistema</p>
                 </div>
                 <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => alert('Soporte')}>
                   <MessageCircle size={24} style={{ color: 'var(--accent-emerald)', marginBottom: 8 }} />

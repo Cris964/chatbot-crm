@@ -183,7 +183,10 @@ export default function Dashboard() {
           <div style={{ background: 'var(--primary-600)18', color: 'var(--primary-400)', width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <Target size={32} />
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 12 }}>¡Bienvenido a NexusCRM!</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 12 }}>¡Bienvenido a tu CRM!</h2>
+          <p style={{ opacity: 0.8, fontSize: '0.95rem', lineHeight: 1.5 }}>
+            Aquí tienes un resumen de la actividad de hoy y el rendimiento de tu embudo de ventas.
+          </p>
           <p style={{ color: 'var(--text-tertiary)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.6 }}>
             Parece que eres nuevo aquí. Todavía no tienes datos para mostrar en las gráficas, 
             pero puedes empezar añadiendo tu primer lead o conectando tus canales.

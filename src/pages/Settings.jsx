@@ -17,12 +17,12 @@ const settingsNav = [
 ]
 
 const teamMembers = [
-  { name: 'Carlos Arango', email: 'carlos@nexuscrm.com', role: 'Administrador', status: 'Activo', avatar: 'CA', bg: 'linear-gradient(135deg, #10b981, #06b6d4)' },
-  { name: 'Ana Rodríguez', email: 'ana@nexuscrm.com', role: 'Vendedor', status: 'Activo', avatar: 'AR', bg: 'linear-gradient(135deg, #ec4899, #f43f5e)' },
-  { name: 'Miguel Torres', email: 'miguel@nexuscrm.com', role: 'Vendedor', status: 'Activo', avatar: 'MT', bg: 'linear-gradient(135deg, #6366f1, #8b5cf6)' },
-  { name: 'Laura Méndez', email: 'laura@nexuscrm.com', role: 'Soporte', status: 'Activo', avatar: 'LM', bg: 'linear-gradient(135deg, #06b6d4, #10b981)' },
-  { name: 'Diego Salazar', email: 'diego@nexuscrm.com', role: 'Vendedor', status: 'Activo', avatar: 'DS', bg: 'linear-gradient(135deg, #f59e0b, #ef4444)' },
-  { name: 'Patricia Morales', email: 'patricia@nexuscrm.com', role: 'Marketing', status: 'Invitado', avatar: 'PM', bg: 'linear-gradient(135deg, #8b5cf6, #ec4899)' },
+  { name: 'Admin', email: 'admin@naturel.com', role: 'Administrador', status: 'Activo', avatar: 'AD', bg: 'linear-gradient(135deg, #10b981, #06b6d4)' },
+  { name: 'Ana Rodríguez', email: 'ana@naturel.com', role: 'Vendedor', status: 'Activo', avatar: 'AR', bg: 'linear-gradient(135deg, #ec4899, #f43f5e)' },
+  { name: 'Miguel Torres', email: 'miguel@naturel.com', role: 'Vendedor', status: 'Activo', avatar: 'MT', bg: 'linear-gradient(135deg, #6366f1, #8b5cf6)' },
+  { name: 'Laura Méndez', email: 'laura@naturel.com', role: 'Soporte', status: 'Activo', avatar: 'LM', bg: 'linear-gradient(135deg, #06b6d4, #10b981)' },
+  { name: 'Diego Salazar', email: 'diego@naturel.com', role: 'Vendedor', status: 'Activo', avatar: 'DS', bg: 'linear-gradient(135deg, #f59e0b, #ef4444)' },
+  { name: 'Patricia Morales', email: 'patricia@naturel.com', role: 'Marketing', status: 'Invitado', avatar: 'PM', bg: 'linear-gradient(135deg, #8b5cf6, #ec4899)' },
 ]
 
 const integrations = [
@@ -55,9 +55,9 @@ export default function Settings() {
 
   // Workspace Form State
   const [workspaceData, setWorkspaceData] = useState({
-    companyName: 'NexusCRM Demo',
-    slug: 'nexuscrm-demo',
-    email: 'admin@nexuscrm.com',
+    companyName: 'Cargando...',
+    slug: 'workspace',
+    email: 'email@dominio.com',
     timezone: 'America/Bogota (UTC-5)'
   })
 
