@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import {
   Truck, Package, MapPin, CheckCircle, Clock, AlertCircle,
@@ -33,6 +34,7 @@ function DispatchStatusBar({ status }) {
 }
 
 export default function Dispatches() {
+  const { session } = useOutletContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [dispatchesList, setDispatchesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -44,8 +46,10 @@ export default function Dispatches() {
   })
 
   useEffect(() => {
-    fetchDispatches()
-  }, [])
+    if (session?.user?.id) {
+      fetchDispatches()
+    }
+  }, [session])
 
   const handleAddDispatch = async (e) => {
     e.preventDefault()
@@ -55,6 +59,7 @@ export default function Dispatches() {
         name: newDispatch.name,
         sku: newDispatch.sku,
         stock: newDispatch.quantity,
+        user_id: session.user.id,
         created_at: new Date().toISOString()
       }])
     
@@ -67,14 +72,17 @@ export default function Dispatches() {
   }
 
   const fetchDispatches = async () => {
+    setIsLoading(true)
     const { data, error } = await supabase
       .from('inventory')
       .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
       .limit(20)
     
     if (!error && data) {
       const mapped = data.map(d => ({
-        id: `INV-${d.id}`,
+        id: d.id,
         sale: d.order_id || 'N/A',
         client: d.name || 'Stock Item',
         company: 'Nexus Inventory',
@@ -92,10 +100,22 @@ export default function Dispatches() {
     setIsLoading(false)
   }
 
+  const handleDeleteDispatch = async (id) => {
+    if (!confirm('¿Seguro que quieres eliminar este despacho?')) return
+    const { error } = await supabase
+      .from('inventory')
+      .delete()
+      .eq('id', id)
+    
+    if (!error) {
+      fetchDispatches()
+    }
+  }
+
   const filteredDispatches = dispatchesList.filter(d => 
-    d.tracking.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.product.toLowerCase().includes(searchQuery.toLowerCase())
+    (d.tracking || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (d.client || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (d.product || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
@@ -188,7 +208,10 @@ export default function Dispatches() {
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{d.sale}</span>
                     <span className={`badge ${statusColors[d.status]}`}>{statusLabels[d.status]}</span>
                   </div>
-                  <button className="btn btn-ghost btn-sm"><MoreHorizontal size={16} /></button>
+                  <div className="flex gap-2">
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteDispatch(d.id)}><Trash2 size={16} style={{ color: 'var(--accent-rose)' }} /></button>
+                    <button className="btn btn-ghost btn-sm"><MoreHorizontal size={16} /></button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4" style={{ marginBottom: 10 }}>

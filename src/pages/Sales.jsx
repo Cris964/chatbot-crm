@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
@@ -15,26 +16,32 @@ function getPaymentBadge(status) {
 }
 
 export default function Sales() {
+  const { session } = useOutletContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [salesList, setSalesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetchSales()
-  }, [])
+    if (session?.user?.id) {
+      fetchSales()
+    }
+  }, [session])
 
   const fetchSales = async () => {
+    setIsLoading(true)
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .limit(20)
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
     
     if (!error && data) {
       setSalesList(data.map(d => ({
         id: d.id,
         client: d.client_name || 'Cliente',
         product: d.items?.[0]?.name || 'Producto',
-        amount: `$${(d.total || 0).toLocaleString()}`,
+        amount: d.total || 0,
         date: new Date(d.created_at).toLocaleDateString(),
         payment: 'Pagado',
         method: 'Transferencia',
@@ -44,6 +51,10 @@ export default function Sales() {
     }
     setIsLoading(false)
   }
+
+  const totalRevenue = salesList.reduce((acc, s) => acc + s.amount, 0)
+  const monthlySales = salesList.length // Placeholder for month filtering
+  const ticketAvg = salesList.length > 0 ? totalRevenue / salesList.length : 0
 
   const filteredSales = salesList.filter(sale => 
     sale.id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,35 +80,36 @@ export default function Sales() {
       <div className="stats-grid">
         <div className="stat-card emerald animate-slideUp stagger-1">
           <div className="stat-card-header">
-            <span className="stat-card-label">Revenue Total (2026)</span>
+            <span className="stat-card-label">Revenue Total</span>
             <div className="stat-card-icon emerald"><DollarSign size={20} /></div>
           </div>
-          <div className="stat-card-value">$796,000</div>
-          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +18.4% vs 2025</div>
+          <div className="stat-card-value">${totalRevenue.toLocaleString()}</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> Actualizado hoy</div>
         </div>
         <div className="stat-card purple animate-slideUp stagger-2">
           <div className="stat-card-header">
-            <span className="stat-card-label">Ventas del Mes</span>
+            <span className="stat-card-label">Órdenes Realizadas</span>
             <div className="stat-card-icon purple"><TrendingUp size={20} /></div>
           </div>
-          <div className="stat-card-value">$98,000</div>
-          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +7.7% vs anterior</div>
+          <div className="stat-card-value">{monthlySales}</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> Total facturado</div>
         </div>
         <div className="stat-card cyan animate-slideUp stagger-3">
           <div className="stat-card-header">
             <span className="stat-card-label">Ticket Promedio</span>
             <div className="stat-card-icon cyan"><CreditCard size={20} /></div>
           </div>
-          <div className="stat-card-value">$24,640</div>
-          <div className="stat-card-change positive"><ArrowUpRight size={14} /> +5.2%</div>
+          <div className="stat-card-value">${ticketAvg.toLocaleString()}</div>
+          <div className="stat-card-change positive"><ArrowUpRight size={14} /> Por venta</div>
         </div>
         <div className="stat-card amber animate-slideUp stagger-4">
           <div className="stat-card-header">
-            <span className="stat-card-label">Por Cobrar</span>
+            <span className="stat-card-label">Pendientes</span>
             <div className="stat-card-icon amber"><Calendar size={20} /></div>
           </div>
-          <div className="stat-card-value">$53,500</div>
-          <div className="stat-card-change negative" style={{ color: 'var(--accent-amber)' }}>3 facturas pendientes</div>
+          <div className="stat-card-value">$0</div>
+          <div className="stat-card-change" style={{ color: 'var(--text-tertiary)' }}>No hay deudas</div>
+        </div>
         </div>
       </div>
 
