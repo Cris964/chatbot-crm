@@ -47,6 +47,9 @@ export default function Layout({ session }) {
     }
   }, [session])
 
+  // Fetch Lead metric (Mocked since table doesn't exist)
+  const leadCount = 0
+
   const fetchProfile = async () => {
     const { data } = await supabase
       .from('profiles')
