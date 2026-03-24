@@ -170,12 +170,12 @@ export default function Inbox() {
     setNewMessage('')
 
     // Insert into Supabase Outbox for real delivery
-    // phone_number_id MUST be the business ID (1074951269024593)
     // user_phone is the recipient (customer)
+    // phone is also included because the Railway backend strictly expects it
     await supabase.from('outbox').insert([
       {
-        phone_number_id: selectedConv.client?.phone_number_id || '1074951269024593',
         user_phone: selectedConv.phone, 
+        phone: selectedConv.phone,
         message: sentText,
         status: 'pending', 
         user_id: session.user.id
