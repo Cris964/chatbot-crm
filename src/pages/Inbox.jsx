@@ -190,10 +190,10 @@ export default function Inbox() {
     const updatedMessages = [...(selectedConv.rawMessages || []), dbMessage]
     selectedConv.rawMessages = updatedMessages 
 
-    // Update conversation last message, append to JSONB history, and set to human mode
+    // Update conversation append to JSONB history, and set to human mode
+    // Note: removed last_message as it doesn't exist in the DB schema
     const { error: convError } = await supabase.from('conversations').update({
       messages: updatedMessages,
-      last_message: sentText,
       updated_at: new Date().toISOString(),
       needs_human: true 
     }).eq('id', selectedConv.id)

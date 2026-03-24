@@ -25,6 +25,19 @@ async function testOutbox() {
   
   console.log('Logged in successfully. User ID:', authData.user.id);
 
+  console.log('Fetching a conversation to inspect the "messages" JSONB array...');
+  const { data: convData, error: convError } = await supabase
+    .from('conversations')
+    .select('id, messages, last_message')
+    .limit(1);
+
+  if (convError) {
+    console.error('Error fetching conversation:', convError);
+  } else {
+    console.log('Conversation Data:');
+    console.dir(convData[0], { depth: null });
+  }
+
   const testPayload = {
     user_phone: '573163799745',
     phone: '573163799745',
