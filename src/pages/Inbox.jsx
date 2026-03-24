@@ -182,8 +182,13 @@ export default function Inbox() {
       }
     ])
     
-    // Update conversation last message and set to human mode (needs_human = true)
+    const dbMessage = { role: 'agent', content: sentText }
+    const updatedMessages = [...(selectedConv.rawMessages || []), dbMessage]
+    selectedConv.rawMessages = updatedMessages // Update local ref for rapid consecutive sends
+
+    // Update conversation last message, append to JSONB history, and set to human mode
     await supabase.from('conversations').update({
+      messages: updatedMessages,
       last_message: sentText,
       updated_at: new Date().toISOString(),
       needs_human: true 
