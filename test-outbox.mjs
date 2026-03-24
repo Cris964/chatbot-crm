@@ -27,6 +27,7 @@ async function testOutbox() {
 
   const testPayload = {
     user_phone: '573163799745',
+    phone: '573163799745',
     message: 'Test message from Node script ' + Date.now(),
     status: 'pending',
     user_id: authData.user.id

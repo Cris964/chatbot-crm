@@ -170,9 +170,7 @@ export default function Inbox() {
     setNewMessage('')
 
     // Insert into Supabase Outbox for real delivery
-    // user_phone is the recipient (customer)
-    // phone is also included because the Railway backend strictly expects it
-    await supabase.from('outbox').insert([
+    const { error: outboxError } = await supabase.from('outbox').insert([
       {
         user_phone: selectedConv.phone, 
         phone: selectedConv.phone,
@@ -182,17 +180,28 @@ export default function Inbox() {
       }
     ])
     
+    if (outboxError) {
+      console.error('Outbox Error:', outboxError)
+      alert('Error guardando en Outbox: ' + outboxError.message)
+      return
+    }
+    
     const dbMessage = { role: 'agent', content: sentText }
     const updatedMessages = [...(selectedConv.rawMessages || []), dbMessage]
-    selectedConv.rawMessages = updatedMessages // Update local ref for rapid consecutive sends
+    selectedConv.rawMessages = updatedMessages 
 
     // Update conversation last message, append to JSONB history, and set to human mode
-    await supabase.from('conversations').update({
+    const { error: convError } = await supabase.from('conversations').update({
       messages: updatedMessages,
       last_message: sentText,
       updated_at: new Date().toISOString(),
       needs_human: true 
     }).eq('id', selectedConv.id)
+    
+    if (convError) {
+      console.error('Conversations Update Error:', convError)
+      alert('Error actualizando historial: ' + convError.message)
+    }
     
     // Refresh conversation list to show new last message
     fetchConversations()
