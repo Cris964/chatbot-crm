@@ -365,20 +365,24 @@ export default function Inbox() {
             </div>
 
             <div className="chat-messages" style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {messages.map(msg => {
                 const isImage = msg.text?.includes('[IMG_SENT:');
                 let cleanText = msg.text;
                 let imageName = '';
+                let imageUrl = '';
                 if (isImage) {
-                  const match = msg.text.match(/\[IMG_SENT:([^\]]+)\]/);
+                  const match = msg.text.match(/\[IMG_SENT:([^|]+)\|([^\]]+)\]/);
                   if (match) {
-                     imageName = match[1].replace(/_/g, ' ');
+                     imageName = match[1];
+                     imageUrl = match[2];
                      cleanText = `Imagen enviada`;
                   }
                 }
 
+                // Fuerza a la derecha todo lo que NO sea del cliente
+                const isIncoming = msg.sender === 'client';
+
                 return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'client' ? 'flex-start' : 'flex-end', width: '100%' }}>
+                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isIncoming ? 'flex-start' : 'flex-end', width: '100%' }}>
                   {msg.sender === 'bot' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)', alignSelf: 'flex-end' }}>
                       <Bot size={12} /> Chatbot IA
@@ -389,16 +393,16 @@ export default function Inbox() {
                       <UserCheck size={12} /> {session?.user?.email?.split('@')[0] || 'Agente'} (Agente)
                     </div>
                   )}
-                  <div className={`message-bubble ${msg.sender === 'client' ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
-                    {isImage ? (
-                      <div style={{ background: 'rgba(0,0,0,0.1)', padding: '10px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
-                          <span style={{ fontSize: '1.4rem' }}>🌄</span>
-                          <span style={{ fontWeight: 600, fontSize: '0.8rem', color: msg.sender === 'client' ? 'var(--text-primary)' : '#fff' }}>Imagen de producto:<br/>{imageName}</span>
+                  <div className={`message-bubble ${isIncoming ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
+                    {isImage && imageUrl ? (
+                      <div style={{ borderRadius: 8, overflow: 'hidden', maxWidth: 220 }}>
+                          <img src={imageUrl} alt={imageName} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                          <div style={{ background: 'rgba(0,0,0,0.4)', padding: '6px 10px', fontSize: '0.75rem', fontWeight: 600 }}>{imageName}</div>
                       </div>
                     ) : (
                       <p style={{ whiteSpace: 'pre-line' }}>{cleanText}</p>
                     )}
-                    <div className="message-time" style={{ textAlign: msg.sender === 'client' ? 'left' : 'right' }}>{msg.time}</div>
+                    <div className="message-time" style={{ textAlign: isIncoming ? 'left' : 'right' }}>{msg.time}</div>
                   </div>
                 </div>
               )})}
