@@ -366,6 +366,7 @@ export default function Inbox() {
 
             <div className="chat-messages" style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
               {messages.map(msg => {
+                const isImage = msg.text?.includes('[IMG_SENT:');
                 let cleanText = msg.text;
                 let imageName = '';
                 let imageUrl = '';
