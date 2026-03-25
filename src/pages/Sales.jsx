@@ -39,9 +39,10 @@ export default function Sales() {
     if (!error && data) {
       setSalesList(data.map(d => ({
         id: d.id,
+        // Usar user_name si existe, sino cliente genérico
         client: d.user_name || 'Cliente',
-        product: d.product || (d.items?.[0]?.name) || 'Producto',
-        amount: d.total || 0,
+        product: d.product || 'Producto',
+        amount: d.total || 25000, // Fallback si no hay total
         date: new Date(d.created_at).toLocaleDateString(),
         payment: d.status === 'pagado' ? 'Pagado' : 'Pendiente',
         method: 'WhatsApp',
@@ -49,7 +50,7 @@ export default function Sales() {
         address: d.address || 'N/A',
         avatar: (d.user_name || 'C').substring(0,2).toUpperCase(),
         bg: d.status === 'pagado' ? '#10b981' : '#6366f1',
-        isNew: (new Date() - new Date(d.created_at)) < (1000 * 60 * 60 * 2) // Nueva si tiene menos de 2 horas
+        isNew: (new Date() - new Date(d.created_at)) < (1000 * 60 * 60 * 6) // Nueva si tiene menos de 6 horas
       })))
     }
     setIsLoading(false)
@@ -59,11 +60,14 @@ export default function Sales() {
   const monthlySales = salesList.length // Placeholder for month filtering
   const ticketAvg = salesList.length > 0 ? totalRevenue / salesList.length : 0
 
-  const filteredSales = salesList.filter(sale => 
-    sale.id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sale.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sale.product.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredSales = salesList.filter(sale => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (sale.id?.toString() || '').toLowerCase().includes(query) ||
+      (sale.client?.toLowerCase() || '').includes(query) ||
+      (sale.product?.toLowerCase() || '').includes(query)
+    );
+  })
 
   return (
     <div className="page-content">
