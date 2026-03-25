@@ -39,14 +39,17 @@ export default function Sales() {
     if (!error && data) {
       setSalesList(data.map(d => ({
         id: d.id,
-        client: d.client_name || 'Cliente',
-        product: d.items?.[0]?.name || 'Producto',
+        client: d.user_name || 'Cliente',
+        product: d.product || (d.items?.[0]?.name) || 'Producto',
         amount: d.total || 0,
         date: new Date(d.created_at).toLocaleDateString(),
-        payment: 'Pagado',
-        method: 'Transferencia',
-        avatar: (d.client_name || 'C').substring(0,2).toUpperCase(),
-        bg: '#10b981'
+        payment: d.status === 'pagado' ? 'Pagado' : 'Pendiente',
+        method: 'WhatsApp',
+        city: d.city || 'N/A',
+        address: d.address || 'N/A',
+        avatar: (d.user_name || 'C').substring(0,2).toUpperCase(),
+        bg: d.status === 'pagado' ? '#10b981' : '#6366f1',
+        isNew: (new Date() - new Date(d.created_at)) < (1000 * 60 * 60 * 2) // Nueva si tiene menos de 2 horas
       })))
     }
     setIsLoading(false)
@@ -162,7 +165,7 @@ export default function Sales() {
           <tbody>
             {filteredSales.map((sale) => (
               <tr key={sale.id} className="table-row-hover">
-                <td><span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>{sale.id}</span></td>
+                <td><span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>{sale.id}</span> {sale.isNew && <span className="badge amber" style={{ fontSize: '0.6rem' }}>NUEVA</span>}</td>
                 <td>
                   <div className="flex items-center gap-2">
                     <div className="avatar sm" style={{ background: sale.bg }}>{sale.avatar}</div>
@@ -179,8 +182,19 @@ export default function Sales() {
                 <td style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{sale.method}</td>
                 <td>
                   <div className="flex gap-2">
+                    {sale.payment === 'Pagado' && (
+                      <button 
+                        className="btn btn-primary btn-sm"
+                        style={{ background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }}
+                        onClick={async () => {
+                           const { error } = await supabase.from('orders').update({ status: 'despachado' }).eq('id', sale.id);
+                           if (!error) fetchSales();
+                        }}
+                      >
+                        <Truck size={14} /> Despachar
+                      </button>
+                    )}
                     <button className="btn btn-ghost btn-sm"><Eye size={14} /></button>
-                    <button className="btn btn-ghost btn-sm"><FileText size={14} /></button>
                   </div>
                 </td>
               </tr>

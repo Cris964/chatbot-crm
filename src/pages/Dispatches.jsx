@@ -74,26 +74,27 @@ export default function Dispatches() {
   const fetchDispatches = async () => {
     setIsLoading(true)
     const { data, error } = await supabase
-      .from('inventory')
+      .from('orders')
       .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
+      .eq('status', 'despachado')
+      .order('updated_at', { ascending: false })
       .limit(20)
     
     if (!error && data) {
       const mapped = data.map(d => ({
         id: d.id,
-        sale: d.order_id || 'N/A',
-        client: d.name || 'Stock Item',
-        company: 'Nexus Inventory',
-        product: d.name,
-        address: 'Bodega Central',
-        carrier: 'Interno',
-        tracking: d.sku || 'N/A',
-        status: 'entregado',
-        estimated: new Date(d.created_at).toLocaleDateString(),
-        avatar: (d.name || 'I').substring(0,2).toUpperCase(),
-        bg: '#6366f1'
+        sale: `FAC-${d.id}`,
+        client: d.user_name || 'Cliente',
+        product: d.product || 'Varios productos',
+        address: d.address || 'N/A',
+        city: d.city || 'N/A',
+        carrier: d.city?.toLowerCase().includes('cali') ? 'Domiciliario Naturel' : 'Transportadora Nacional',
+        tracking: d.city?.toLowerCase().includes('cali') ? 'ENTREGA DOMICILIAR' : (d.tracking || 'Pte Guía'),
+        status: 'preparando',
+        estimated: new Date().toLocaleDateString(),
+        avatar: (d.user_name || 'C').substring(0,2).toUpperCase(),
+        bg: '#6366f1',
+        isCali: d.city?.toLowerCase().includes('cali')
       }))
       setDispatchesList(mapped)
     }
@@ -225,21 +226,25 @@ export default function Dispatches() {
                     <span style={{ color: 'var(--text-primary)' }}>{d.product}</span>
                   </div>
                   <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Ciudad</div>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{d.city}</span>
+                  </div>
+                  <div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Transportadora</div>
                     <span style={{ color: 'var(--text-primary)' }}>{d.carrier}</span>
                   </div>
                   <div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Tracking</div>
-                    <span style={{ color: 'var(--primary-400)', fontFamily: 'monospace', fontSize: '0.78rem' }}>{d.tracking}</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Entrega Estimada</div>
-                    <span style={{ color: 'var(--text-primary)' }}>{d.estimated}</span>
+                    {d.isCali ? (
+                      <span className="badge emerald" style={{ fontSize: '0.65rem' }}>ENTREGA A DOMICILIO</span>
+                    ) : (
+                      <span style={{ color: 'var(--primary-400)', fontFamily: 'monospace', fontSize: '0.78rem' }}>{d.tracking}</span>
+                    )}
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--text-tertiary)', marginBottom: 12 }}>
-                  <MapPin size={14} /> {d.address}
+                  <MapPin size={14} /> {d.address} {d.isCali && <span style={{ color: 'var(--accent-emerald)', fontWeight: 600, marginLeft: 8 }}>(Cercano a Bodega)</span>}
                 </div>
 
                 <DispatchStatusBar status={d.status} />

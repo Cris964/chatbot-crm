@@ -123,7 +123,7 @@ export default function Inbox() {
         return {
           id: conv.id,
           name: displayName,
-          preview: conv.last_message || 'Inició conversación...',
+          preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
           time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
           channel: conv.channel || 'whatsapp',
           unread: false,
@@ -252,7 +252,11 @@ export default function Inbox() {
               onClick={() => setSelectedConv(conv)}
             >
               <div className="conv-avatar" style={{ background: conv.bg }}>
-                {conv.avatar}
+                {conv.client?.image_url ? (
+                  <img src={conv.client.image_url} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  conv.avatar
+                )}
                 <div className={`channel-icon ${conv.channel}`}>
                   <ChannelIcon channel={conv.channel} />
                 </div>
@@ -344,6 +348,14 @@ export default function Inbox() {
                     <AlertTriangle size={12} /> Requiere atención
                   </span>
                 )}
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-default)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Asignado a:</span>
+                  <select style={{ fontSize: '0.75rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                    <option>Admin</option>
+                  </select>
+                </div>
+
                 <button className="btn btn-ghost btn-sm"><Phone size={16} /></button>
                 <button className="btn btn-ghost btn-sm"><Video size={16} /></button>
                 <button className="btn btn-ghost btn-sm"><Star size={16} /></button>
@@ -351,25 +363,44 @@ export default function Inbox() {
               </div>
             </div>
 
-            <div className="chat-messages" style={{ overflowY: 'auto', flex: 1 }}>
-              {messages.map(msg => (
-                <div key={msg.id}>
+            <div className="chat-messages" style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {messages.map(msg => {
+                const isImage = msg.text?.includes('[IMG_SENT:');
+                let cleanText = msg.text;
+                let imageName = '';
+                if (isImage) {
+                  const match = msg.text.match(/\[IMG_SENT:([^\]]+)\]/);
+                  if (match) {
+                     imageName = match[1].replace(/_/g, ' ');
+                     cleanText = `Imagen enviada`;
+                  }
+                }
+
+                return (
+                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'client' ? 'flex-start' : 'flex-end', width: '100%' }}>
                   {msg.sender === 'bot' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)', alignSelf: 'flex-end' }}>
                       <Bot size={12} /> Chatbot IA
                     </div>
                   )}
                   {msg.sender === 'agent' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-emerald)' }}>
-                      <UserCheck size={12} /> Ana Rodríguez (Agente)
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-emerald)', alignSelf: 'flex-end' }}>
+                      <UserCheck size={12} /> {session?.user?.email?.split('@')[0] || 'Agente'} (Agente)
                     </div>
                   )}
                   <div className={`message-bubble ${msg.sender === 'client' ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
-                    <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
-                    <div className="message-time">{msg.time}</div>
+                    {isImage ? (
+                      <div style={{ background: 'rgba(0,0,0,0.1)', padding: '10px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
+                          <span style={{ fontSize: '1.4rem' }}>🌄</span>
+                          <span style={{ fontWeight: 600, fontSize: '0.8rem', color: msg.sender === 'client' ? 'var(--text-primary)' : '#fff' }}>Imagen de producto:<br/>{imageName}</span>
+                      </div>
+                    ) : (
+                      <p style={{ whiteSpace: 'pre-line' }}>{cleanText}</p>
+                    )}
+                    <div className="message-time" style={{ textAlign: msg.sender === 'client' ? 'left' : 'right' }}>{msg.time}</div>
                   </div>
                 </div>
-              ))}
+              )})}
               <div ref={messagesEndRef} />
             </div>
 
