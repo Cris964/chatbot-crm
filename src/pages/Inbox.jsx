@@ -67,7 +67,7 @@ export default function Inbox() {
         id: i,
         sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
         text: m.content || m.text,
-        time: selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+        time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
       })))
 
       // Realtime listener for updates to this conversation (which contains the JSONB messages)
@@ -86,7 +86,7 @@ export default function Inbox() {
               id: i,
               sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
               text: m.content || m.text,
-              time: updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+              time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
             })))
           }
         })
@@ -157,6 +157,7 @@ export default function Inbox() {
     e?.preventDefault()
     if (!newMessage.trim() || !selectedConv) return
     
+    const timestamp = new Date().toISOString();
     // Optimistic UI update
     const newMsg = {
       id: Date.now(),
@@ -186,7 +187,7 @@ export default function Inbox() {
       return
     }
     
-    const dbMessage = { role: 'agent', content: sentText }
+    const dbMessage = { role: 'agent', content: sentText, timestamp: timestamp }
     const updatedMessages = [...(selectedConv.rawMessages || []), dbMessage]
     selectedConv.rawMessages = updatedMessages 
 
