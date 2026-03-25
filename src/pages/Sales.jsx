@@ -3,12 +3,15 @@ import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
-  Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search
+  Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search, Truck
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const monthlyData = []
-const sales = []
+const monthlyData = [
+  { month: 'Ene', ventas: 4000 },
+  { month: 'Feb', ventas: 3000 },
+  { month: 'Mar', ventas: 2000 },
+]
 
 function getPaymentBadge(status) {
   const map = { 'Pagado': 'emerald', 'Parcial': 'amber', 'Pendiente': 'violet', 'Vencido': 'rose' }
@@ -20,26 +23,38 @@ export default function Sales() {
   const [searchQuery, setSearchQuery] = useState('')
   const [salesList, setSalesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [currentUserClient, setCurrentUserClient] = useState(null)
 
   useEffect(() => {
-    if (session?.user?.id) {
-      fetchSales()
+    const init = async () => {
+      if (session?.user?.id) {
+        // Encontrar a qué client_id pertenece este usuario
+        const { data: client } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .single()
+        
+        if (client) {
+          setCurrentUserClient(client.id)
+          fetchSales(client.id)
+        } else {
+          // Si no está vinculado a un cliente, intentar cargar todos por si acaso (o avisar)
+          fetchSales()
+        }
+      }
     }
+    init()
   }, [session])
 
-  const fetchSales = async () => {
+  const fetchSales = async (clientId) => {
     setIsLoading(true)
-    
-    // Buscar el client_id del usuario logueado
-    const { data: userClient } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', session.user.id)
-      .single()
-
     let query = supabase.from('orders').select('*')
-    if (userClient) {
-      query = query.eq('client_id', userClient.id)
+    
+    // Si tenemos un clientId, lo usamos para filtrar (Multitenant)
+    const targetId = clientId || currentUserClient
+    if (targetId) {
+      query = query.eq('client_id', targetId)
     }
 
     const { data, error } = await query
@@ -49,18 +64,17 @@ export default function Sales() {
     if (!error && data) {
       setSalesList(data.map(d => ({
         id: d.id,
-        // Usar user_name si existe, sino cliente genérico
         client: d.user_name || 'Cliente',
         product: d.product || 'Producto',
-        amount: d.total || 25000, // Fallback si no hay total
+        amount: d.total || 25000, 
         date: new Date(d.created_at).toLocaleDateString(),
         payment: d.status === 'pagado' ? 'Pagado' : 'Pendiente',
-        method: 'WhatsApp',
+        method: d.payment_method || 'WhatsApp',
         city: d.city || 'N/A',
         address: d.address || 'N/A',
         avatar: (d.user_name || 'C').substring(0,2).toUpperCase(),
         bg: d.status === 'pagado' ? '#10b981' : '#6366f1',
-        isNew: (new Date() - new Date(d.created_at)) < (1000 * 60 * 60 * 6) // Nueva si tiene menos de 6 horas
+        isNew: (new Date() - new Date(d.created_at)) < (1000 * 60 * 60 * 6)
       })))
     }
     setIsLoading(false)
@@ -72,11 +86,11 @@ export default function Sales() {
     const amountStr = prompt('Precio de venta:');
     const amount = parseInt(amountStr) || 0;
     
-    // Obtener el client_id actual del usuario
+    // Obtener el client_id actual del usuario (doble check)
     const { data: userClient } = await supabase.from('clients').select('id').eq('user_id', session.user.id).single();
     
     if (!userClient) {
-       alert('Error: No se encontró la configuración del comercio para este usuario.');
+       alert('Error: No se encontró la configuración del comercio vinculado a tu usuario.');
        return;
     }
 
@@ -90,11 +104,11 @@ export default function Sales() {
     });
 
     if (error) alert('Error al crear: ' + error.message);
-    else fetchSales();
+    else fetchSales(userClient.id);
   }
 
   const totalRevenue = salesList.reduce((acc, s) => acc + s.amount, 0)
-  const monthlySales = salesList.length // Placeholder for month filtering
+  const monthlySales = salesList.length
   const ticketAvg = salesList.length > 0 ? totalRevenue / salesList.length : 0
 
   const filteredSales = salesList.filter(sale => {
@@ -208,18 +222,18 @@ export default function Sales() {
           <tbody>
             {filteredSales.map((sale) => (
               <tr key={sale.id} className="table-row-hover">
-                <td><span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>{sale.id}</span> {sale.isNew && <span className="badge amber" style={{ fontSize: '0.6rem' }}>NUEVA</span>}</td>
+                <td><span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>{sale.id?.slice(0,8)}</span> {sale.isNew && <span className="badge amber" style={{ fontSize: '0.6rem' }}>NUEVA</span>}</td>
                 <td>
                   <div className="flex items-center gap-2">
                     <div className="avatar sm" style={{ background: sale.bg }}>{sale.avatar}</div>
                     <div>
                       <div style={{ fontWeight: 600 }}>{sale.client}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{sale.contact}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{sale.city}</div>
                     </div>
                   </div>
                 </td>
                 <td style={{ fontSize: '0.85rem' }}>{sale.product}</td>
-                <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>{sale.amount}</td>
+                <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>${sale.amount.toLocaleString()}</td>
                 <td style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{sale.date}</td>
                 <td><span className={`badge ${getPaymentBadge(sale.payment)}`}>{sale.payment}</span></td>
                 <td style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{sale.method}</td>
@@ -246,7 +260,7 @@ export default function Sales() {
         </table>
         {filteredSales.length === 0 && (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-            No se encontraron ventas con "{searchQuery}"
+            {searchQuery ? `No se encontraron ventas con "${searchQuery}"` : "Aún no hay ventas registradas."}
           </div>
         )}
       </div>
