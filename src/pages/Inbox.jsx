@@ -365,44 +365,57 @@ export default function Inbox() {
             </div>
 
             <div className="chat-messages" style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                const isImage = msg.text?.includes('[IMG_SENT:');
+              {messages.map(msg => {
                 let cleanText = msg.text;
                 let imageName = '';
                 let imageUrl = '';
+                
                 if (isImage) {
-                  const match = msg.text.match(/\[IMG_SENT:([^|]+)\|([^\]]+)\]/);
-                  if (match) {
-                     imageName = match[1];
-                     imageUrl = match[2];
-                     cleanText = `Imagen enviada`;
+                  // Soporte para nuevo formato [IMG_SENT:Nombre|URL]
+                  const newMatch = msg.text.match(/\[IMG_SENT:([^|]+)\|([^\]]+)\]/);
+                  if (newMatch) {
+                     imageName = newMatch[1];
+                     imageUrl = newMatch[2];
+                  } else {
+                     // Soporte para formato antiguo [IMG_SENT:Key]
+                     const oldMatch = msg.text.match(/\[IMG_SENT:([^\]]+)\]/);
+                     if (oldMatch) {
+                        imageName = oldMatch[1].replace(/_/g, ' ');
+                     }
                   }
+                  cleanText = `Imagen enviada`;
                 }
 
                 // Fuerza a la derecha todo lo que NO sea del cliente
                 const isIncoming = msg.sender === 'client';
+                const alignmentClass = isIncoming ? 'align-start' : 'align-end';
 
                 return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isIncoming ? 'flex-start' : 'flex-end', width: '100%' }}>
+                <div key={msg.id} className={`message-wrapper ${alignmentClass}`} style={{ width: '100%', display: 'flex', flexDirection: 'column', marginTop: 12 }}>
                   {msg.sender === 'bot' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-violet)', alignSelf: 'flex-end' }}>
+                    <div className="bot-label">
                       <Bot size={12} /> Chatbot IA
                     </div>
                   )}
                   {msg.sender === 'agent' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: '0.72rem', color: 'var(--accent-emerald)', alignSelf: 'flex-end' }}>
-                      <UserCheck size={12} /> {session?.user?.email?.split('@')[0] || 'Agente'} (Agente)
+                    <div className="agent-label">
+                      <UserCheck size={12} /> {session?.user?.email?.split('@')[0] || 'Agente'}
                     </div>
                   )}
                   <div className={`message-bubble ${isIncoming ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
-                    {isImage && imageUrl ? (
-                      <div style={{ borderRadius: 8, overflow: 'hidden', maxWidth: 220 }}>
-                          <img src={imageUrl} alt={imageName} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                          <div style={{ background: 'rgba(0,0,0,0.4)', padding: '6px 10px', fontSize: '0.75rem', fontWeight: 600 }}>{imageName}</div>
+                    {isImage ? (
+                      <div className="product-image-card">
+                          {imageUrl ? (
+                             <img src={imageUrl} alt={imageName} className="prod-img" />
+                          ) : (
+                             <div className="prod-img-placeholder">🌄</div>
+                          )}
+                          <div className="prod-img-footer">Producto: {imageName}</div>
                       </div>
                     ) : (
                       <p style={{ whiteSpace: 'pre-line' }}>{cleanText}</p>
                     )}
-                    <div className="message-time" style={{ textAlign: isIncoming ? 'left' : 'right' }}>{msg.time}</div>
+                    <div className="message-time">{msg.time}</div>
                   </div>
                 </div>
               )})}
