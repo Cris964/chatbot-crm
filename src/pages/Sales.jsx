@@ -29,10 +29,20 @@ export default function Sales() {
 
   const fetchSales = async () => {
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
+    
+    // Buscar el client_id del usuario logueado
+    const { data: userClient } = await supabase
+      .from('clients')
+      .select('id')
       .eq('user_id', session.user.id)
+      .single()
+
+    let query = supabase.from('orders').select('*')
+    if (userClient) {
+      query = query.eq('client_id', userClient.id)
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .limit(50)
     
@@ -54,6 +64,33 @@ export default function Sales() {
       })))
     }
     setIsLoading(false)
+  }
+
+  const handleManualSale = async () => {
+    const product = prompt('Nombre del producto (ej: CX-P):');
+    if (!product) return;
+    const amountStr = prompt('Precio de venta:');
+    const amount = parseInt(amountStr) || 0;
+    
+    // Obtener el client_id actual del usuario
+    const { data: userClient } = await supabase.from('clients').select('id').eq('user_id', session.user.id).single();
+    
+    if (!userClient) {
+       alert('Error: No se encontró la configuración del comercio para este usuario.');
+       return;
+    }
+
+    const { error } = await supabase.from('orders').insert({
+      client_id: userClient.id,
+      product: product,
+      user_name: 'Venta Manual',
+      status: 'pagado',
+      total: amount,
+      created_at: new Date().toISOString()
+    });
+
+    if (error) alert('Error al crear: ' + error.message);
+    else fetchSales();
   }
 
   const totalRevenue = salesList.reduce((acc, s) => acc + s.amount, 0)
@@ -78,8 +115,10 @@ export default function Sales() {
             <p className="page-subtitle">Control completo de facturación y revenue</p>
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-secondary"><Download size={16} /> Exportar</button>
-            <button className="btn btn-primary"><DollarSign size={16} /> Registrar Venta</button>
+            <button className="btn btn-secondary" onClick={() => fetchSales()}><Download size={16} /> Refrescar</button>
+            <button className="btn btn-primary" onClick={handleManualSale}>
+              <DollarSign size={16} /> Registrar Venta
+            </button>
           </div>
         </div>
       </div>
