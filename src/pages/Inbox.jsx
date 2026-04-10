@@ -4,7 +4,7 @@ import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
-  Sparkles, Check, X as Close, User, Globe, History, CheckCircle2
+  Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
