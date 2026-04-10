@@ -2,271 +2,211 @@ import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
   Users, DollarSign, TrendingUp, Target, ArrowUpRight, ArrowDownRight,
-  MoreHorizontal, ExternalLink, Clock, UserPlus, MessageSquare, ShoppingCart
+  MoreHorizontal, ChevronRight, Activity, Zap
 } from 'lucide-react'
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 
-const revenueData = [
-  { month: 'Ene', revenue: 0, deals: 0 },
-  { month: 'Feb', revenue: 0, deals: 0 },
-  { month: 'Mar', revenue: 0, deals: 0 },
-  // ... rest of month placeholders as needed
+const mainChartData = [
+  { name: 'Jan', value: 32000, value2: 28000 },
+  { name: 'Feb', value: 45000, value2: 35000 },
+  { name: 'Mar', value: 42000, value2: 38000 },
+  { name: 'Apr', value: 38000, value2: 48000 },
+  { name: 'May', value: 55000, value2: 42000 },
+  { name: 'Jun', value: 68000, value2: 58000 },
+  { name: 'Jul', value: 62000, value2: 55000 },
+  { name: 'Aug', value: 75000, value2: 68000 },
+  { name: 'Sep', value: 89000, value2: 72000 },
+  { name: 'Oct', value: 78000, value2: 75000 },
+  { name: 'Nov', value: 85000, value2: 82000 },
+  { name: 'Dec', value: 95000, value2: 88000 },
 ]
 
-const sourceData = [
-  { name: 'WhatsApp', value: 0, color: '#25d366' },
-  { name: 'Instagram', value: 0, color: '#e1306c' },
-  { name: 'Formularios', value: 0, color: '#6366f1' },
-  { name: 'Facebook', value: 0, color: '#0084ff' },
-  { name: 'Email', value: 0, color: '#f59e0b' },
+const sparklineData = [
+  { pv: 2400 }, { pv: 1398 }, { pv: 9800 }, { pv: 3908 }, { pv: 4800 }, { pv: 3800 }, { pv: 4300 },
+]
+
+const recentDeals = [
+  { lead: 'Alex Banner', stage: 'Opening', value: '$10.00k', date: '08/03/2026', color: '#10b981' },
+  { lead: 'Anner Daterson', stage: 'Succeed', value: '$15.00k', date: '03/02/2026', color: '#6366f1' },
+  { lead: 'James Wilson', stage: 'Contract', value: '$8.50k', date: '01/02/2026', color: '#f59e0b' },
 ]
 
 const pipelineData = [
-  { stage: 'Nuevo', count: 0, value: 0, color: '#6366f1' },
-  { stage: 'Contactado', count: 0, value: 0, color: '#06b6d4' },
-  { stage: 'Interesado', count: 0, value: 0, color: '#8b5cf6' },
-  { stage: 'Negociación', count: 0, value: 0, color: '#f59e0b' },
-  { stage: 'Cerrado', count: 0, value: 0, color: '#10b981' },
+  { name: 'Lead', value: 45, color: '#6366f1' },
+  { name: 'Contact', value: 32, color: '#10b981' },
+  { name: 'Proposal', value: 24, color: '#f59e0b' },
+  { name: 'Negotiation', value: 18, color: '#ec4899' },
+  { name: 'Closing', value: 12, color: '#8b5cf6' },
 ]
-
-const topSellers = []
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{
-        background: 'rgba(22, 22, 31, 0.95)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '10px',
-        padding: '12px 16px',
-        backdropFilter: 'blur(12px)'
-      }}>
-        <p style={{ color: '#a1a1b5', fontSize: '0.78rem', marginBottom: 6 }}>{label}</p>
-        {payload.map((p, i) => (
-          <p key={i} style={{ color: p.color, fontSize: '0.88rem', fontWeight: 600 }}>
-            {p.name}: {typeof p.value === 'number' && p.name === 'revenue' ? `$${p.value.toLocaleString()}` : p.value}
-          </p>
-        ))}
-      </div>
-    )
-  }
-  return null
-}
 
 export default function Dashboard() {
   const { session } = useOutletContext()
-  const [stats, setStats] = useState({
-    leads: 0,
-    clients: 0,
-    revenue: 0,
-    conversion: 0
-  })
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (session?.user?.id) {
-      fetchDashboardData()
-    }
-  }, [session?.user?.id])
-
-  const fetchDashboardData = async () => {
-    setIsLoading(true)
-    
-    // Lead count is 0 as the table 'leads' doesn't exist (using clients instead)
-    const leadCount = 0
-
-    // Fetch Clients Count
-    const { count: clientCount } = await supabase
-      .from('clients')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-
-    // Fetch Total Revenue from clients (Avoid ltv column)
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('user_id', session.user.id)
-
-    let totalRevenue = 0
-    if (clientData) {
-      totalRevenue = clientData.reduce((acc, client) => {
-        const val = parseFloat((client.revenue || '$0').replace(/[^0-9.]/g, ''))
-        return acc + (isNaN(val) ? 0 : val)
-      }, 0)
-    }
-
-    setStats({
-      leads: leadCount || 0,
-      clients: clientCount || 0,
-      revenue: totalRevenue,
-      conversion: leadCount > 0 ? ((clientCount / leadCount) * 100).toFixed(1) : 0
-    })
-
-    // MASTER DIAGNOSTIC
-    console.log('--- MASTER DIAGNOSTIC START ---')
-    const tables = ['clients', 'conversations', 'orders', 'outbox', 'inventory']
-    for (const table of tables) {
-      const { data, error } = await supabase.from(table).select('*').limit(5)
-      if (error) console.error(`Error in ${table}:`, error)
-      else console.log(`Data from ${table}:`, data)
-    }
-    console.log('--- MASTER DIAGNOSTIC END ---')
-    
-    setIsLoading(false)
-  }
+    // Artificial delay for premium loading feel
+    setTimeout(() => setIsLoading(false), 800)
+  }, [])
 
   return (
-    <div className="page-content">
+    <div className="page-content" style={{ padding: '32px' }}>
       <div className="page-header animate-slideUp">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">Resumen general de tu rendimiento comercial</p>
+        <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>Dashboard</h1>
+        <p className="page-subtitle">Welcome back! Here's what's happening today.</p>
       </div>
 
-      {/* Stats */}
-      <div className="stats-grid">
-        <div className="stat-card purple animate-slideUp stagger-1">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Total Leads</span>
-            <div className="stat-card-icon purple"><Users size={20} /></div>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
+        {/* LTV Card */}
+        <div className="stat-card">
+          <div className="card-header" style={{ marginBottom: 0 }}>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>LTV</span>
+             <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>+12.5%</span>
           </div>
-          <div className="stat-card-value">{isLoading ? '...' : stats.leads.toLocaleString()}</div>
-          <div className="stat-card-change positive">
-            <ArrowUpRight size={14} /> Datos reales
-          </div>
-        </div>
-
-        <div className="stat-card cyan animate-slideUp stagger-2">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Clientes Totales</span>
-            <div className="stat-card-icon cyan"><UserPlus size={20} /></div>
-          </div>
-          <div className="stat-card-value">{isLoading ? '...' : stats.clients.toLocaleString()}</div>
-          <div className="stat-card-change positive">
-            <ArrowUpRight size={14} /> Datos reales
+          <div className="stat-card-value">$1.4M</div>
+          <div style={{ height: 40, marginTop: 12 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparklineData}>
+                <Area type="monotone" dataKey="pv" stroke="#10b981" fill="rgba(16, 185, 129, 0.1)" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="stat-card emerald animate-slideUp stagger-3">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Revenue Estimado (LTV)</span>
-            <div className="stat-card-icon emerald"><DollarSign size={20} /></div>
+        {/* Total Sales Card */}
+        <div className="stat-card">
+          <div className="card-header" style={{ marginBottom: 0 }}>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Sales</span>
+             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 700 }}>+18.2%</span>
           </div>
-          <div className="stat-card-value">{isLoading ? '...' : `$${stats.revenue.toLocaleString()}`}</div>
-          <div className="stat-card-change positive">
-            <ArrowUpRight size={14} /> Datos reales
+          <div className="stat-card-value">$2.8M</div>
+          <div style={{ height: 40, marginTop: 12 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparklineData}>
+                <Area type="monotone" dataKey="pv" stroke="#6366f1" fill="rgba(99, 102, 241, 0.1)" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="stat-card amber animate-slideUp stagger-4">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Tasa Conversión</span>
-            <div className="stat-card-icon amber"><TrendingUp size={20} /></div>
+        {/* Active Deals Card */}
+        <div className="stat-card">
+          <div className="card-header" style={{ marginBottom: 0 }}>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active Deals</span>
+             <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
           </div>
-          <div className="stat-card-value">{isLoading ? '...' : `${stats.conversion}%`}</div>
-          <div className="stat-card-change">
-            Ratio Leads vs Clientes
+          <div className="stat-card-value">312</div>
+          <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, marginTop: 4 }}>+5.3% this month</div>
+        </div>
+
+        {/* New Leads Card */}
+        <div className="stat-card">
+          <div className="card-header" style={{ marginBottom: 0 }}>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>New Leads</span>
+             <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
           </div>
+          <div className="stat-card-value">450</div>
+          <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600, marginTop: 4 }}>-2.1% lower trend</div>
         </div>
       </div>
 
-      {stats.leads === 0 && !isLoading && (
-        <div className="card animate-slideUp stagger-5" style={{ padding: '4rem', textAlign: 'center', marginTop: 24 }}>
-          <div style={{ background: 'var(--primary-600)18', color: 'var(--primary-400)', width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-            <Target size={32} />
+      {/* Main Chart */}
+      <div className="card" style={{ marginBottom: '32px', padding: '32px' }}>
+        <div className="card-header" style={{ marginBottom: '32px' }}>
+           <div>
+              <h3 className="card-title" style={{ fontSize: '1.2rem' }}>Sales Performance</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Metric performance across key channels</p>
+           </div>
+           <button className="btn btn-secondary btn-sm" style={{ padding: '8px 16px' }}>This Year <ChevronDown size={14} /></button>
+        </div>
+        <div style={{ height: 350 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={mainChartData}>
+              <defs>
+                <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorVal2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `$${v/1000}k`} />
+              <Tooltip 
+                contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}
+                itemStyle={{ fontSize: '0.85rem' }}
+              />
+              <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
+              <Area type="monotone" dataKey="value2" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorVal2)" dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' }}>
+        {/* Recent Deals */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Recent Deals</h3>
+            <MoreHorizontal size={16} />
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 12 }}>¡Bienvenido a Nexus CRM!</h2>
-          <p style={{ opacity: 0.8, fontSize: '0.95rem', lineHeight: 1.5 }}>
-            Aquí tienes un resumen de la actividad de hoy y el rendimiento de tu embudo de ventas.
-          </p>
-          <p style={{ color: 'var(--text-tertiary)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.6 }}>
-            Parece que eres nuevo aquí. Todavía no tienes datos para mostrar en las gráficas, 
-            pero puedes empezar añadiendo tu primer lead o conectando tus canales.
-          </p>
-          <div className="flex justify-center gap-3">
-            <button className="btn btn-primary" onClick={() => navigate('/leads')}>Ir a Leads</button>
-            <button className="btn btn-secondary" onClick={() => navigate('/inbox')}>Ver Inbox</button>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--glass-border)' }}>
+                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>LEAD</th>
+                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>STAGE</th>
+                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>VALUE</th>
+                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>CLOSE DATE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentDeals.map((deal, i) => (
+                <tr key={i} style={{ borderBottom: i === recentDeals.length - 1 ? 'none' : '1px solid var(--glass-border)' }}>
+                  <td style={{ padding: '16px 12px', fontWeight: 600, fontSize: '0.9rem' }}>{deal.lead}</td>
+                  <td style={{ padding: '16px 12px' }}>
+                    <span className="badge" style={{ background: `${deal.color}15`, color: deal.color }}>{deal.stage}</span>
+                  </td>
+                  <td style={{ padding: '16px 12px', fontWeight: 700 }}>{deal.value}</td>
+                  <td style={{ padding: '16px 12px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>{deal.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pipeline Status */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Pipeline Status</h3>
+            <MoreHorizontal size={16} />
+          </div>
+          <div style={{ height: 220, marginTop: 24 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pipelineData} layout="vertical">
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} width={80} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                  {pipelineData.map((entry, index) => (
+                    <cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
-      )}
-
-      {stats.leads > 0 && (
-        <>
-          {/* Charts Row */}
-          <div className="charts-grid">
-            <div className="chart-card animate-slideUp stagger-3">
-              <div className="card-header">
-                <h3 className="card-title">Revenue Mensual (Placeholder)</h3>
-                <button className="btn btn-ghost btn-sm">
-                  <ExternalLink size={16} />
-                </button>
-              </div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: 20 }}>Gráfica de ejemplo con datos mensuales</p>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="month" stroke="#6b6b80" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#6b6b80" tick={{ fontSize: 12 }} tickFormatter={v => `$${v/1000}k`} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#6366f1"
-                    strokeWidth={2.5}
-                    fill="url(#revenueGradient)"
-                    name="revenue"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="chart-card animate-slideUp stagger-4">
-              <div className="card-header">
-                <h3 className="card-title">Origen de Leads (Placeholder)</h3>
-                <button className="btn btn-ghost btn-sm">
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={sourceData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {sourceData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 4 }}>
-                {sourceData.map((s, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color }} />
-                    <span style={{ color: '#a1a1b5' }}>{s.name}</span>
-                    <span style={{ fontWeight: 700 }}>{s.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      </div>
     </div>
+  )
+}
+
+function ChevronDown(props) {
+  return (
+    <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
   )
 }

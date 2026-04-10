@@ -1,268 +1,147 @@
-import { useState, useEffect } from 'react'
-import { useOutletContext } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useState } from 'react'
 import {
-  Truck, Package, MapPin, CheckCircle, Clock, AlertCircle,
-  Search, Filter, Plus, MoreHorizontal, Eye, ArrowRight,
-  Calendar, Phone, ChevronDown
+  Truck, Package, MapPin, Navigation, Clock, CheckCircle2,
+  AlertCircle, ChevronRight, Search, Filter, MoreHorizontal,
+  Globe, Info, Phone, Calendar
 } from 'lucide-react'
 
-const stats = []
-const dispatches = []
-
-const statusSteps = ['preparando', 'enviado', 'en_transito', 'entregado']
-const statusLabels = { preparando: 'Preparando', enviado: 'Enviado', en_transito: 'En Tránsito', entregado: 'Entregado' }
-const statusColors = { preparando: 'purple', enviado: 'cyan', en_transito: 'amber', entregado: 'emerald' }
-
-function DispatchStatusBar({ status }) {
-  const currentIndex = statusSteps.indexOf(status)
-  return (
-    <div className="dispatch-steps">
-      {statusSteps.map((step, i) => (
-        <div key={step} style={{ display: 'flex', alignItems: 'center' }}>
-          <div className={`dispatch-step ${i < currentIndex ? 'completed' : i === currentIndex ? 'current' : ''}`}>
-            {i <= currentIndex ? <CheckCircle size={12} /> : <Clock size={12} />}
-            {statusLabels[step]}
-          </div>
-          {i < statusSteps.length - 1 && (
-            <div className={`dispatch-step-line ${i < currentIndex ? 'completed' : ''}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
+const orderTimeline = [
+  { status: 'Order Received', date: 'Mar 10, 2026', time: '09:00 AM', completed: true, icon: Package },
+  { status: 'Payment Confirmed', date: 'Mar 10, 2026', time: '10:30 AM', completed: true, icon: CheckCircle2 },
+  { status: 'In Production', date: 'Mar 11, 2026', time: '02:15 PM', completed: true, icon: Info },
+  { status: 'Quality Check', date: 'Mar 12, 2026', time: '08:45 AM', completed: false, icon: AlertCircle },
+  { status: 'Out for Delivery', date: 'TBD', time: 'TBD', completed: false, icon: Truck },
+]
 
 export default function Dispatches() {
-  const { session } = useOutletContext()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [dispatchesList, setDispatchesList] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [newDispatch, setNewDispatch] = useState({
-    name: '',
-    sku: '',
-    quantity: 1
+  const [selectedOrder, setSelectedOrder] = useState({
+    id: 'NX-9982',
+    customer: 'Sarah Johnson',
+    destination: 'San Francisco, CA',
+    status: 'In Transit',
+    eta: '2 days',
+    driver: 'Robert Fox',
+    vehicle: 'Tesla Semi #4'
   })
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchDispatches()
-    }
-  }, [session])
-
-  const handleAddDispatch = async (e) => {
-    e.preventDefault()
-    const { error } = await supabase
-      .from('inventory')
-      .insert([{
-        name: newDispatch.name,
-        sku: newDispatch.sku,
-        stock: newDispatch.quantity,
-        user_id: session.user.id,
-        created_at: new Date().toISOString()
-      }])
-    
-    if (!error) {
-      setShowModal(false)
-      fetchDispatches()
-    } else {
-      alert('Error: ' + error.message)
-    }
-  }
-
-  const fetchDispatches = async () => {
-    setIsLoading(true)
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('status', 'despachado')
-      .order('updated_at', { ascending: false })
-      .limit(20)
-    
-    if (!error && data) {
-      const mapped = data.map(d => ({
-        id: d.id,
-        sale: `FAC-${d.id}`,
-        client: d.user_name || 'Cliente',
-        product: d.product || 'Varios productos',
-        address: d.address || 'N/A',
-        city: d.city || 'N/A',
-        carrier: d.city?.toLowerCase().includes('cali') ? 'Domiciliario Naturel' : 'Transportadora Nacional',
-        tracking: d.city?.toLowerCase().includes('cali') ? 'ENTREGA DOMICILIAR' : (d.tracking || 'Pte Guía'),
-        status: 'preparando',
-        estimated: new Date().toLocaleDateString(),
-        avatar: (d.user_name || 'C').substring(0,2).toUpperCase(),
-        bg: '#6366f1',
-        isCali: d.city?.toLowerCase().includes('cali')
-      }))
-      setDispatchesList(mapped)
-    }
-    setIsLoading(false)
-  }
-
-  const handleDeleteDispatch = async (id) => {
-    if (!confirm('¿Seguro que quieres eliminar este despacho?')) return
-    const { error } = await supabase
-      .from('inventory')
-      .delete()
-      .eq('id', id)
-    
-    if (!error) {
-      fetchDispatches()
-    }
-  }
-
-  const filteredDispatches = dispatchesList.filter(d => 
-    (d.tracking || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (d.client || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (d.product || '').toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
   return (
-    <div className="page-content">
+    <div className="page-content" style={{ padding: '32px' }}>
       <div className="page-header animate-slideUp">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Despachos</h1>
-            <p className="page-subtitle">Gestión y seguimiento de entregas y envíos</p>
-          </div>
-          <div className="flex gap-2">
-            <button className="btn btn-secondary"><Filter size={16} /> Filtros</button>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> Nuevo Despacho</button>
-          </div>
-        </div>
+        <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>Global Logistics</h1>
+        <p className="page-subtitle">Nexus Precision Tracking & Fleet Management</p>
       </div>
 
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)} style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)'
-        }}>
-          <div className="modal-content animate-slideUp" onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg-secondary)', padding: '24px', borderRadius: '16px',
-            width: '100%', maxWidth: '400px', border: '1px solid var(--border-default)'
-          }}>
-            <h2 style={{ marginBottom: 16 }}>Nuevo Despacho</h2>
-            <form onSubmit={handleAddDispatch} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '32px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          {/* Map Widget Mockup */}
+          <div className="card" style={{ height: 450, padding: 0, position: 'relative', overflow: 'hidden' }}>
+             <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10, display: 'flex', gap: 12 }}>
+                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '12px 20px', backdropFilter: 'blur(10px)' }}>
+                   <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Active Shipments</div>
+                   <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>1,245</div>
+                </div>
+                <div style={{ background: '#10b981', color: 'white', borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                   <Navigation size={18} />
+                   <span style={{ fontWeight: 700 }}>On Track</span>
+                </div>
+             </div>
+             
+             {/* Mock Map Background */}
+             <div style={{ width: '100%', height: '100%', background: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url("https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                {/* SVG Route Mockup */}
+                <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0 }}>
+                   <path d="M100 300 Q 300 100 500 250 T 800 200" stroke="#6366f1" strokeWidth="3" fill="none" strokeDasharray="8 4" />
+                   <circle cx="100" cy="300" r="6" fill="#10b981" />
+                   <circle cx="800" cy="200" r="8" fill="#6366f1" />
+                </svg>
+             </div>
+
+             <div className="card-header" style={{ position: 'absolute', bottom: 24, left: 24, right: 24, background: 'rgba(5, 5, 8, 0.6)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(20px)', borderRadius: 16 }}>
+                <div className="flex items-center justify-between w-full">
+                   <div className="flex items-center gap-4">
+                      <div className="avatar md" style={{ background: 'var(--primary-600)' }}><Truck /></div>
+                      <div>
+                         <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>In Transit to SF</div>
+                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Driver: {selectedOrder.driver} • {selectedOrder.vehicle}</div>
+                      </div>
+                   </div>
+                   <button className="btn btn-primary btn-sm">View Full Route</button>
+                </div>
+             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+             <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title">Fleet Efficiency</h3>
+                  <MoreHorizontal size={16} />
+                </div>
+                <div style={{ marginTop: 16, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                   <div style={{ fontSize: '2rem', fontWeight: 800 }}>94.2%</div>
+                   <div style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 700, marginBottom: 6 }}>+2.4 this week</div>
+                </div>
+                <div style={{ marginTop: 20, height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
+                   <div style={{ width: '94.2%', height: '100%', background: '#6366f1', borderRadius: 2 }} />
+                </div>
+             </div>
+             <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title">Average TAT</h3>
+                  <MoreHorizontal size={16} />
+                </div>
+                <div style={{ marginTop: 16, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                   <div style={{ fontSize: '2rem', fontWeight: 800 }}>1.8 Days</div>
+                   <div style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 700, marginBottom: 6 }}>-12% decrease</div>
+                </div>
+                <div style={{ marginTop: 20, height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
+                   <div style={{ width: '75%', height: '100%', background: '#10b981', borderRadius: 2 }} />
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Vertical Timeline */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+           <div className="card-header" style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: 24 }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6 }}>Producto</label>
-                <input 
-                  type="text" className="input" placeholder="Nombre del producto" required
-                  value={newDispatch.name} onChange={e => setNewDispatch({...newDispatch, name: e.target.value})}
-                />
+                 <div style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)', padding: '4px 12px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, display: 'inline-block', marginBottom: 12 }}>{selectedOrder.id}</div>
+                 <h3 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Order Lifecycle</h3>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6 }}>SKU / Tracking</label>
-                <input 
-                  type="text" className="input" placeholder="Referencia" required
-                  value={newDispatch.sku} onChange={e => setNewDispatch({...newDispatch, sku: e.target.value})}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                <button type="button" className="btn btn-ghost flex-1" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary flex-1">Crear Despacho</button>
-              </div>
-            </form>
-          </div>
+              <button className="btn btn-ghost btn-sm"><Info size={20} /></button>
+           </div>
+
+           <div style={{ padding: '32px 0', flex: 1, paddingLeft: 12 }}>
+              {orderTimeline.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: 24, position: 'relative', marginBottom: 32 }}>
+                   {i !== orderTimeline.length - 1 && (
+                     <div style={{ position: 'absolute', left: 24, top: 44, bottom: -24, width: 2, background: step.completed ? 'var(--primary-600)' : 'rgba(255,255,255,0.05)' }} />
+                   )}
+                   <div style={{ 
+                     width: 48, 
+                     height: 48, 
+                     borderRadius: 16, 
+                     background: step.completed ? 'var(--primary-600)' : 'rgba(255,255,255,0.03)',
+                     border: step.completed ? 'none' : '1px solid var(--glass-border)',
+                     color: step.completed ? 'white' : 'var(--text-tertiary)',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     zIndex: 1
+                   }}>
+                      <step.icon size={22} />
+                   </div>
+                   <div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: step.completed ? 'white' : 'var(--text-secondary)' }}>{step.status}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 4 }}>{step.date} • {step.time}</div>
+                   </div>
+                </div>
+              ))}
+           </div>
+
+           <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, marginTop: 'auto' }}>
+              <button className="btn btn-primary" style={{ width: '100%', padding: '16px' }}>Print Shipping Label</button>
+           </div>
         </div>
-      )}
-
-      <div className="stats-grid">
-        {stats.map((stat, i) => (
-          <div key={i} className={`stat-card ${stat.color} animate-slideUp stagger-${i + 1}`}>
-            <div className="stat-card-header">
-              <span className="stat-card-label">{stat.label}</span>
-              <div className={`stat-card-icon ${stat.color}`}><stat.icon size={20} /></div>
-            </div>
-            <div className="stat-card-value">{stat.value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="filters-bar animate-slideUp stagger-2">
-        <div className="header-search" style={{ maxWidth: 280 }}>
-          <Search size={16} />
-          <input 
-            type="text" 
-            placeholder="Buscar por tracking, cliente..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <button className="filter-btn">Estado <ChevronDown size={13} /></button>
-        <button className="filter-btn">Transportadora <ChevronDown size={13} /></button>
-        <button className="filter-btn">Fecha <ChevronDown size={13} /></button>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {filteredDispatches.map((d, i) => (
-          <div key={d.id} className={`card animate-slideUp stagger-${Math.min(i + 1, 6)}`}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-              <div className="avatar md" style={{ background: d.bg, marginTop: 2 }}>{d.avatar}</div>
-              <div style={{ flex: 1 }}>
-                <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                  <div className="flex items-center gap-3">
-                    <span style={{ fontWeight: 800, color: 'var(--primary-400)' }}>{d.id}</span>
-                    <ArrowRight size={14} style={{ color: 'var(--text-tertiary)' }} />
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{d.sale}</span>
-                    <span className={`badge ${statusColors[d.status]}`}>{statusLabels[d.status]}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteDispatch(d.id)}><Trash2 size={16} style={{ color: 'var(--accent-rose)' }} /></button>
-                    <button className="btn btn-ghost btn-sm"><MoreHorizontal size={16} /></button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4" style={{ marginBottom: 10 }}>
-                  <span style={{ fontWeight: 600 }}>{d.client}</span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{d.company}</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, fontSize: '0.82rem', color: 'var(--text-tertiary)', marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Producto</div>
-                    <span style={{ color: 'var(--text-primary)' }}>{d.product}</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Ciudad</div>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{d.city}</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Transportadora</div>
-                    <span style={{ color: 'var(--text-primary)' }}>{d.carrier}</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Tracking</div>
-                    {d.isCali ? (
-                      <span className="badge emerald" style={{ fontSize: '0.65rem' }}>ENTREGA A DOMICILIO</span>
-                    ) : (
-                      <span style={{ color: 'var(--primary-400)', fontFamily: 'monospace', fontSize: '0.78rem' }}>{d.tracking}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--text-tertiary)', marginBottom: 12 }}>
-                  <MapPin size={14} /> {d.address} {d.isCali && <span style={{ color: 'var(--accent-emerald)', fontWeight: 600, marginLeft: 8 }}>(Cercano a Bodega)</span>}
-                </div>
-
-                <DispatchStatusBar status={d.status} />
-
-                {d.confirmed && (
-                  <div style={{ marginTop: 8, fontSize: '0.78rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle size={14} /> Entrega confirmada el {d.confirmed}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {filteredDispatches.length === 0 && (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-            No se encontraron despachos con "{searchQuery}"
-          </div>
-        )}
       </div>
     </div>
   )

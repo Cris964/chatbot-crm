@@ -3,495 +3,219 @@ import { useOutletContext } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
-  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare
+  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
+  Sparkles, Check, X as Close, User, Globe, History
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-const channels = ['Todos', 'WhatsApp', 'Instagram', 'Messenger', 'Email']
-
-function ChannelIcon({ channel }) {
-  const icons = {
-    whatsapp: '💬',
-    instagram: '📷',
-    messenger: '💭',
-    email: '📧',
-  }
-  return <span>{icons[channel?.toLowerCase()] || '💬'}</span>
-}
-
 export default function Inbox() {
   const { session } = useOutletContext()
-  const [conversationsList, setConversationsList] = useState([])
+  const [conversationsList, setConversationsList] = useState([
+    { id: 1, name: 'Sarah Johnson', preview: 'Hi! Interested in NexusCRM...', time: '11:45 AM', channel: 'whatsapp', unread: true, tags: ['Hot Lead'], avatar: 'SJ', bg: '#10b981' },
+    { id: 2, name: 'David Chen', preview: 'Last message...', time: '10:30 AM', channel: 'messenger', tags: ['Support'], avatar: 'DC', bg: '#6366f1' },
+    { id: 3, name: 'Emily White', preview: 'AI Assistant checking in...', time: '9:15 AM', channel: 'instagram', tags: ['AI Assistant'], avatar: 'EW', bg: '#ec4899' },
+  ])
   const [selectedConv, setSelectedConv] = useState(null)
-  const [activeChannel, setActiveChannel] = useState('Todos')
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'client', text: 'Hi! Interested in NexusCRM\'s enterprise plan. When can we chat?', time: '11:42 AM' },
+    { id: 2, sender: 'agent', text: 'Hi Sarah! I\'d love to help. How about a quick call today?', time: '11:43 AM' },
+    { id: 3, sender: 'client', text: 'Hey! Interested you NexusCRM\'s entepte on chats today!', time: '11:42 AM' },
+  ])
   const [newMessage, setNewMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const messagesEndRef = useRef(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  const [showAI, setShowAI] = useState(true)
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, selectedConv])
-
-  useEffect(() => {
-    if (!session?.user?.id) return
-
-    fetchConversations()
-
-    // Realtime listener for new conversations or updates
-    const convSub = supabase
-      .channel('public:conversations')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'conversations',
-        filter: `user_id=eq.${session.user.id}`
-      }, () => {
-        fetchConversations()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(convSub)
+    if (!selectedConv && conversationsList.length > 0) {
+      setSelectedConv(conversationsList[0])
     }
-  }, [session?.user?.id])
-
-  useEffect(() => {
-    if (selectedConv) {
-      // Initialize messages from the conversation object
-      setMessages((selectedConv.rawMessages || []).map((m, i) => ({
-        id: i,
-        sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-        text: m.content || m.text,
-        time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
-      })))
-
-      // Realtime listener for updates to this conversation (which contains the JSONB messages)
-      const convUpdateSub = supabase
-        .channel(`public:conversations:${selectedConv.id}`)
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'conversations', 
-          filter: `id=eq.${selectedConv.id}` 
-        }, (payload) => {
-          console.log('Conversation updated:', payload.new)
-          const updatedConv = payload.new
-          if (updatedConv.messages) {
-            setMessages(updatedConv.messages.map((m, i) => ({
-              id: i,
-              sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-              text: m.content || m.text,
-              time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
-            })))
-          }
-        })
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(convUpdateSub)
-      }
-    }
-  }, [selectedConv])
-
-  const fetchConversations = async () => {
-    if (!session?.user?.id) return
-    setIsLoading(true)
-    console.log('Fetching conversations for user:', session.user.id)
-    // Two-step fetch for maximum reliability
-    const { data: userClients } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', session.user.id)
-    
-    const clientIds = userClients?.map(c => c.id) || []
-    
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('*, clients(*)')
-      .in('client_id', clientIds)
-      .order('updated_at', { ascending: false })
-    
-    if (!error && data && data.length > 0) {
-      const mapped = data.map(conv => {
-        const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
-
-        return {
-          id: conv.id,
-          name: displayName,
-          preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
-          time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          channel: conv.channel || 'whatsapp',
-          unread: false,
-          avatar: displayName.substring(0, 2).toUpperCase(),
-          bg: '#6366f1',
-          tags: [],
-          intent: 'consulta',
-          botHandled: !conv.needs_human,
-          phone: conv.user_phone,
-          client: conv.clients,
-          rawMessages: conv.messages || [],
-          needs_human: conv.needs_human
-        }
-      })
-      setConversationsList(mapped)
-      
-      // Temporary diagnostic for outbox table
-      const { data: outSamples } = await supabase.from('outbox').select('*').limit(1)
-      if (outSamples && outSamples.length > 0) {
-        console.log('SCHEMA DIAGNOSTIC - Outbox Columns:', Object.keys(outSamples[0]))
-      }
-
-      if (mapped.length > 0 && !selectedConv) {
-        setSelectedConv(mapped[0])
-      }
-    }
-    setIsLoading(false)
-  }
-
-  const handleSendMessage = async (e) => {
-    e?.preventDefault()
-    if (!newMessage.trim() || !selectedConv) return
-    
-    const timestamp = new Date().toISOString();
-    // Optimistic UI update
-    const newMsg = {
-      id: Date.now(),
-      sender: 'agent',
-      text: newMessage,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-    
-    setMessages([...messages, newMsg])
-    const sentText = newMessage
-    setNewMessage('')
-
-    // Insert into Supabase Outbox for real delivery
-    const { error: outboxError } = await supabase.from('outbox').insert([
-      {
-        user_phone: selectedConv.phone, 
-        phone: selectedConv.phone,
-        message: sentText,
-        status: 'pending', 
-        user_id: session.user.id
-      }
-    ])
-    
-    if (outboxError) {
-      console.error('Outbox Error:', outboxError)
-      alert('Error guardando en Outbox: ' + outboxError.message)
-      return
-    }
-    
-    const dbMessage = { role: 'agent', content: sentText, timestamp: timestamp }
-    const updatedMessages = [...(selectedConv.rawMessages || []), dbMessage]
-    selectedConv.rawMessages = updatedMessages 
-
-    // Update conversation append to JSONB history, and set to human mode
-    // Note: removed last_message as it doesn't exist in the DB schema
-    const { error: convError } = await supabase.from('conversations').update({
-      messages: updatedMessages,
-      updated_at: new Date().toISOString(),
-      needs_human: true 
-    }).eq('id', selectedConv.id)
-    
-    if (convError) {
-      console.error('Conversations Update Error:', convError)
-      alert('Error actualizando historial: ' + convError.message)
-    }
-    
-    // Refresh conversation list to show new last message
-    fetchConversations()
-  }
-
-  const filtered = activeChannel === 'Todos'
-    ? conversationsList
-    : conversationsList.filter(c => c.channel?.toLowerCase() === activeChannel.toLowerCase())
-
-  if (isLoading && conversationsList.length === 0) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyItems: 'center', width: '100%', padding: '2rem' }}>Cargando conversaciones...</div>
-  }
+  }, [])
 
   return (
-    <div className="inbox-layout">
-      {/* Left Panel - Conversations List */}
-      <div className="inbox-sidebar">
-        <div className="inbox-sidebar-header">
-          <div className="flex items-center justify-between">
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Inbox</h2>
-            <div className="flex gap-2">
-              <button className="btn btn-ghost btn-sm"><Filter size={16} /></button>
-            </div>
-          </div>
-          <div className="inbox-search">
-            <Search size={16} />
-            <input type="text" placeholder="Buscar conversaciones..." />
-          </div>
+    <div className="inbox-layout" style={{ background: 'transparent', height: 'calc(100vh - var(--header-height))' }}>
+      {/* List */}
+      <div className="inbox-sidebar" style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)' }}>
+        <div className="inbox-sidebar-header" style={{ padding: '24px' }}>
+           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 16 }}>CRM Inbox</h2>
+           <div className="inbox-search">
+             <Search size={18} />
+             <input type="text" placeholder="Search chats..." />
+           </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: 12, padding: '0 24px 16px', borderBottom: '1px solid var(--glass-border)' }}>
+           {['All', 'Leads', 'Support', 'My Chats'].map(t => (
+             <button key={t} style={{ fontSize: '0.85rem', fontWeight: 600, color: t === 'All' ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{t}</button>
+           ))}
         </div>
 
-        <div className="inbox-tabs">
-          {channels.map(ch => (
-            <button
-              key={ch}
-              className={`inbox-tab ${activeChannel === ch ? 'active' : ''}`}
-              onClick={() => setActiveChannel(ch)}
+        <div className="conversation-list" style={{ padding: 12 }}>
+          {conversationsList.map(c => (
+            <div 
+              key={c.id} 
+              className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
+              onClick={() => setSelectedConv(c)}
+              style={{ padding: '16px', borderRadius: 16, marginBottom: 4 }}
             >
-              {ch}
-            </button>
-          ))}
-        </div>
-
-        <div className="conversation-list">
-          {filtered.map(conv => (
-            <div
-              key={conv.id}
-              className={`conversation-item ${selectedConv?.id === conv.id ? 'active' : ''} ${conv.unread ? 'unread' : ''}`}
-              onClick={() => setSelectedConv(conv)}
-            >
-              <div className="conv-avatar" style={{ background: conv.bg }}>
-                {conv.client?.image_url ? (
-                  <img src={conv.client.image_url} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                  conv.avatar
-                )}
-                <div className={`channel-icon ${conv.channel}`}>
-                  <ChannelIcon channel={conv.channel} />
-                </div>
-              </div>
-              <div className="conv-content">
-                <div className="conv-header">
-                  <span className="conv-name">{conv.name}</span>
-                  <span className="conv-time">{conv.time}</span>
-                </div>
-                <p className="conv-preview">{conv.preview}</p>
-                <div className="conv-tags">
-                  {conv.tags.map((tag, i) => (
-                    <span key={i} className={`conv-tag badge ${tag.color}`}>{tag.label}</span>
-                  ))}
-                  {conv.botHandled && <span className="conv-tag badge neutral">🤖 Bot</span>}
-                  {!conv.botHandled && <span className="conv-tag badge rose">👤 Humano</span>}
-                </div>
-              </div>
+               <div className="avatar lg" style={{ background: c.bg, position: 'relative' }}>
+                  {c.avatar}
+                  <div style={{ position: 'absolute', bottom: -2, right: -2, background: '#25d366', width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--bg-secondary)' }} />
+               </div>
+               <div className="conv-content" style={{ marginLeft: 16 }}>
+                  <div className="flex justify-between items-center">
+                     <span style={{ fontWeight: 700 }}>{c.name}</span>
+                     <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{c.time}</span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>{c.preview}</p>
+                  <div className="flex gap-2 mt-2">
+                     {c.tags.map(t => <span key={t} className="badge amber" style={{ fontSize: 10, padding: '1px 6px' }}>{t}</span>)}
+                  </div>
+               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Center Panel - Chat */}
-      <div className="chat-area">
-        {selectedConv ? (
+      {/* Chat Area */}
+      <div className="chat-area" style={{ background: 'rgba(255,255,255,0.01)', borderRight: '1px solid var(--glass-border)' }}>
+        {selectedConv && (
           <>
-            <div className="chat-header">
-              <div className="conv-avatar" style={{ background: selectedConv.bg, width: 36, height: 36, fontSize: '0.85rem' }}>
-                {selectedConv.avatar}
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{selectedConv.name}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{selectedConv.isAdminRecord ? 'Lead de Prueba' : (selectedConv.client?.email || 'Sin correo')}</div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                  {selectedConv.channel === 'whatsapp' ? 'WhatsApp Business' :
-                   selectedConv.channel === 'instagram' ? 'Instagram DM' :
-                   selectedConv.channel === 'messenger' ? 'Facebook Messenger' : 'Email'}
-                  {' '} • En línea
-                </span>
-              </div>
-              <div className="ml-auto flex gap-3 items-center">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 20, border: '1px solid var(--border-default)' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: selectedConv.botHandled ? 'var(--accent-violet)' : 'var(--text-tertiary)' }}>
-                    {selectedConv.botHandled ? 'BOT ACTIVO' : 'BOT DESACTIVADO'}
-                  </span>
-                    <button 
-                      onClick={async () => {
-                        const newNeedsHuman = !selectedConv.needs_human
-                        
-                        const { error } = await supabase
-                          .from('conversations')
-                          .update({ needs_human: newNeedsHuman })
-                          .eq('id', selectedConv.id)
-                        
-                        if (!error) {
-                          setSelectedConv({...selectedConv, needs_human: newNeedsHuman, botHandled: !newNeedsHuman})
-                          setConversationsList(prev => prev.map(c => (c.id === selectedConv.id ? {...c, needs_human: newNeedsHuman, botHandled: !newNeedsHuman} : c)))
-                        } else {
-                          console.error('Update error:', error)
-                          alert('Error al actualizar bot: ' + error.message)
-                        }
-                      }}
-                    style={{
-                      width: 32,
-                      height: 18,
-                      borderRadius: 10,
-                      background: selectedConv.botHandled ? 'var(--accent-violet)' : 'var(--bg-active)',
-                      border: 'none',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      background: 'white',
-                      position: 'absolute',
-                      top: 2,
-                      left: selectedConv.botHandled ? 16 : 2,
-                      transition: 'all 0.2s'
-                    }} />
-                  </button>
-                </div>
-                {!selectedConv.botHandled && (
-                  <span className="badge rose" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <AlertTriangle size={12} /> Requiere atención
-                  </span>
-                )}
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-default)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Asignado a:</span>
-                  <select style={{ fontSize: '0.75rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                    <option>Admin</option>
-                  </select>
-                </div>
-
-                <button className="btn btn-ghost btn-sm"><Phone size={16} /></button>
-                <button className="btn btn-ghost btn-sm"><Video size={16} /></button>
-                <button className="btn btn-ghost btn-sm"><Star size={16} /></button>
-                <button className="btn btn-ghost btn-sm"><MoreVertical size={16} /></button>
-              </div>
-            </div>
-
-            <div className="chat-messages" style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {messages.map(msg => {
-                const isImage = msg.text?.includes('[IMG_SENT:');
-                let cleanText = msg.text;
-                let imageName = '';
-                let imageUrl = '';
-                
-                if (isImage) {
-                  // Soporte para nuevo formato [IMG_SENT:Nombre|URL]
-                  const newMatch = msg.text.match(/\[IMG_SENT:([^|]+)\|([^\]]+)\]/);
-                  if (newMatch) {
-                     imageName = newMatch[1];
-                     imageUrl = newMatch[2];
-                  } else {
-                     // Soporte para formato antiguo [IMG_SENT:Key]
-                     const oldMatch = msg.text.match(/\[IMG_SENT:([^\]]+)\]/);
-                     if (oldMatch) {
-                        imageName = oldMatch[1].replace(/_/g, ' ');
-                     }
-                  }
-                  cleanText = `Imagen enviada`;
-                }
-
-                // Fuerza a la derecha todo lo que NO sea del cliente
-                const isIncoming = msg.sender === 'client';
-                const alignmentClass = isIncoming ? 'align-start' : 'align-end';
-
-                return (
-                <div key={msg.id} className={`message-wrapper ${alignmentClass}`} style={{ width: '100%', display: 'flex', flexDirection: 'column', marginTop: 12 }}>
-                  {msg.sender === 'bot' && (
-                    <div className="bot-label">
-                      <Bot size={12} /> Chatbot IA
-                    </div>
-                  )}
-                  {msg.sender === 'agent' && (
-                    <div className="agent-label">
-                      <UserCheck size={12} /> {session?.user?.email?.split('@')[0] || 'Agente'}
-                    </div>
-                  )}
-                  <div className={`message-bubble ${isIncoming ? 'incoming' : msg.sender === 'bot' ? 'bot' : 'outgoing'}`}>
-                    {isImage ? (
-                      <div className="product-image-card">
-                          {imageUrl ? (
-                             <img src={imageUrl} alt={imageName} className="prod-img" />
-                          ) : (
-                             <div className="prod-img-placeholder">🌄</div>
-                          )}
-                          <div className="prod-img-footer">Producto: {imageName}</div>
-                      </div>
-                    ) : (
-                      <p style={{ whiteSpace: 'pre-line' }}>{cleanText}</p>
-                    )}
-                    <div className="message-time">{msg.time}</div>
+            <div className="chat-header" style={{ padding: '20px 32px' }}>
+               <div className="avatar md" style={{ background: selectedConv.bg }}>{selectedConv.avatar}</div>
+               <div style={{ marginLeft: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {selectedConv.name} <CheckCircle />
                   </div>
-                </div>
-              )})}
-              <div ref={messagesEndRef} />
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Sales Lead | Open | <span style={{ color: 'var(--accent-emerald)' }}>Verified WA</span></p>
+               </div>
+               <div className="ml-auto flex gap-2">
+                  <button className="btn btn-secondary btn-sm"><Phone size={16} /> Call</button>
+                  <button className="btn btn-secondary btn-sm"><Mail size={16} /> Email</button>
+                  <button className="btn btn-secondary btn-sm">Details</button>
+               </div>
             </div>
 
-            <form className="chat-input-area" onSubmit={handleSendMessage}>
-              <button type="button" className="btn btn-ghost"><Paperclip size={18} /></button>
-              <input 
-                type="text" 
-                placeholder="Escribe un mensaje..." 
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-              />
-              <button type="button" className="btn btn-ghost"><Smile size={18} /></button>
-              <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}><Send size={18} /></button>
-            </form>
+            <div className="chat-messages" style={{ padding: '32px' }}>
+               {messages.map(m => (
+                 <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'client' ? 'flex-start' : 'flex-end', marginBottom: 24 }}>
+                    <div style={{ 
+                      maxWidth: '70%', 
+                      padding: '16px 20px', 
+                      borderRadius: m.sender === 'client' ? '0 20px 20px 20px' : '20px 0 20px 20px',
+                      background: m.sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-600)',
+                      border: m.sender === 'client' ? '1px solid var(--glass-border)' : 'none',
+                      boxShadow: m.sender === 'agent' ? '0 10px 20px -10px rgba(99, 102, 241, 0.4)' : 'none'
+                    }}>
+                       <p style={{ fontSize: '0.95rem', color: '#fff' }}>{m.text}</p>
+                       <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'right' }}>You ({m.time})</div>
+                    </div>
+                 </div>
+               ))}
+            </div>
+
+            <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none' }}>
+               {showAI && (
+                 <div style={{ 
+                   background: 'rgba(99, 102, 241, 0.05)', 
+                   border: '1px solid rgba(99, 102, 241, 0.1)',
+                   borderRadius: '16px',
+                   padding: '16px',
+                   marginBottom: 20,
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'space-between',
+                   animation: 'slideUp 0.4s ease'
+                 }}>
+                   <div className="flex items-center gap-3">
+                      <div style={{ background: 'var(--primary-600)', color: 'white', padding: 6, borderRadius: 8 }}>
+                         <Sparkles size={16} />
+                      </div>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>AI suggest: Schedule a demo call?</span>
+                   </div>
+                   <div className="flex gap-2">
+                      <button className="btn btn-primary btn-sm" style={{ background: '#10b981', boxShadow: 'none' }}>Accept</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)}>Decline</button>
+                   </div>
+                 </div>
+               )}
+               <div style={{ 
+                 background: 'rgba(255,255,255,0.03)', 
+                 border: '1px solid var(--glass-border)',
+                 borderRadius: '16px',
+                 padding: '8px 16px',
+                 display: 'flex',
+                 alignItems: 'center'
+               }}>
+                  <input type="text" placeholder="Type a message..." style={{ flex: 1, padding: '12px' }} />
+                  <div className="flex gap-2">
+                    <button className="btn btn-ghost"><Paperclip size={20} /></button>
+                    <button className="btn btn-ghost"><Smile size={20} /></button>
+                    <button className="btn btn-primary" style={{ padding: '8px 20px' }}>Send</button>
+                  </div>
+               </div>
+            </div>
           </>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', gap: 16 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MessageSquare size={32} />
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <h3 style={{ color: 'var(--text-main)', marginBottom: 4 }}>No hay conversaciones seleccionadas</h3>
-              <p style={{ fontSize: '0.9rem' }}>Selecciona un chat de la lista o espera nuevos mensajes.</p>
-            </div>
-          </div>
         )}
       </div>
 
-      {/* Right Panel - Contact Info */}
-      {selectedConv && (
-        <div className="contact-panel">
-          <div className="contact-panel-header">
-            <div className="avatar xl" style={{ background: selectedConv.bg }}>
-              {selectedConv.avatar}
+      {/* Profile Column */}
+      <div className="contact-panel" style={{ background: 'transparent' }}>
+         <div style={{ padding: '32px' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 24 }}>Sarah Johnson Profile</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+               {['Contact', 'Deal Info', 'Company', 'Timeline'].map(t => (
+                 <div key={t} style={{ 
+                   padding: '12px 16px', 
+                   borderRadius: 12, 
+                   background: t === 'Contact' ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                   color: t === 'Contact' ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+                   fontWeight: 600,
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'space-between'
+                 }}>
+                    {t}
+                    {t === 'Contact' && <ChevronRight size={14} />}
+                 </div>
+               ))}
             </div>
-            <h3>{selectedConv.name}</h3>
-            <p>Lead • {selectedConv.phone || 'Sin télefono'}</p>
-          </div>
 
-          <div className="contact-section">
-            <div className="contact-section-title">Información de Contacto</div>
-            <div className="contact-detail">
-              <Mail size={16} /> {selectedConv.client?.email || 'N/A'}
+            <div style={{ marginTop: 40 }}>
+               <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Quick Info</h4>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div className="flex items-center gap-3">
+                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><User size={16} /></div>
+                     <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Position</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>CEO @ CloudStream</div>
+                     </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Globe size={16} /></div>
+                     <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Location</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>San Francisco, CA</div>
+                     </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><History size={16} /></div>
+                     <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Last Active</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>2 minutes ago</div>
+                     </div>
+                  </div>
+               </div>
             </div>
-            <div className="contact-detail">
-              <Phone size={16} /> {selectedConv.phone || 'N/A'}
-            </div>
-            <div className="contact-detail">
-              <MapPin size={16} /> No registrada
-            </div>
-          </div>
+         </div>
+      </div>
+    </div>
+  )
+}
 
-          <div className="contact-section">
-            <div className="contact-section-title">Etiquetas</div>
-            <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
-              <span className="badge emerald">WhatsApp</span>
-            </div>
-          </div>
-
-          <div className="contact-section">
-            <div className="contact-section-title">Inteligencia IA</div>
-            <div className="card" style={{ padding: 14, background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--primary-300)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Bot size={14} /> Resumen Histórico
-              </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                El chatbot ha manejado esta conversación. El cliente interactuó a través del canal {selectedConv.channel}.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+function CheckCircle() {
+  return (
+    <div style={{ background: '#10b981', color: 'white', borderRadius: '50%', padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Check size={10} strokeWidth={4} />
     </div>
   )
 }
