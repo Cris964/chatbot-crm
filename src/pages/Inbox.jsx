@@ -212,10 +212,4 @@ export default function Inbox() {
   )
 }
 
-function CheckCircle() {
-  return (
-    <div style={{ background: '#10b981', color: 'white', borderRadius: '50%', padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Check size={10} strokeWidth={4} />
-    </div>
-  )
-}
+

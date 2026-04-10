@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Zap, Plus, UserPlus, Bell, Mail, Clock, Tag, GitBranch,
   ArrowRight, AlertTriangle, MessageSquare, Target,
-  Repeat, CheckCircle, Star, Brain
+  Repeat, CheckCircle2, Star, Brain
 } from 'lucide-react'
 
 const automations = [
@@ -154,7 +154,7 @@ export default function Automations() {
         <div className="stat-card emerald animate-slideUp stagger-2">
           <div className="stat-card-header">
             <span className="stat-card-label">Ejecuciones Hoy</span>
-            <div className="stat-card-icon emerald"><CheckCircle size={20} /></div>
+            <div className="stat-card-icon emerald"><CheckCircle2 size={20} /></div>
           </div>
           <div className="stat-card-value">1,247</div>
         </div>
