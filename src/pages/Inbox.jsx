@@ -4,7 +4,7 @@ import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
-  Sparkles, Check, X as Close, User, Globe, History
+  Sparkles, Check, X as Close, User, Globe, History, CheckCircle2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -83,7 +83,7 @@ export default function Inbox() {
                <div className="avatar md" style={{ background: selectedConv.bg }}>{selectedConv.avatar}</div>
                <div style={{ marginLeft: 16 }}>
                   <div style={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {selectedConv.name} <CheckCircle />
+                    {selectedConv.name} <CheckCircle2 size={16} style={{ color: 'var(--accent-emerald)' }} />
                   </div>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Sales Lead | Open | <span style={{ color: 'var(--accent-emerald)' }}>Verified WA</span></p>
                </div>

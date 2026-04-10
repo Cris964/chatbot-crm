@@ -160,7 +160,19 @@ img {
 .app-layout {
   display: flex;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  position: relative;
+  min-width: 0; /* Prevents flex items from overflowing */
 }
 
 /* === Sidebar === */

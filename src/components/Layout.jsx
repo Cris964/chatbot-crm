@@ -12,7 +12,7 @@ import NexusLogo from './NexusLogo'
 const navItems = [
   { label: 'GENERAL', items: [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/inbox', icon: MessageSquare, label: 'Inbox', badge: 'New' },
+    { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
   ]},
   { label: 'NEGOCIO', items: [
     { to: '/leads', icon: Users, label: 'Leads' },
