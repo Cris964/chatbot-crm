@@ -22,6 +22,7 @@ export default function Inbox() {
     { id: 3, sender: 'client', text: 'Hey! Interested you NexusCRM\'s entepte on chats today!', time: '11:42 AM' },
   ])
   const [newMessage, setNewMessage] = useState('')
+  const [botActive, setBotActive] = useState(true)
   const [showAI, setShowAI] = useState(true)
 
   useEffect(() => {
@@ -67,10 +68,11 @@ export default function Inbox() {
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>{c.preview}</p>
                   <div className="flex gap-2 mt-2">
-                     {c.tags.map(t => <span key={t} className="badge amber" style={{ fontSize: 10, padding: '1px 6px' }}>{t}</span>)}
-                  </div>
-               </div>
-            </div>
+                      {c.tags.map(t => <span key={t} className="badge amber" style={{ fontSize: 10, padding: '1px 6px' }}>{t}</span>)}
+                      {botActive && c.id === 1 && <span className="badge emerald" style={{ fontSize: 10, padding: '1px 6px', display: 'flex', alignItems: 'center', gap: 4 }}><Bot size={10} /> AI Active</span>}
+                   </div>
+                </div>
+             </div>
           ))}
         </div>
       </div>
@@ -87,11 +89,25 @@ export default function Inbox() {
                   </div>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Sales Lead | Open | <span style={{ color: 'var(--accent-emerald)' }}>Verified WA</span></p>
                </div>
-               <div className="ml-auto flex gap-2">
-                  <button className="btn btn-secondary btn-sm"><Phone size={16} /> Call</button>
-                  <button className="btn btn-secondary btn-sm"><Mail size={16} /> Email</button>
-                  <button className="btn btn-secondary btn-sm">Details</button>
-               </div>
+                <div className="ml-auto flex items-center gap-6">
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
+                      <div className="flex items-center gap-2">
+                         <Bot size={16} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
+                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: botActive ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                            {botActive ? 'Chatbot Activo' : 'Modo Manual'}
+                         </span>
+                      </div>
+                      <div 
+                        className={`toggle-switch ${botActive ? 'active' : ''}`} 
+                        onClick={() => setBotActive(!botActive)}
+                      />
+                   </div>
+                   <div style={{ width: 1, height: 24, background: 'var(--glass-border)' }} />
+                   <div className="flex gap-2">
+                      <button className="btn btn-secondary btn-sm"><Phone size={16} /> Call</button>
+                      <button className="btn btn-secondary btn-sm"><Mail size={16} /> Email</button>
+                   </div>
+                </div>
             </div>
 
             <div className="chat-messages" style={{ padding: '32px' }}>
@@ -113,7 +129,7 @@ export default function Inbox() {
             </div>
 
             <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none' }}>
-               {showAI && (
+               {showAI && botActive && (
                  <div style={{ 
                    background: 'rgba(99, 102, 241, 0.05)', 
                    border: '1px solid rgba(99, 102, 241, 0.1)',
