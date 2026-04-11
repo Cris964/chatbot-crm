@@ -4,7 +4,7 @@ import {
   LayoutDashboard, MessageSquare, Users, UserCircle, Kanban,
   DollarSign, Truck, Zap, BarChart3, Settings, Search,
   Bell, Menu, ChevronLeft, Sparkles, LogOut, HelpCircle, User,
-  X, Clock, MessageCircle, Shield, ChevronRight, Command
+  X, Clock, MessageCircle, Shield, ChevronRight, Command, Calendar
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import NexusLogo from './NexusLogo'
