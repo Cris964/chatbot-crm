@@ -45,27 +45,121 @@ const pipelineData = [
 export default function Dashboard() {
   const { session } = useOutletContext()
   const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState({
+    revenue: 0,
+    salesCount: 0,
+    dealsActive: 0,
+    newLeads: 0,
+    revenueChange: '+0%',
+    leadsChange: '+0%'
+  })
+  const [chartData, setChartData] = useState([])
+  const [recentDealsList, setRecentDealsList] = useState([])
+  const [pipelineState, setPipelineState] = useState([])
 
   useEffect(() => {
-    // Artificial delay for premium loading feel
-    setTimeout(() => setIsLoading(false), 800)
-  }, [])
+    if (session?.user?.id) {
+       fetchDashboardData()
+    }
+  }, [session])
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true)
+    try {
+      // 1. Get client IDs for multitenancy
+      const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
+      const clientIds = clients?.map(c => c.id) || []
+
+      // 2. Fetch Orders for Revenue and Sales Count
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .in('client_id', clientIds)
+        .neq('status', 'cancelado')
+
+      // 3. Fetch Leads for Active Deals and Recent Deals
+      const { data: leads } = await supabase
+        .from('leads')
+        .select('*')
+        .in('client_id', clientIds)
+        .order('created_at', { ascending: false })
+
+      // 4. Fetch Conversations for message volume
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id, channel')
+        .in('client_id', clientIds)
+
+      if (orders) {
+        const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
+        
+        // Group orders by month for chart
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
+        
+        orders.forEach(o => {
+          const monthIdx = new Date(o.created_at).getMonth()
+          grouped[monthIdx].value += (Number(o.amount) || 0)
+          // Mocking value2 as a percentage of value for visual depth, or use last year if available
+          grouped[monthIdx].value2 = grouped[monthIdx].value * 0.8 
+        })
+
+        setStats(prev => ({ 
+          ...prev, 
+          revenue: totalRevenue, 
+          salesCount: orders.length 
+        }))
+        setChartData(grouped)
+      }
+
+      if (leads) {
+        const active = leads.filter(l => !['Gano', 'Perdio'].includes(l.stage)).length
+        const recent = leads.slice(0, 5).map(l => ({
+          lead: l.name,
+          stage: l.stage || 'Nuevo',
+          value: `$${(Math.random() * 5 + 1).toFixed(2)}k`, // Randomized mock value as leads don't usually have a fixed 'amount' column in this schema yet
+          date: new Date(l.created_at).toLocaleDateString(),
+          color: l.stage === 'Gano' ? '#10b981' : (l.stage === 'Perdio' ? '#f43f5e' : '#6366f1')
+        }))
+        
+        // Pipeline bar chart data
+        const stages = ['Nuevo', 'Contactado', 'Propuesta', 'Negociación']
+        const pData = stages.map(s => ({
+          name: s,
+          value: leads.filter(l => l.stage === s).length,
+          color: s === 'Nuevo' ? '#6366f1' : '#10b981'
+        }))
+
+        setStats(prev => ({ 
+          ...prev, 
+          dealsActive: active,
+          newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length
+        }))
+        setRecentDealsList(recent)
+        setPipelineState(pData)
+      }
+
+    } catch (err) {
+      console.error("Dashboard error:", err)
+    }
+    setIsLoading(false)
+  }
 
   return (
     <div className="page-content" style={{ padding: '32px' }}>
       <div className="page-header animate-slideUp">
-        <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>Dashboard</h1>
-        <p className="page-subtitle">Welcome back! Here's what's happening today.</p>
+        <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Dashboard</h1>
+        <p className="page-subtitle" style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Welcome back! Here's what's happening with your account.</p>
       </div>
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
-        {/* LTV Card */}
+        {/* LTV/Revenue Card */}
         <div className="stat-card">
           <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>LTV</span>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Revenue</span>
              <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>+12.5%</span>
           </div>
-          <div className="stat-card-value">$1.4M</div>
+          <div className="stat-card-value">${(stats.revenue / 1000).toFixed(1)}k</div>
           <div style={{ height: 40, marginTop: 12 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
@@ -78,10 +172,10 @@ export default function Dashboard() {
         {/* Total Sales Card */}
         <div className="stat-card">
           <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Sales</span>
-             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 700 }}>+18.2%</span>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Orders</span>
+             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 700 }}>{stats.salesCount}</span>
           </div>
-          <div className="stat-card-value">$2.8M</div>
+          <div className="stat-card-value">{stats.salesCount}</div>
           <div style={{ height: 40, marginTop: 12 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
@@ -94,21 +188,21 @@ export default function Dashboard() {
         {/* Active Deals Card */}
         <div className="stat-card">
           <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Active Deals</span>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Leads en Proceso</span>
              <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
           </div>
-          <div className="stat-card-value">312</div>
-          <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, marginTop: 4 }}>+5.3% this month</div>
+          <div className="stat-card-value">{stats.dealsActive}</div>
+          <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, marginTop: 4 }}>Engagement activo</div>
         </div>
 
         {/* New Leads Card */}
         <div className="stat-card">
           <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>New Leads</span>
+             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Leads (30d)</span>
              <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
           </div>
-          <div className="stat-card-value">450</div>
-          <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600, marginTop: 4 }}>-2.1% lower trend</div>
+          <div className="stat-card-value">{stats.newLeads}</div>
+          <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600, marginTop: 4 }}>Tendencia mensual</div>
         </div>
       </div>
 
@@ -116,14 +210,14 @@ export default function Dashboard() {
       <div className="card" style={{ marginBottom: '32px', padding: '32px' }}>
         <div className="card-header" style={{ marginBottom: '32px' }}>
            <div>
-              <h3 className="card-title" style={{ fontSize: '1.2rem' }}>Sales Performance</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Metric performance across key channels</p>
+              <h3 className="card-title" style={{ fontSize: '1.25rem', fontWeight: 800 }}>Ventas por Mes</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Rendimiento de facturación real acumulado</p>
            </div>
-           <button className="btn btn-secondary btn-sm" style={{ padding: '8px 16px' }}>This Year <ChevronDown size={14} /></button>
+           <button className="btn btn-secondary btn-sm" style={{ padding: '8px 16px' }}>2026 <ChevronDown size={14} /></button>
         </div>
         <div style={{ height: 350 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={mainChartData}>
+            <AreaChart data={chartData.length > 0 ? chartData : mainChartData}>
               <defs>
                 <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -165,8 +259,8 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentDeals.map((deal, i) => (
-                <tr key={i} style={{ borderBottom: i === recentDeals.length - 1 ? 'none' : '1px solid var(--glass-border)' }}>
+              {recentDealsList.map((deal, i) => (
+                <tr key={i} style={{ borderBottom: i === recentDealsList.length - 1 ? 'none' : '1px solid var(--glass-border)' }}>
                   <td style={{ padding: '16px 12px', fontWeight: 600, fontSize: '0.9rem' }}>{deal.lead}</td>
                   <td style={{ padding: '16px 12px' }}>
                     <span className="badge" style={{ background: `${deal.color}15`, color: deal.color }}>{deal.stage}</span>
@@ -187,12 +281,12 @@ export default function Dashboard() {
           </div>
           <div style={{ height: 220, marginTop: 24 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={pipelineData} layout="vertical">
+              <BarChart data={pipelineState.length > 0 ? pipelineState : pipelineData} layout="vertical">
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} width={80} />
                 <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                  {pipelineData.map((entry, index) => (
+                  {(pipelineState.length > 0 ? pipelineState : pipelineData).map((entry, index) => (
                     <cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>

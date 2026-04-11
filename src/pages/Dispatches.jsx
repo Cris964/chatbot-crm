@@ -7,6 +7,46 @@ import {
   Zap, Compass, Plus, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+// Custom marker icon to match Cosmic aesthetic
+const markerIcon = new L.DivIcon({
+  className: 'custom-div-icon',
+  html: `<div style="background-color: #6366f1; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6]
+})
+
+const originIcon = new L.DivIcon({
+  className: 'custom-div-icon',
+  html: `<div style="background-color: #10b981; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6]
+})
+
+// Coordinate mapping for major Colombian cities
+const CITY_COORDS = {
+  'Cali': [3.4516, -76.5320],
+  'Bogotá': [4.7110, -74.0721],
+  'Medellín': [6.2442, -75.5812],
+  'Barranquilla': [10.9639, -74.7964],
+  'Cartagena': [10.3910, -75.4794],
+  'Bucaramanga': [7.1193, -73.1227],
+  'Pereira': [4.8133, -75.6961],
+  'Manizales': [5.0689, -75.5174],
+  'Armenia': [4.5339, -75.6811],
+  'Popayán': [2.4419, -76.6063],
+  'Pasto': [1.2136, -77.2811],
+  'Buenaventura': [3.8801, -77.0312],
+}
+
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  map.setView(center, zoom);
+  return null;
+}
 
 export default function Dispatches() {
   const { session } = useOutletContext()
@@ -22,7 +62,6 @@ export default function Dispatches() {
 
   const fetchShipments = async () => {
     setIsLoading(true)
-    // Get clients first for multitenancy
     const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
     const clientIds = clients?.map(c => c.id) || []
 
@@ -34,27 +73,29 @@ export default function Dispatches() {
       .order('updated_at', { ascending: false })
 
     if (!error && data) {
-      const mapped = data.map(d => ({
-        id: d.id,
-        customer: d.user_name || 'Cliente',
-        destination: d.address ? `${d.address}, ${d.city}` : d.city || 'Destino TBD',
-        status: d.status || 'pendiente',
-        progress: d.status === 'entregado' ? 100 : (d.status === 'despachado' ? 65 : 20),
-        eta: d.status === 'entregado' ? 'Entregado' : '2-3 días',
-        driver: 'Logística Naturel',
-        vehicle: 'Envío Terrestre',
-        route: { 
-          from: { x: 100, y: 300, name: 'Cali (Origen)' }, 
-          to: { x: 800, y: 150, name: d.city || 'Destino' }, 
-          current: { x: d.status === 'entregado' ? 800 : (d.status === 'despachado' ? 550 : 200), y: d.status === 'entregado' ? 150 : (d.status === 'despachado' ? 200 : 280) } 
-        },
-        timeline: [
-          { status: 'Pedido Recibido', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: Package },
-          { status: 'Pago Confirmado', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: ShieldCheck },
-          { status: 'Despachado', date: d.updated_at ? new Date(d.updated_at).toLocaleDateString() : 'Pendiente', completed: ['despachado', 'entregado'].includes(d.status), icon: Truck },
-          { status: 'Entregado', date: d.status === 'entregado' ? new Date(d.updated_at).toLocaleDateString() : 'TBD', completed: d.status === 'entregado', icon: CheckCircle2 },
-        ]
-      }))
+      const mapped = data.map(d => {
+        const destCity = d.city || 'Cali'
+        const destCoords = CITY_COORDS[destCity] || [3.4516, -76.5320]
+        
+        return {
+          id: d.id,
+          customer: d.user_name || 'Cliente',
+          destination: d.address ? `${d.address}, ${d.city}` : d.city || 'Destino TBD',
+          city: destCity,
+          coords: destCoords,
+          status: d.status || 'pendiente',
+          progress: d.status === 'entregado' ? 100 : (d.status === 'despachado' ? 65 : 20),
+          eta: d.status === 'entregado' ? 'Entregado' : '2-3 días',
+          driver: 'Logística Naturel',
+          vehicle: 'Envío Terrestre',
+          timeline: [
+            { status: 'Pedido Recibido', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: Package },
+            { status: 'Pago Confirmado', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: ShieldCheck },
+            { status: 'Despachado', date: d.updated_at ? new Date(d.updated_at).toLocaleDateString() : 'Pendiente', completed: ['despachado', 'entregado'].includes(d.status), icon: Truck },
+            { status: 'Entregado', date: d.status === 'entregado' ? new Date(d.updated_at).toLocaleDateString() : 'TBD', completed: d.status === 'entregado', icon: CheckCircle2 },
+          ]
+        }
+      })
       setShipments(mapped)
       if (mapped.length > 0 && !activeShipmentId) {
         setActiveShipmentId(mapped[0].id)
@@ -139,22 +180,47 @@ export default function Dispatches() {
           ))}
         </div>
 
-        {/* Center: Interactive Map */}
-        <div className="card" style={{ padding: 0, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10, display: 'flex', gap: 12 }}>
+        {/* Center: Leaflet Map */}
+        <div className="card" style={{ padding: 0, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', border: '1px solid var(--glass-border)' }}>
+          <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 1000, display: 'flex', gap: 12 }}>
              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '12px 20px', backdropFilter: 'blur(15px)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Destino Final</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>{activeShipment.destination}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>{activeShipment?.city || 'Seleccionar...'}</div>
              </div>
-             <div style={{ background: activeShipment.status === 'Delivered' ? 'var(--accent-emerald)' : '#6366f1', color: 'white', borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(15px)' }}>
-                {activeShipment.status === 'Delivered' ? <ShieldCheck size={18} /> : <Compass className="animate-spin-slow" size={18} />}
-                <span style={{ fontWeight: 700 }}>{activeShipment.status === 'Delivered' ? 'Entregado' : 'En Camino'}</span>
+             <div style={{ background: activeShipment?.status === 'entregado' ? 'var(--accent-emerald)' : '#6366f1', color: 'white', borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(15px)' }}>
+                {activeShipment?.status === 'entregado' ? <ShieldCheck size={18} /> : <Compass className="animate-spin-slow" size={18} />}
+                <span style={{ fontWeight: 700 }}>{activeShipment?.status === 'entregado' ? 'Entregado' : 'En Camino'}</span>
              </div>
           </div>
 
-          <ShipmentMap route={activeShipment.route} progress={activeShipment.progress} />
+          <div style={{ width: '100%', height: '100%', filter: 'invert(1) hue-rotate(180deg) brightness(0.9) contrast(1.2)' }}>
+            {activeShipment && (
+              <MapContainer 
+                center={activeShipment.coords} 
+                zoom={6} 
+                style={{ width: '100%', height: '100%' }}
+                zoomControl={false}
+              >
+                <ChangeView center={activeShipment.coords} zoom={7} />
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                />
+                
+                {/* Cali Origin */}
+                <Marker position={CITY_COORDS['Cali']} icon={originIcon}>
+                  <Popup>Centro de Despacho Cali</Popup>
+                </Marker>
 
-          <div style={{ position: 'absolute', bottom: 24, left: 24, right: 24, background: 'rgba(5, 5, 8, 0.75)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(25px)', borderRadius: 20, padding: '20px' }}>
+                {/* Shipment Destination */}
+                <Marker position={activeShipment.coords} icon={markerIcon}>
+                  <Popup>{activeShipment.customer} - {activeShipment.city}</Popup>
+                </Marker>
+              </MapContainer>
+            )}
+          </div>
+
+          <div style={{ position: 'absolute', bottom: 24, left: 24, right: 24, background: 'rgba(5, 5, 8, 0.75)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(25px)', borderRadius: 20, padding: '20px', zIndex: 1000 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
                <div className="flex items-center gap-3">
                   <div className="avatar md" style={{ background: 'var(--primary-600)', borderRadius: 12 }}><Truck size={20} /></div>
@@ -185,7 +251,7 @@ export default function Dispatches() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="card-header" style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: 24 }}>
              <div>
-                <div style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)', padding: '4px 12px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, display: 'inline-block', marginBottom: 12 }}>ID: {activeShipment.id}</div>
+                <div style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)', padding: '4px 12px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, display: 'inline-block', marginBottom: 12 }}>ID: {activeShipment?.id?.slice(0,12)}</div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Ciclo de Vida</h3>
              </div>
           </div>
@@ -211,8 +277,8 @@ export default function Dispatches() {
                      <step.icon size={18} />
                   </div>
                   <div>
-                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: step.completed ? 'white' : 'var(--text-secondary)' }}>{step.status}</div>
-                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{step.date}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: step.completed ? 'white' : 'var(--text-secondary)' }}>{step.status}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{step.date}</div>
                   </div>
                </div>
              )) : (
@@ -233,67 +299,6 @@ export default function Dispatches() {
         </div>
 
       </div>
-    </div>
-  )
-}
-
-function ShipmentMap({ route, progress }) {
-  return (
-    <div style={{ width: '100%', height: '100%', background: '#050508', position: 'relative' }}>
-      {/* Abstract Map Grid */}
-      <div style={{ 
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-        opacity: 0.5
-      }} />
-
-      <svg width="100%" height="100%" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" style={{ position: 'relative', zIndex: 1 }}>
-        <defs>
-          <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.8" />
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
-
-        {/* The Route Path */}
-        <path 
-          d={`M ${route.from.x} ${route.from.y} Q ${(route.from.x + route.to.x)/2} ${(route.from.y + route.to.y)/2 - 100} ${route.to.x} ${route.to.y}`} 
-          stroke="url(#routeGradient)" 
-          strokeWidth="4" 
-          fill="none" 
-          strokeDasharray="10 5"
-        />
-
-        {/* Origin Dot */}
-        <circle cx={route.from.x} cy={route.from.y} r="8" fill="rgba(255,255,255,0.2)" />
-        <circle cx={route.from.x} cy={route.from.y} r="4" fill="#fff" />
-        <text x={route.from.x - 20} y={route.from.y + 25} fill="var(--text-tertiary)" fontSize="12" fontWeight="600">{route.from.name}</text>
-
-        {/* Destination Dot */}
-        <circle cx={route.to.x} cy={route.to.y} r="12" fill="rgba(99,102,241,0.2)">
-           <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" />
-        </circle>
-        <circle cx={route.to.x} cy={route.to.y} r="6" fill="#6366f1" filter="url(#glow)" />
-        <text x={route.to.x - 10} y={route.to.y + 30} fill="var(--text-primary)" fontSize="14" fontWeight="800">{route.to.name}</text>
-
-        {/* Vehicle / Current Position */}
-        <g transform={`translate(${route.current.x}, ${route.current.y})`}>
-          <circle r="20" fill="rgba(99,102,241,0.1)">
-             <animate attributeName="opacity" values="0.1;0.4;0.1" dur="1.5s" repeatCount="indefinite" />
-          </circle>
-          <circle r="6" fill="#6366f1" filter="url(#glow)" />
-          {/* Animated Wave */}
-          <circle r="6" fill="none" stroke="#6366f1" strokeWidth="2">
-             <animate attributeName="r" values="6;22" dur="1.5s" repeatCount="indefinite" />
-             <animate attributeName="opacity" values="1;0" dur="1.5s" repeatCount="indefinite" />
-          </circle>
-        </g>
-      </svg>
     </div>
   )
 }

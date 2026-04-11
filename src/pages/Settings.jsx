@@ -68,19 +68,24 @@ export default function Settings() {
   }, [session])
 
   const fetchSettings = async () => {
-    // Try to get company name from clients table for this user
-    const { data: clients } = await supabase
+    setIsLoading(true)
+    // Get the client record associated with this user
+    const { data: clients, error } = await supabase
       .from('clients')
-      .select('name')
+      .select('*')
       .eq('user_id', session.user.id)
       .limit(1)
 
-    setWorkspaceData({
-      companyName: clients?.[0]?.name || 'Mi Empresa',
-      slug: (clients?.[0]?.name || 'mi-empresa').toLowerCase().replace(/\s+/g, '-'),
-      email: session.user.email,
-      timezone: 'America/Bogota (UTC-5)'
-    })
+    if (clients && clients.length > 0) {
+      const client = clients[0]
+      setWorkspaceData({
+        id: client.id,
+        companyName: client.name || 'Mi Empresa',
+        slug: client.slug || (client.name || 'mi-empresa').toLowerCase().replace(/\s+/g, '-'),
+        email: client.email || session.user.email,
+        timezone: client.timezone || 'America/Bogota (UTC-5)'
+      })
+    }
     setIsLoading(false)
   }
 
@@ -88,15 +93,33 @@ export default function Settings() {
     setWorkspaceData({ ...workspaceData, [e.target.name]: e.target.value })
   }
 
-  const handleSaveWorkspace = () => {
+  const handleSaveWorkspace = async () => {
     setIsSaving(true)
     setShowSuccess(false)
-    // Simulate API call to save settings
-    setTimeout(() => {
+    
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ 
+          name: workspaceData.companyName,
+          slug: workspaceData.slug,
+          email: workspaceData.email,
+          updated_at: new Date().toISOString()
+          // We can add more fields if the schema supports it, otherwise metadata
+        })
+        .eq('id', workspaceData.id)
+
+      if (!error) {
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
+      } else {
+        console.error("Error saving settings:", error)
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err)
+    } finally {
       setIsSaving(false)
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
-    }, 1000)
+    }
   }
 
   return (
