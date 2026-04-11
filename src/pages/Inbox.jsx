@@ -283,25 +283,18 @@ export default function Inbox() {
 
             <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none' }}>
                {showAI && !selectedConv?.needs_human && (
-                 <div style={{ 
-                   background: 'rgba(99, 102, 241, 0.05)', 
-                   border: '1px solid rgba(99, 102, 241, 0.1)',
-                   borderRadius: '16px',
-                   padding: '16px',
-                   marginBottom: 20,
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'space-between',
-                   animation: 'slideUp 0.4s ease'
-                 }}>
-                   <div className="flex items-center gap-3">
-                      <div style={{ background: 'var(--primary-600)', color: 'white', padding: 6, borderRadius: 8 }}>
+                 <div className="ai-suggestion-panel animate-slideUp">
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div className="ai-icon-wrapper">
                          <Sparkles size={16} />
                       </div>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>AI suggest: Schedule a demo call?</span>
+                      <div>
+                         <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Suggestion</div>
+                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Schedule a demo call?</span>
+                      </div>
                    </div>
                    <div className="flex gap-2">
-                      <button className="btn btn-primary btn-sm" style={{ background: '#10b981', boxShadow: 'none' }}>Accept</button>
+                      <button className="btn btn-primary btn-sm" style={{ background: 'var(--accent-emerald)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}>Accept</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)}>Decline</button>
                    </div>
                  </div>
