@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
-  Plus, MoreHorizontal, DollarSign, Filter, Settings, Search
+  Plus, MoreHorizontal, DollarSign, Filter, Settings, Search, X
 } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { supabase } from '../lib/supabase'
@@ -26,6 +26,9 @@ export default function Pipeline() {
   const { session } = useOutletContext()
   const [stages, setStages] = useState(initialStages)
   const [isLoading, setIsLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [newDeal, setNewDeal] = useState({ name: '', company: '', value: '', stage: 'Nuevo' })
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -115,6 +118,39 @@ export default function Pipeline() {
        .update({ stage: stageId })
        .eq('id', leadId)
   }
+
+  const handleCreateDeal = async (e) => {
+    if (e) e.preventDefault()
+    setIsSaving(true)
+    
+    // Get client for multitenancy
+    const { data: client } = await supabase.from('clients').select('id').eq('user_id', session.user.id).single()
+    
+    if (!client) {
+        alert('No se encontró un cliente asociado a tu cuenta.')
+        setIsSaving(false)
+        return
+    }
+
+    const { error } = await supabase.from('leads').insert({
+      client_id: client.id,
+      name: newDeal.name,
+      company: newDeal.company,
+      value: newDeal.value.startsWith('$') ? newDeal.value : `$${newDeal.value}`,
+      stage: newDeal.stage,
+      score: 50,
+      status: 'active'
+    })
+
+    if (!error) {
+      setShowModal(false)
+      setNewDeal({ name: '', company: '', value: '', stage: 'Nuevo' })
+      fetchLeads()
+    } else {
+      alert('Error: ' + error.message)
+    }
+    setIsSaving(false)
+  }
   return (
     <div className="page-content" style={{ paddingBottom: 0, display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height))' }}>
       <div className="page-header animate-slideUp" style={{ flexShrink: 0 }}>
@@ -124,9 +160,11 @@ export default function Pipeline() {
             <p className="page-subtitle">Valor total del pipeline: <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>${totalValue.toLocaleString()}</span></p>
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-secondary"><Filter size={16} /> Filtros</button>
-            <button className="btn btn-secondary"><Settings size={16} /> Personalizar</button>
-            <button className="btn btn-primary"><Plus size={16} /> Nuevo Deal</button>
+            <button className="btn btn-secondary" onClick={() => alert('Filtros avanzados próximamente')}><Filter size={16} /> Filtros</button>
+            <button className="btn btn-secondary" onClick={() => alert('Personalización de columnas próximamente')}><Settings size={16} /> Personalizar</button>
+            <button className="btn btn-primary" onClick={() => { setNewDeal({ ...newDeal, stage: 'Nuevo' }); setShowModal(true); }}>
+              <Plus size={16} /> Nuevo Deal
+            </button>
           </div>
         </div>
       </div>
@@ -193,17 +231,52 @@ export default function Pipeline() {
                         </Draggable>
                       ))}
                       {provided.placeholder}
-                      <button className="btn btn-ghost btn-sm w-full" style={{ justifyContent: 'center', marginTop: 8, borderStyle: 'dashed', border: '1px dashed var(--border-default)' }}>
+                      <button 
+                        className="btn btn-ghost btn-sm w-full" 
+                        onClick={() => { setNewDeal({ ...newDeal, stage: stage.id }); setShowModal(true); }}
+                        style={{ justifyContent: 'center', marginTop: 8, borderStyle: 'dashed', border: '1px dashed var(--border-default)' }}
+                      >
                         <Plus size={14} /> Agregar
                       </button>
-                    </div>
-                  )}
-                </Droppable>
-              </div>
-            )
-          })}
-        </div>
       </DragDropContext>
+
+      {/* New Deal Modal */}
+      {showModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 480, padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Nuevo Deal</h1>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateDeal} style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre del Deal / Contacto</label>
+                  <input type="text" required className="input" placeholder="ej: Juan Pérez" value={newDeal.name} onChange={e => setNewDeal({...newDeal, name: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Empresa</label>
+                  <input type="text" className="input" placeholder="ej: Naturel Corp" value={newDeal.company} onChange={e => setNewDeal({...newDeal, company: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Estimado</label>
+                  <input type="text" className="input" placeholder="ej: $1,500" value={newDeal.value} onChange={e => setNewDeal({...newDeal, value: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Etapa Inicial</label>
+                  <select className="input" value={newDeal.stage} onChange={e => setNewDeal({...newDeal, stage: e.target.value})}>
+                    {stages.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Crear Deal'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import {
   Zap, Users, BarChart3, MessageSquare, 
   Send, Calendar, Target, Sparkles,
   ChevronRight, ArrowUpRight, Filter, Plus, 
-  CheckCircle2, Clock, Mail
+  CheckCircle2, Clock, Mail, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -12,6 +12,8 @@ export default function Marketing() {
   const { session } = useOutletContext()
   const [clients, setClients] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [newCampaign, setNewCampaign] = useState({ name: '', channel: 'WhatsApp', reach: '' })
 
   useEffect(() => {
     if (session?.user?.id) fetchClients()
@@ -42,7 +44,7 @@ export default function Marketing() {
             <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 800 }}>Marketing & Re-marketing</h1>
             <p className="page-subtitle">Activa tu base de datos con campañas inteligentes</p>
           </div>
-          <button className="btn btn-primary"><Plus size={18} /> Nueva Campaña</button>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={18} /> Nueva Campaña</button>
         </div>
       </div>
 
@@ -111,11 +113,11 @@ export default function Marketing() {
                   <div className="ai-icon-wrapper mini"><Sparkles size={14} /></div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Sugerencia Re-marketing</h3>
                </div>
-               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  Hemos detectado que <strong>43 clientes High-Value</strong> no han realizado pedidos en los últimos 30 días.
-               </p>
-               <button className="btn btn-primary btn-sm mt-6" style={{ width: '100%' }}>Lanzar Campaña VIP</button>
-            </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                   Hemos detectado que <strong>43 clientes High-Value</strong> no han realizado pedidos en los últimos 30 días.
+                </p>
+                <button className="btn btn-primary btn-sm mt-6" style={{ width: '100%' }} onClick={() => alert('Campaña VIP lanzada a los 43 clientes seleccionados')}>Lanzar Campaña VIP</button>
+             </div>
 
             <div className="card" style={{ padding: 24 }}>
                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 20 }}>Segmentos de Clientes</h3>
@@ -138,6 +140,52 @@ export default function Marketing() {
          </div>
 
       </div>
+
+      {/* New Campaign Modal */}
+      {showModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 480, padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Nueva Campaña</h1>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}><X size={20} /></button>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre de la Campaña</label>
+                  <input type="text" className="input" placeholder="ej: Promo Verano" value={newCampaign.name} onChange={e => setNewCampaign({...newCampaign, name: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Canal de Difusión</label>
+                  <select className="input" value={newCampaign.channel} onChange={e => setNewCampaign({...newCampaign, channel: e.target.value})}>
+                    <option>WhatsApp</option>
+                    <option>Messenger</option>
+                    <option>Instagram DM</option>
+                    <option>Email</option>
+                    <option>Multi-channel</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Alcance Estimado (Segmento)</label>
+                  <input type="number" className="input" placeholder="ej: 500" value={newCampaign.reach} onChange={e => setNewCampaign({...newCampaign, reach: e.target.value})} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                        alert('Campaña programada correctamente');
+                        setShowModal(false);
+                    }}
+                >
+                    Programar Campaña
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
