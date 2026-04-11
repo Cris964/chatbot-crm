@@ -24,6 +24,18 @@ export default function Sales() {
   const [salesList, setSalesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentUserClient, setCurrentUserClient] = useState(null)
+  
+  // New Modal States
+  const [showModal, setShowModal] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [newSale, setNewSale] = useState({
+    user_name: '',
+    product: '',
+    total: '',
+    city: '',
+    address: '',
+    payment_method: 'WhatsApp'
+  })
 
   useEffect(() => {
     const init = async () => {
@@ -80,31 +92,37 @@ export default function Sales() {
     setIsLoading(false)
   }
 
-  const handleManualSale = async () => {
-    const product = prompt('Nombre del producto (ej: CX-P):');
-    if (!product) return;
-    const amountStr = prompt('Precio de venta:');
-    const amount = parseInt(amountStr) || 0;
+  const handleCreateSale = async (e) => {
+    if (e) e.preventDefault()
+    setIsSaving(true)
     
-    // Obtener el client_id actual del usuario (doble check)
-    const { data: userClient } = await supabase.from('clients').select('id').eq('user_id', session.user.id).single();
-    
-    if (!userClient) {
-       alert('Error: No se encontró la configuración del comercio vinculado a tu usuario.');
-       return;
+    const targetClientId = currentUserClient
+    if (!targetClientId) {
+       alert('Error: No client configuration found for your account.')
+       setIsSaving(false)
+       return
     }
 
     const { error } = await supabase.from('orders').insert({
-      client_id: userClient.id,
-      product: product,
-      user_name: 'Venta Manual',
+      client_id: targetClientId,
+      product: newSale.product,
+      user_name: newSale.user_name,
       status: 'pagado',
-      total: amount,
+      total: parseInt(newSale.total) || 0,
+      city: newSale.city,
+      address: newSale.address,
+      payment_method: newSale.payment_method,
       created_at: new Date().toISOString()
-    });
+    })
 
-    if (error) alert('Error al crear: ' + error.message);
-    else fetchSales(userClient.id);
+    if (!error) {
+       setShowModal(false)
+       setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp' })
+       fetchSales(targetClientId)
+    } else {
+       alert('Error saving sale: ' + error.message)
+    }
+    setIsSaving(false)
   }
 
   const totalRevenue = salesList.reduce((acc, s) => acc + s.amount, 0)
@@ -130,7 +148,7 @@ export default function Sales() {
           </div>
           <div className="flex gap-2">
             <button className="btn btn-secondary" onClick={() => fetchSales()}><Download size={16} /> Refrescar</button>
-            <button className="btn btn-primary" onClick={handleManualSale}>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
               <DollarSign size={16} /> Registrar Venta
             </button>
           </div>
@@ -264,6 +282,73 @@ export default function Sales() {
           </div>
         )}
       </div>
+      </div>
+
+      {/* Sale Creation Modal */}
+      {showModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 540, padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Registrar Nueva Venta</h1>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}><Search size={20} style={{ transform: 'rotate(45deg)' }} /></button>
+            </div>
+            <form onSubmit={handleCreateSale} style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre del Cliente</label>
+                  <input 
+                    type="text" required className="input" placeholder="Nombre completo" 
+                    value={newSale.user_name} onChange={e => setNewSale({...newSale, user_name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto / Plan</label>
+                  <input 
+                    type="text" required className="input" placeholder="ej: CX-P" 
+                    value={newSale.product} onChange={e => setNewSale({...newSale, product: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Monto Total</label>
+                  <input 
+                    type="number" required className="input" placeholder="0.00" 
+                    value={newSale.total} onChange={e => setNewSale({...newSale, total: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Ciudad</label>
+                  <input 
+                    type="text" className="input" placeholder="ej: Cali" 
+                    value={newSale.city} onChange={e => setNewSale({...newSale, city: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Método de Pago</label>
+                  <select className="input" value={newSale.payment_method} onChange={e => setNewSale({...newSale, payment_method: e.target.value})}>
+                    <option>WhatsApp</option>
+                    <option>Transferencia</option>
+                    <option>Efectivo</option>
+                    <option>Card</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Dirección de Entrega</label>
+                  <input 
+                    type="text" className="input" placeholder="Dirección completa" 
+                    value={newSale.address} onChange={e => setNewSale({...newSale, address: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                  {isSaving ? 'Guardando...' : 'Confirmar Venta'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

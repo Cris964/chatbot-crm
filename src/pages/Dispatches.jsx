@@ -1,72 +1,78 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   Truck, Package, MapPin, Navigation, Clock, CheckCircle2,
   AlertCircle, ChevronRight, Search, Filter, MoreHorizontal,
   Globe, Info, Phone, Calendar, ArrowUpRight, ShieldCheck,
-  Zap, Compass
+  Zap, Compass, Plus, X
 } from 'lucide-react'
-
-const mockShipments = [
-  {
-    id: 'NX-9982',
-    customer: 'Sarah Johnson',
-    destination: 'San Francisco, CA',
-    status: 'In Transit',
-    progress: 65,
-    eta: '2 days',
-    driver: 'Robert Fox',
-    vehicle: 'Tesla Semi #4',
-    route: { from: { x: 100, y: 300, name: 'Austin' }, to: { x: 800, y: 150, name: 'SF' }, current: { x: 550, y: 200 } },
-    timeline: [
-      { status: 'Order Received', date: 'Mar 10, 2026', time: '09:00 AM', completed: true, icon: Package },
-      { status: 'Payment Confirmed', date: 'Mar 10, 2026', time: '10:30 AM', completed: true, icon: ShieldCheck },
-      { status: 'In Production', date: 'Mar 11, 2026', time: '02:15 PM', completed: true, icon: Zap },
-      { status: 'Quality Check', date: 'Mar 12, 2026', time: '08:45 AM', completed: true, icon: CheckCircle2 },
-      { status: 'Out for Delivery', date: 'Mar 12, 2026', time: '11:00 AM', completed: true, icon: Truck },
-    ]
-  },
-  {
-    id: 'NX-4410',
-    customer: 'James Wilson',
-    destination: 'Miami, FL',
-    status: 'Pending',
-    progress: 15,
-    eta: '5 days',
-    driver: 'Anner Daterson',
-    vehicle: 'Ford E-Transit',
-    route: { from: { x: 100, y: 150, name: 'Seattle' }, to: { x: 850, y: 350, name: 'Miami' }, current: { x: 220, y: 180 } },
-    timeline: [
-      { status: 'Order Received', date: 'Mar 11, 2026', time: '11:00 AM', completed: true, icon: Package },
-      { status: 'Payment Confirmed', date: 'Mar 11, 2026', time: '01:30 PM', completed: true, icon: ShieldCheck },
-      { status: 'In Production', date: 'Mar 12, 2026', time: '09:00 AM', completed: false, icon: Zap },
-      { status: 'Quality Check', date: 'TBD', time: 'TBD', completed: false, icon: CheckCircle2 },
-      { status: 'Out for Delivery', date: 'TBD', time: 'TBD', completed: false, icon: Truck },
-    ]
-  },
-  {
-    id: 'NX-2104',
-    customer: 'Emily White',
-    destination: 'New York, NY',
-    status: 'Delivered',
-    progress: 100,
-    eta: 'Arrived',
-    driver: 'Michael Scott',
-    vehicle: 'Rivian EDV',
-    route: { from: { x: 150, y: 250, name: 'LA' }, to: { x: 820, y: 120, name: 'NY' }, current: { x: 820, y: 120 } },
-    timeline: [
-      { status: 'Order Received', date: 'Mar 08, 2026', time: '08:00 AM', completed: true, icon: Package },
-      { status: 'Payment Confirmed', date: 'Mar 08, 2026', time: '09:30 AM', completed: true, icon: ShieldCheck },
-      { status: 'In Production', date: 'Mar 08, 2026', time: '03:15 PM', completed: true, icon: Zap },
-      { status: 'Quality Check', date: 'Mar 09, 2026', time: '10:00 AM', completed: true, icon: CheckCircle2 },
-      { status: 'Delivered', date: 'Mar 10, 2026', time: '04:00 PM', completed: true, icon: Truck },
-    ]
-  }
-]
+import { supabase } from '../lib/supabase'
 
 export default function Dispatches() {
-  const [activeShipmentId, setActiveShipmentId] = useState(mockShipments[0].id)
-  
-  const activeShipment = mockShipments.find(s => s.id === activeShipmentId) || mockShipments[0]
+  const { session } = useOutletContext()
+  const [shipments, setShipments] = useState([])
+  const [activeShipmentId, setActiveShipmentId] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (session?.user?.id) {
+       fetchShipments()
+    }
+  }, [session])
+
+  const fetchShipments = async () => {
+    setIsLoading(true)
+    // Get clients first for multitenancy
+    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
+    const clientIds = clients?.map(c => c.id) || []
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .in('client_id', clientIds)
+      .neq('status', 'cancelado')
+      .order('updated_at', { ascending: false })
+
+    if (!error && data) {
+      const mapped = data.map(d => ({
+        id: d.id,
+        customer: d.user_name || 'Cliente',
+        destination: d.address ? `${d.address}, ${d.city}` : d.city || 'Destino TBD',
+        status: d.status || 'pendiente',
+        progress: d.status === 'entregado' ? 100 : (d.status === 'despachado' ? 65 : 20),
+        eta: d.status === 'entregado' ? 'Entregado' : '2-3 días',
+        driver: 'Logística Naturel',
+        vehicle: 'Envío Terrestre',
+        route: { 
+          from: { x: 100, y: 300, name: 'Cali (Origen)' }, 
+          to: { x: 800, y: 150, name: d.city || 'Destino' }, 
+          current: { x: d.status === 'entregado' ? 800 : (d.status === 'despachado' ? 550 : 200), y: d.status === 'entregado' ? 150 : (d.status === 'despachado' ? 200 : 280) } 
+        },
+        timeline: [
+          { status: 'Pedido Recibido', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: Package },
+          { status: 'Pago Confirmado', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: ShieldCheck },
+          { status: 'Despachado', date: d.updated_at ? new Date(d.updated_at).toLocaleDateString() : 'Pendiente', completed: ['despachado', 'entregado'].includes(d.status), icon: Truck },
+          { status: 'Entregado', date: d.status === 'entregado' ? new Date(d.updated_at).toLocaleDateString() : 'TBD', completed: d.status === 'entregado', icon: CheckCircle2 },
+        ]
+      }))
+      setShipments(mapped)
+      if (mapped.length > 0 && !activeShipmentId) {
+        setActiveShipmentId(mapped[0].id)
+      }
+    }
+    setIsLoading(false)
+  }
+
+  const activeShipment = shipments.find(s => s.id === activeShipmentId) || shipments[0]
+
+  const updateStatus = async (id, newStatus) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    
+    if (!error) fetchShipments()
+  }
 
   return (
     <div className="page-content" style={{ padding: '32px', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
@@ -96,7 +102,14 @@ export default function Dispatches() {
             />
           </div>
           
-          {mockShipments.map(s => (
+          {isLoading ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+               <div className="spinner" style={{ margin: '0 auto 12px' }} />
+               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Loading logistics...</p>
+            </div>
+          ) : shipments.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No trends found.</div>
+          ) : shipments.map(s => (
             <div 
               key={s.id}
               onClick={() => setActiveShipmentId(s.id)}
@@ -110,8 +123,8 @@ export default function Dispatches() {
               }}
             >
               <div className="flex justify-between items-start mb-3">
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)' }}>{s.id}</span>
-                <span className={`badge ${s.status === 'Delivered' ? 'emerald' : s.status === 'Pending' ? 'amber' : 'purple'}`} style={{ fontSize: '0.65rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)' }}>{s.id?.slice(0,8)}</span>
+                <span className={`badge ${s.status === 'entregado' ? 'emerald' : s.status === 'pendiente' ? 'amber' : 'purple'}`} style={{ fontSize: '0.65rem' }}>
                   {s.status}
                 </span>
               </div>
@@ -147,21 +160,21 @@ export default function Dispatches() {
                   <div className="avatar md" style={{ background: 'var(--primary-600)', borderRadius: 12 }}><Truck size={20} /></div>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Transporte</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{activeShipment.vehicle}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{activeShipment?.vehicle || 'N/A'}</div>
                   </div>
                </div>
                <div className="flex items-center gap-3">
                   <div className="avatar md" style={{ background: 'var(--accent-emerald)', borderRadius: 12 }}><Navigation size={20} /></div>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Conductor</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{activeShipment.driver}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{activeShipment?.driver || 'N/A'}</div>
                   </div>
                </div>
                <div className="flex items-center gap-3">
                   <div className="avatar md" style={{ background: 'var(--accent-amber)', borderRadius: 12 }}><Clock size={20} /></div>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Entrega Estimada</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{activeShipment.eta}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{activeShipment?.eta || 'TBD'}</div>
                   </div>
                </div>
             </div>
@@ -178,7 +191,7 @@ export default function Dispatches() {
           </div>
 
           <div style={{ padding: '24px 0', flex: 1, overflowY: 'auto', paddingLeft: 8 }}>
-             {activeShipment.timeline.map((step, i) => (
+             {activeShipment?.timeline ? activeShipment.timeline.map((step, i) => (
                <div key={i} style={{ display: 'flex', gap: 20, position: 'relative', marginBottom: 28 }}>
                   {i !== activeShipment.timeline.length - 1 && (
                     <div style={{ position: 'absolute', left: 20, top: 40, bottom: -28, width: 2, background: step.completed ? 'var(--primary-600)' : 'rgba(255,255,255,0.05)' }} />
@@ -199,14 +212,22 @@ export default function Dispatches() {
                   </div>
                   <div>
                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: step.completed ? 'white' : 'var(--text-secondary)' }}>{step.status}</div>
-                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{step.date} • {step.time}</div>
+                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{step.date}</div>
                   </div>
                </div>
-             ))}
+             )) : (
+               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-tertiary)' }}>Select a shipment to view history.</div>
+             )}
           </div>
 
           <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 20 }}>
-             <button className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: 12 }}>Gestionar Incidencia</button>
+             {activeShipment?.status === 'despachado' ? (
+               <button className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: 12 }} onClick={() => updateStatus(activeShipment.id, 'entregado')}>Marcar como Entregado</button>
+             ) : activeShipment?.status === 'pagado' ? (
+               <button className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: 12, background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }} onClick={() => updateStatus(activeShipment.id, 'despachado')}>Despachar Ahora</button>
+             ) : (
+               <button className="btn btn-secondary" style={{ width: '100%', padding: '14px', borderRadius: 12 }} disabled>Estado: {activeShipment?.status?.toUpperCase() || 'PAGADO'}</button>
+             )}
              <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8, fontSize: '0.8rem' }}>Ver Documentación</button>
           </div>
         </div>
