@@ -282,7 +282,6 @@ export default function Sales() {
           </div>
         )}
       </div>
-      </div>
 
       {/* Sale Creation Modal */}
       {showModal && (

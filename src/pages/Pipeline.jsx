@@ -35,10 +35,15 @@ export default function Pipeline() {
 
   const fetchLeads = async () => {
     setIsLoading(true)
+    
+    // 1. Get client IDs for multitenancy
+    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
+    const clientIds = clients?.map(c => c.id) || []
+
     const { data: leads, error } = await supabase
       .from('leads')
       .select('*')
-      .eq('user_id', session.user.id)
+      .in('client_id', clientIds)
     
     if (!error && leads) {
       const newStages = initialStages.map(stage => ({

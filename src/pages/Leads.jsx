@@ -58,17 +58,20 @@ export default function Leads() {
 
   const fetchLeads = async () => {
     setIsLoading(true)
+    
+    // 1. Get client IDs for multitenancy
+    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
+    const clientIds = clients?.map(c => c.id) || []
+
     const { data, error } = await supabase
       .from('leads')
       .select('*')
-      .eq('user_id', session.user.id)
+      .in('client_id', clientIds)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching leads:', error)
-      // Attempt fallback to clients table
-      const { data: clientLeads } = await supabase.from('clients').select('*').eq('user_id', session.user.id)
-      if (clientLeads) setLeads(clientLeads)
+      setLeads([])
     } else {
       setLeads(data || [])
     }
