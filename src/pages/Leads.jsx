@@ -17,14 +17,24 @@ function getStageBadge(stage) {
   return map[stage] || 'neutral'
 }
 
-function ScoreBadge({ score }) {
-  const color = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : 'var(--text-tertiary)'
+function ScoreBadge({ score, onScoreChange }) {
+  const stars = [1, 2, 3, 4, 5]
+  const rating = Math.ceil(score / 20) || 0
+  
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ width: 60, height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 99, overflow: 'hidden' }}>
-        <div style={{ width: `${score}%`, height: '100%', background: color, borderRadius: 99 }} />
-      </div>
-      <span style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{score}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {stars.map(s => (
+        <Star 
+          key={s} 
+          size={16} 
+          fill={s <= rating ? 'var(--accent-amber)' : 'transparent'} 
+          color={s <= rating ? 'var(--accent-amber)' : 'var(--text-tertiary)'}
+          style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+          onClick={() => onScoreChange(s * 20)}
+          className="hover-scale"
+        />
+      ))}
+      <span style={{ fontSize: '0.75rem', fontWeight: 700, marginLeft: 8, color: 'var(--text-tertiary)' }}>{score}%</span>
     </div>
   )
 }
@@ -101,6 +111,31 @@ export default function Leads() {
     setIsAddingLead(false)
   }
 
+  const handleUpdateLead = async (id, updates) => {
+    const { error } = await supabase
+      .from('leads')
+      .update(updates)
+      .eq('id', id)
+    
+    if (!error) fetchLeads()
+  }
+
+  const exportLeads = () => {
+    const headers = ['Nombre,Compañia,Email,Telefono,Origen,Estado,Score,Valor']
+    const rows = leads.map(l => 
+        `"${l.name}","${l.company}","${l.email}","${l.phone}","${l.source}","${l.stage}",${l.score},"${l.value}"`
+    )
+    const csvString = headers.concat(rows).join("\n")
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", "nexus_leads.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="page-content" style={{ padding: '32px' }}>
       <div className="page-header animate-slideUp">
@@ -110,7 +145,7 @@ export default function Leads() {
             <p className="page-subtitle">Track and nurture your sales opportunities</p>
           </div>
           <div className="flex gap-3">
-             <button className="btn btn-secondary"><Download size={18} /> Export</button>
+             <button className="btn btn-secondary" onClick={exportLeads}><Download size={18} /> Export</button>
              <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={18} /> Create Lead</button>
           </div>
         </div>
@@ -172,8 +207,27 @@ export default function Leads() {
                         </div>
                      </td>
                      <td><span className={`badge ${getSourceBadge(l.source)}`}>{l.source}</span></td>
-                     <td><span className={`badge ${getStageBadge(l.stage)}`}>{l.stage}</span></td>
-                     <td><ScoreBadge score={l.score} /></td>
+                     <td>
+                        <select 
+                            className="badge-select"
+                            value={l.stage} 
+                            onChange={(e) => handleUpdateLead(l.id, { stage: e.target.value })}
+                            style={{ 
+                                background: 'rgba(255,255,255,0.05)', 
+                                border: '1px solid var(--glass-border)',
+                                color: 'white',
+                                borderRadius: 8,
+                                fontSize: '0.75rem',
+                                padding: '4px 8px',
+                                fontWeight: 700
+                            }}
+                        >
+                            {['Nuevo', 'Contactado', 'Interesado', 'Negociación', 'Venta Cerrada', 'Venta Perdida'].map(s => (
+                                <option key={s} value={s} style={{ background: '#111' }}>{s}</option>
+                            ))}
+                        </select>
+                      </td>
+                      <td><ScoreBadge score={l.score} onScoreChange={(newScore) => handleUpdateLead(l.id, { score: newScore })} /></td>
                      <td style={{ fontWeight: 800, color: 'var(--accent-emerald)' }}>{l.value || '$0'}</td>
                      <td>
                         <div className="flex gap-2">

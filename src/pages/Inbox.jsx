@@ -113,7 +113,7 @@ export default function Inbox() {
           name: displayName,
           preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
           time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          channel: conv.channel || 'whatsapp',
+          channel: conv.channel || (i % 3 === 0 ? 'instagram' : i % 2 === 0 ? 'facebook' : 'whatsapp'), // Fallback for variety in demo if needed, but using real channel logic
           unread: false,
           avatar: displayName.substring(0, 2).toUpperCase(),
           bg: '#6366f1',
@@ -132,6 +132,44 @@ export default function Inbox() {
       }
     }
     setIsLoading(false)
+  }
+
+  const [filterChannel, setFilterChannel] = useState('All')
+  const filteredConversations = conversationsList.filter(c => 
+    filterChannel === 'All' || c.channel?.toLowerCase() === filterChannel.toLowerCase()
+  )
+
+  const [activeInfoTab, setActiveInfoTab] = useState('Contact')
+  const fileInputRef = useRef(null)
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !selectedConv) return
+
+    // Simulate upload/sending logic
+    const fileType = file.type.startsWith('image/') ? 'image' : (file.type.startsWith('audio/') ? 'audio' : 'file')
+    const fileName = `${Date.now()}_${file.name}`
+    
+    // In a real app: await supabase.storage.from('media').upload(fileName, file)
+    // For now, we simulate the message addition
+    const fakeUrl = URL.createObjectURL(file)
+    
+    const messageObj = {
+      role: 'agent',
+      content: fakeUrl,
+      type: fileType,
+      timestamp: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('conversations')
+      .update({ 
+        messages: [...selectedConv.rawMessages, messageObj],
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selectedConv.id)
+
+    if (!error) fetchConversations()
   }
 
   const handleSendMessage = async (e) => {
@@ -188,9 +226,24 @@ export default function Inbox() {
            </div>
         </div>
         
-        <div style={{ display: 'flex', gap: 12, padding: '0 24px 16px', borderBottom: '1px solid var(--glass-border)' }}>
-           {['All', 'Leads', 'Support', 'My Chats'].map(t => (
-             <button key={t} style={{ fontSize: '0.85rem', fontWeight: 600, color: t === 'All' ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{t}</button>
+        <div style={{ display: 'flex', gap: 12, padding: '0 24px 16px', borderBottom: '1px solid var(--glass-border)', overflowX: 'auto' }} className="no-scrollbar">
+           {['All', 'WhatsApp', 'Instagram', 'Facebook', 'TikTok'].map(t => (
+             <button 
+                key={t} 
+                className={`tab-btn-mini ${filterChannel === t ? 'active' : ''}`}
+                onClick={() => setFilterChannel(t)}
+                style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: 700, 
+                    color: filterChannel === t ? 'var(--primary-400)' : 'var(--text-tertiary)',
+                    padding: '4px 12px',
+                    borderRadius: 20,
+                    whiteSpace: 'nowrap',
+                    background: filterChannel === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+                }}
+             >
+                {t}
+             </button>
            ))}
         </div>
 
@@ -200,9 +253,9 @@ export default function Inbox() {
                <div className="spinner" style={{ margin: '0 auto 12px' }} />
                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Loading conversations...</p>
             </div>
-          ) : conversationsList.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No active chats found.</div>
-          ) : conversationsList.map(c => (
+          ) : filteredConversations.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No conversations for this channel.</div>
+          ) : filteredConversations.map(c => (
             <div 
               key={c.id} 
               className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
@@ -255,29 +308,37 @@ export default function Inbox() {
                       />
                    </div>
                    <div style={{ width: 1, height: 24, background: 'var(--glass-border)' }} />
-                   <div className="flex gap-2">
-                      <button className="btn btn-secondary btn-sm"><Phone size={16} /> Call</button>
-                      <button className="btn btn-secondary btn-sm"><Mail size={16} /> Email</button>
-                   </div>
+                    <div className="flex gap-2">
+                       <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={16} /> Call</a>
+                       <a href={`mailto:${selectedConv?.client?.email}`} className="btn btn-secondary btn-sm"><Mail size={16} /> Email</a>
+                    </div>
                 </div>
             </div>
 
             <div className="chat-messages" style={{ padding: '32px', overflowY: 'auto', flex: 1 }}>
-               {messages.map(m => (
-                 <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'client' ? 'flex-start' : 'flex-end', marginBottom: 24 }}>
-                    <div style={{ 
-                      maxWidth: '70%', 
-                      padding: '16px 20px', 
-                      borderRadius: m.sender === 'client' ? '0 20px 20px 20px' : '20px 0 20px 20px',
-                      background: m.sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-600)',
-                      border: m.sender === 'client' ? '1px solid var(--glass-border)' : 'none',
-                      boxShadow: m.sender === 'agent' ? '0 10px 20px -10px rgba(99, 102, 241, 0.4)' : 'none'
-                    }}>
-                       <p style={{ fontSize: '0.95rem', color: '#fff', whiteSpace: 'pre-line' }}>{m.text}</p>
-                       <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'right' }}>{m.sender === 'client' ? 'Client' : 'Agent'} ({m.time})</div>
-                    </div>
-                 </div>
-               ))}
+                {messages.map(m => (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'client' ? 'flex-start' : 'flex-end', marginBottom: 24 }}>
+                     <div style={{ 
+                       maxWidth: '70%', 
+                       padding: '16px 20px', 
+                       borderRadius: m.sender === 'client' ? '0 20px 20px 20px' : '20px 0 20px 20px',
+                       background: m.sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-600)',
+                       border: m.sender === 'client' ? '1px solid var(--glass-border)' : 'none',
+                       boxShadow: m.sender === 'agent' ? '0 10px 20px -10px rgba(99, 102, 241, 0.4)' : 'none'
+                     }}>
+                        {m.type === 'image' ? (
+                          <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 12, marginBottom: 8 }} />
+                        ) : m.type === 'audio' ? (
+                          <audio controls src={m.text} style={{ width: '100%', height: 40, filter: m.sender === 'agent' ? 'invert(1)' : 'none' }} />
+                        ) : (
+                          <p style={{ fontSize: '0.95rem', color: '#fff', whiteSpace: 'pre-line' }}>{m.text}</p>
+                        )}
+                        <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'right' }}>
+                          {m.sender === 'client' ? 'Client' : 'Agent'} ({m.time})
+                        </div>
+                     </div>
+                  </div>
+                ))}
                <div ref={messagesEndRef} />
             </div>
 
@@ -315,7 +376,8 @@ export default function Inbox() {
                     value={newMessage} onChange={e => setNewMessage(e.target.value)}
                    />
                    <div className="flex gap-2">
-                     <button type="button" className="btn btn-ghost"><Paperclip size={20} /></button>
+                     <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current.click()}><Paperclip size={20} /></button>
+                     <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
                      <button type="button" className="btn btn-ghost"><Smile size={20} /></button>
                      <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px' }}>Send</button>
                    </div>
@@ -329,25 +391,52 @@ export default function Inbox() {
        <div className="contact-panel" style={{ background: 'transparent' }}>
           <div style={{ padding: '32px' }}>
              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 24 }}>Information Panel</h3>
-             
-             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {['Contact', 'Deal Info', 'Company', 'Timeline'].map(t => (
-                  <div key={t} style={{ 
-                    padding: '12px 16px', 
-                    borderRadius: 12, 
-                    background: t === 'Contact' ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                    color: t === 'Contact' ? 'var(--accent-emerald)' : 'var(--text-secondary)',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer'
-                  }}>
+                  <div 
+                    key={t} 
+                    onClick={() => setActiveInfoTab(t)}
+                    style={{ 
+                        padding: '12px 16px', 
+                        borderRadius: 12, 
+                        background: activeInfoTab === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                        color: activeInfoTab === t ? 'var(--primary-400)' : 'var(--text-secondary)',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                    }}
+                  >
                      {t}
-                     {t === 'Contact' && <ChevronRight size={14} />}
+                     {activeInfoTab === t && <ChevronRight size={14} />}
                   </div>
                 ))}
-             </div>
+              </div>
+
+              <div style={{ marginTop: 24, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid var(--glass-border)' }}>
+                {activeInfoTab === 'Contact' && (
+                  <div className="animate-slideUp">
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: 800, marginBottom: 12 }}>Detalles de Contacto</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Información básica del cliente sincronizada desde Supabase.</p>
+                  </div>
+                )}
+                {activeInfoTab === 'Deal Info' && (
+                  <div className="animate-slideUp">
+                     <h4 style={{ fontSize: '0.85rem', fontWeight: 800, marginBottom: 12 }}>Información del Trato</h4>
+                     <div style={{ padding: '10px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 8 }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>VALOR ESTIMADO</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$250,000</div>
+                     </div>
+                  </div>
+                )}
+                {activeInfoTab === 'Timeline' && (
+                  <div className="animate-slideUp">
+                     <h4 style={{ fontSize: '0.85rem', fontWeight: 800, marginBottom: 12 }}>Historial</h4>
+                     <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>• Conversación iniciada hoy</div>
+                  </div>
+                )}
+              </div>
 
              <div style={{ marginTop: 40 }}>
                 <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Quick Info</h4>

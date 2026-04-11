@@ -54,6 +54,9 @@ export default function Dispatches() {
   const [activeShipmentId, setActiveShipmentId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const [showFilters, setShowFilters] = useState(false)
+  const [showNewDispatch, setShowNewDispatch] = useState(false)
+
   useEffect(() => {
     if (session?.user?.id) {
        fetchShipments()
@@ -124,8 +127,8 @@ export default function Dispatches() {
             <p className="page-subtitle" style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Seguimiento en tiempo real y gestión de flota inteligente</p>
           </div>
           <div className="flex gap-3">
-            <button className="btn btn-secondary"><Filter size={18} /> Filtros</button>
-            <button className="btn btn-primary"><Plus size={18} /> Nuevo Despacho</button>
+            <button className="btn btn-secondary" onClick={() => setShowFilters(!showFilters)}><Filter size={18} /> Filtros</button>
+            <button className="btn btn-primary" onClick={() => setShowNewDispatch(true)}><Plus size={18} /> Nuevo Despacho</button>
           </div>
         </div>
       </div>
@@ -299,6 +302,32 @@ export default function Dispatches() {
         </div>
 
       </div>
+      {/* Filters Dropdown */}
+      {showFilters && (
+        <div className="card animate-slideUp" style={{ position: 'absolute', top: 150, right: 320, width: 200, zIndex: 1000 }}>
+          <div style={{ padding: 12 }}>
+             {['All', 'Pendiente', 'Despachado', 'Entregado'].map(f => (
+               <button key={f} className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'flex-start' }}>{f}</button>
+             ))}
+          </div>
+        </div>
+      )}
+
+      {/* New Dispatch Modal Placeholder */}
+      {showNewDispatch && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 400 }}>
+             <div className="card-header">
+                <h3>Nuevo Despacho</h3>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowNewDispatch(false)}><X /></button>
+             </div>
+             <div style={{ padding: 20 }}>
+                <p style={{ color: 'var(--text-secondary)' }}>Interfaz de creación de despacho inteligente en desarrollo.</p>
+                <button className="btn btn-primary mt-4" style={{ width: '100%' }} onClick={() => setShowNewDispatch(false)}>Entendido</button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

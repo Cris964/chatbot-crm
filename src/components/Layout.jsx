@@ -13,10 +13,13 @@ const navItems = [
   { label: 'GENERAL', items: [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
+    { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
+    { to: '/calendario', icon: Calendar, label: 'Calendario' },
   ]},
   { label: 'NEGOCIO', items: [
     { to: '/leads', icon: Users, label: 'Leads' },
     { to: '/ventas', icon: DollarSign, label: 'Ventas' },
+    { to: '/marketing', icon: Zap, label: 'Marketing' },
     { to: '/despachos', icon: Truck, label: 'Logística' },
   ]},
   { label: 'SISTEMA', items: [
@@ -36,6 +39,9 @@ export default function Layout({ session }) {
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
+
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -147,17 +153,62 @@ export default function Layout({ session }) {
           </div>
 
           <div className="header-actions">
-            <button className="header-action-btn">
+            <button className="header-action-btn" onClick={() => setShowNotifications(!showNotifications)}>
               <Bell size={20} />
               <span className="notification-dot"></span>
             </button>
-            <button className="header-action-btn" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)' }}>
+            <button className="header-action-btn" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)' }} onClick={() => setShowAIModal(true)}>
               <Sparkles size={20} />
             </button>
             <div style={{ width: 1, height: 24, background: 'var(--glass-border)', margin: '0 8px' }} />
             <button className="header-action-btn" onClick={handleLogout}>
               <LogOut size={20} />
             </button>
+
+            {/* Notifications Panel */}
+            {showNotifications && (
+              <div className="card animate-slideUp" style={{ position: 'absolute', top: 70, right: 120, width: 320, zIndex: 1000, padding: 0 }}>
+                <div className="card-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+                  <h3 style={{ fontSize: '0.9rem', fontWeight: 800 }}>Notificaciones</h3>
+                </div>
+                <div style={{ maxHeight: 300, overflowY: 'auto', padding: '8px' }}>
+                  {[1, 2].map(i => (
+                    <div key={i} style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.03)', borderRadius: 12 }} className="table-row-hover">
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Nuevo Lead: WhatsApp</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>Hace 5 minutos</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: 12, textAlign: 'center', borderTop: '1px solid var(--glass-border)' }}>
+                  <button className="btn btn-ghost btn-sm" style={{ width: '100%' }}>Ver todas</button>
+                </div>
+              </div>
+            )}
+
+            {/* AI Assistant Modal */}
+            {showAIModal && (
+              <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAIModal(false)}>
+                <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 500, padding: 0 }} onClick={e => e.stopPropagation()}>
+                    <div className="card-header" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), transparent)', padding: '24px' }}>
+                       <div className="flex items-center gap-3">
+                          <div className="ai-icon-wrapper large"><Sparkles /></div>
+                          <div>
+                             <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Nexus AI Assistant</h2>
+                             <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Inteligencia Artificial para tu negocio</p>
+                          </div>
+                          <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setShowAIModal(false)}><X /></button>
+                       </div>
+                    </div>
+                    <div style={{ padding: '24px' }}>
+                       <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Hola, soy Nexus AI. Puedo ayudarte a generar respuestas automáticas, calificar tus leads y programar campañas de re-marketing.</p>
+                       <div className="flex gap-2 mt-6">
+                          <button className="btn btn-primary" style={{ flex: 1 }}>Analizar Leads</button>
+                          <button className="btn btn-secondary" style={{ flex: 1 }}>Ayuda</button>
+                       </div>
+                    </div>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

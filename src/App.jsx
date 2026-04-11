@@ -14,6 +14,8 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import UsersPage from './pages/Users'
 import Login from './pages/Login'
+import Calendar from './pages/Calendar'
+import Marketing from './pages/Marketing'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -80,6 +82,9 @@ function App() {
         
         <Route path="reportes" element={<Reports />} />
         <Route path="reports" element={<Navigate to="/reportes" replace />} />
+        
+        <Route path="calendario" element={<Calendar />} />
+        <Route path="marketing" element={<Marketing />} />
         
         <Route path="usuarios" element={<UsersPage />} />
         
