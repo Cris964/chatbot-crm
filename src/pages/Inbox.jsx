@@ -356,21 +356,21 @@ export default function Inbox() {
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Phone size={16} /></div>
                       <div>
                          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Phone</div>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv.phone || 'N/A'}</div>
+                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.phone || 'N/A'}</div>
                       </div>
                    </div>
                    <div className="flex items-center gap-3">
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Mail size={16} /></div>
                       <div>
                          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Email</div>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv.client?.email || 'N/A'}</div>
+                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.client?.email || 'N/A'}</div>
                       </div>
                    </div>
                    <div className="flex items-center gap-3">
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Tag size={16} /></div>
                       <div>
                          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Channel</div>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv.channel || 'whatsapp'}</div>
+                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.channel || 'whatsapp'}</div>
                       </div>
                    </div>
                 </div>
