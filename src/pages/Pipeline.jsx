@@ -238,6 +238,13 @@ export default function Pipeline() {
                       >
                         <Plus size={14} /> Agregar
                       </button>
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            )
+          })}
+        </div>
       </DragDropContext>
 
       {/* New Deal Modal */}
