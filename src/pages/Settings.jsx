@@ -103,7 +103,8 @@ export default function Settings() {
       .upsert([{ 
         id: NEW_CLIENT_ID,
         name: 'Naturel',
-        user_id: session.user.id
+        user_id: session.user.id,
+        phone_number_id: 'Naturel_Default' // Mandatory field to avoid PGRST204/23502 error
       }])
     
     if (!error) {
