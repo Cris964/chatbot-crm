@@ -114,7 +114,7 @@ export default function Inbox() {
             name: displayName,
             preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
             time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-            channel: conv.channel || (i % 3 === 0 ? 'instagram' : i % 2 === 0 ? 'facebook' : 'whatsapp'), 
+            channel: conv.channel ? conv.channel.toLowerCase() : 'whatsapp', 
             unread: false,
             avatar: displayName.substring(0, 2).toUpperCase(),
             bg: '#6366f1',
@@ -349,19 +349,19 @@ export default function Inbox() {
 
             <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none' }}>
                {showAI && !selectedConv?.needs_human && (
-                 <div className="ai-suggestion-panel animate-slideUp">
+                 <div className="ai-suggestion-panel animate-slideUp" style={{ padding: '16px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: 16, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div className="ai-icon-wrapper">
-                         <Sparkles size={16} />
+                      <div className="ai-icon-wrapper" style={{ background: 'var(--primary-600)', padding: 8, borderRadius: 8 }}>
+                         <Sparkles size={16} color="white" />
                       </div>
-                      <div>
-                         <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Suggestion</div>
-                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Schedule a demo call?</span>
+                      <div style={{ flex: 1 }}>
+                         <div style={{ fontSize: '0.7rem', color: 'var(--primary-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Sugerencia de IA</div>
+                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>¿Enviar información y catálogo al cliente?</span>
                       </div>
                    </div>
-                   <div className="flex gap-2">
-                      <button className="btn btn-primary btn-sm" style={{ background: 'var(--accent-emerald)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}>Accept</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)}>Decline</button>
+                   <div className="flex gap-2" style={{ flexShrink: 0 }}>
+                      <button className="btn btn-primary btn-sm" style={{ background: 'var(--accent-emerald)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', padding: '6px 16px' }}>Aplicar</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)} style={{ padding: '6px 12px' }}>Omitir</button>
                    </div>
                  </div>
                )}
