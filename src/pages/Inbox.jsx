@@ -360,7 +360,7 @@ export default function Inbox() {
                       </div>
                    </div>
                    <div className="flex gap-2" style={{ flexShrink: 0 }}>
-                      <button className="btn btn-primary btn-sm" style={{ background: 'var(--accent-emerald)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', padding: '6px 16px' }}>Aplicar</button>
+                      <button className="btn btn-primary btn-sm" onClick={() => { setNewMessage("Hola, claro que sí. Cuéntame, ¿en qué producto estás interesado?"); setShowAI(false); }} style={{ background: 'var(--accent-emerald)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', padding: '6px 16px' }}>Aplicar</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)} style={{ padding: '6px 12px' }}>Omitir</button>
                    </div>
                  </div>
