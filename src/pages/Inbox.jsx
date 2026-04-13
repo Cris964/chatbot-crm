@@ -347,7 +347,7 @@ export default function Inbox() {
                <div ref={messagesEndRef} />
             </div>
 
-            <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none' }}>
+            <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
                {showAI && !selectedConv?.needs_human && (
                  <div className="ai-suggestion-panel animate-slideUp" style={{ padding: '16px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: 16, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
