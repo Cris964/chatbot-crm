@@ -90,48 +90,53 @@ export default function Inbox() {
     if (!session?.user?.id) return
     setIsLoading(true)
     
-    // Get clients linked to this user for multitenancy
-    const { data: userClients } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', session.user.id)
-    
-    const clientIds = userClients?.map(c => c.id) || []
-    
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('*, clients(*)')
-      .in('client_id', clientIds)
-      .order('updated_at', { ascending: false })
-    
-    if (!error && data) {
-      const mapped = data.map(conv => {
-        const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
+    try {
+      // Get clients linked to this user for multitenancy
+      const { data: userClients } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', session.user.id)
+      
+      const clientIds = userClients?.map(c => c.id) || []
+      
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*, clients(*)')
+        .in('client_id', clientIds)
+        .order('updated_at', { ascending: false })
+      
+      if (!error && data) {
+        const mapped = data.map((conv, i) => {
+          const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
 
-        return {
-          id: conv.id,
-          name: displayName,
-          preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
-          time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          channel: conv.channel || (i % 3 === 0 ? 'instagram' : i % 2 === 0 ? 'facebook' : 'whatsapp'), // Fallback for variety in demo if needed, but using real channel logic
-          unread: false,
-          avatar: displayName.substring(0, 2).toUpperCase(),
-          bg: '#6366f1',
-          tags: conv.needs_human ? ['Atención Req.'] : [],
-          intent: 'consulta',
-          botHandled: !conv.needs_human,
-          phone: conv.user_phone,
-          client: conv.clients,
-          rawMessages: conv.messages || [],
-          needs_human: conv.needs_human
+          return {
+            id: conv.id,
+            name: displayName,
+            preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
+            time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            channel: conv.channel || (i % 3 === 0 ? 'instagram' : i % 2 === 0 ? 'facebook' : 'whatsapp'), 
+            unread: false,
+            avatar: displayName.substring(0, 2).toUpperCase(),
+            bg: '#6366f1',
+            tags: conv.needs_human ? ['Atención Req.'] : [],
+            intent: 'consulta',
+            botHandled: !conv.needs_human,
+            phone: conv.user_phone,
+            client: conv.clients,
+            rawMessages: conv.messages || [],
+            needs_human: conv.needs_human
+          }
+        })
+        setConversationsList(mapped)
+        if (mapped.length > 0 && !selectedConv) {
+          setSelectedConv(mapped[0])
         }
-      })
-      setConversationsList(mapped)
-      if (mapped.length > 0 && !selectedConv) {
-        setSelectedConv(mapped[0])
       }
+    } catch (err) {
+      console.error("Error fetching conversations:", err)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const [filterChannel, setFilterChannel] = useState('All')
