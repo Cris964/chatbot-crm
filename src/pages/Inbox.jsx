@@ -4,7 +4,8 @@ import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
-  Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight
+  Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight,
+  Mic, Square, Trash2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -17,7 +18,12 @@ export default function Inbox() {
   const [botActive, setBotActive] = useState(true)
   const [showAI, setShowAI] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
   const messagesEndRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const recordingTimerRef = useRef(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -208,6 +214,102 @@ export default function Inbox() {
     }
   }
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        stream.getTracks().forEach(track => track.stop())
+        await uploadAudio(audioBlob)
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+      setRecordingTime(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+    } catch (err) {
+      console.error("Microphone access denied:", err)
+      alert("Para grabar audios, por favor permite el acceso al micrófono en tu navegador.")
+    }
+  }
+
+  const stopRecording = (cancel = false) => {
+    if (mediaRecorderRef.current && isRecording) {
+      if (cancel) {
+        mediaRecorderRef.current.onstop = () => {
+          mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop())
+        }
+      }
+      mediaRecorderRef.current.stop()
+      clearInterval(recordingTimerRef.current)
+      setIsRecording(false)
+      setRecordingTime(0)
+    }
+  }
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+    const s = (seconds % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  const uploadAudio = async (audioBlob) => {
+    if (!selectedConv) return
+    setIsLoading(true)
+    try {
+      const fileName = `voice_${Date.now()}.webm`
+      const { data, error } = await supabase.storage
+        .from('media')
+        .upload(fileName, audioBlob, { contentType: 'audio/webm' })
+        
+      if (error) throw error
+
+      const { data: publicUrlData } = supabase.storage
+        .from('media')
+        .getPublicUrl(fileName)
+
+      const audioUrl = publicUrlData.publicUrl
+      
+      const messageObj = {
+        role: 'agent',
+        content: audioUrl,
+        type: 'audio',
+        timestamp: new Date().toISOString()
+      }
+
+      const { error: dbError } = await supabase
+        .from('conversations')
+        .update({ 
+          messages: [...selectedConv.rawMessages, messageObj],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedConv.id)
+
+      if (!dbError) {
+        fetchConversations()
+      } else {
+        throw dbError
+      }
+    } catch (err) {
+      console.error("Upload error:", err)
+      alert("Error al subir el audio: " + err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const toggleBot = async () => {
     if (!selectedConv) return
     const newState = !botActive
@@ -376,15 +478,40 @@ export default function Inbox() {
                     alignItems: 'center'
                   }}
                 >
-                   <input 
-                    type="text" placeholder="Type a message..." style={{ flex: 1, padding: '12px' }} 
-                    value={newMessage} onChange={e => setNewMessage(e.target.value)}
-                   />
+                   {isRecording ? (
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, padding: '12px' }}>
+                         <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite' }} />
+                         <span style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444' }}>Grabando... {formatTime(recordingTime)}</span>
+                      </div>
+                   ) : (
+                      <input 
+                       type="text" placeholder="Escribe un mensaje..." style={{ flex: 1, padding: '12px', background: 'transparent', border: 'none', color: 'white', outline: 'none' }} 
+                       value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                      />
+                   )}
+
                    <div className="flex gap-2">
-                     <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current.click()}><Paperclip size={20} /></button>
-                     <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
-                     <button type="button" className="btn btn-ghost"><Smile size={20} /></button>
-                     <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px' }}>Send</button>
+                     {!isRecording && (
+                       <>
+                         <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current.click()}><Paperclip size={20} /></button>
+                         <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
+                         <button type="button" className="btn btn-ghost"><Smile size={20} /></button>
+                         {newMessage.trim() ? (
+                           <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px' }}>Enviar</button>
+                         ) : (
+                           <button type="button" className="btn btn-ghost" onClick={startRecording}><Mic size={20} /></button>
+                         )}
+                       </>
+                     )}
+                     
+                     {isRecording && (
+                       <>
+                         <button type="button" className="btn btn-ghost" onClick={() => stopRecording(true)} style={{ color: 'var(--text-tertiary)' }}><Trash2 size={20} /></button>
+                         <button type="button" className="btn btn-primary" onClick={() => stopRecording(false)} style={{ background: '#ef4444', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Square size={14} fill="white" /> Enviar
+                         </button>
+                       </>
+                     )}
                    </div>
                 </form>
             </div>
