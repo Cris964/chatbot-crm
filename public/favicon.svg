@@ -1,10 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#818cf8"/>
-      <stop offset="100%" stop-color="#4f46e5"/>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#10b981" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="128" fill="url(#bgGlow)"/>
-  <path d="M256 128 L283.5 228.5 L384 256 L283.5 283.5 L256 384 L228.5 283.5 L128 256 L228.5 228.5 Z" fill="#ffffff"/>
+  
+  <path
+    d="M25 20V80L45 50L75 80V20L55 50L25 20Z"
+    fill="url(#logoGradient)"
+  />
+  
+  <circle cx="25" cy="20" r="5" fill="#a5b4fc" />
+  <circle cx="75" cy="80" r="5" fill="#6ee7b7" />
 </svg>
