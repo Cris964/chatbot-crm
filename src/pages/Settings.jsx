@@ -97,19 +97,29 @@ export default function Settings() {
 
   const handleInitializeWorkspace = async () => {
     setIsSaving(true)
-    // Usamos el ID de cliente que encontramos vinculado a los pedidos existentes para restaurar la conexión
-    const NEW_CLIENT_ID = '98b9fafd-90ad-4ed9-9616-b8ed992b0e7d'
-    
+    // Si el usuario es el administrador principal, aseguramos su conexión con Naturel
+    // De lo contrario, creamos una empresa nueva y genérica para el nuevo cliente SaaS
+    const isNaturelAdmin = session.user.email === 'admin@chekadmin.com';
+    const payload = isNaturelAdmin 
+      ? { 
+          id: '98b9fafd-90ad-4ed9-9616-b8ed992b0e7d',
+          name: 'Naturel',
+          user_id: session.user.id,
+          phone_number_id: 'Naturel_Default',
+          whatsapp_token: '',
+          prompt: 'Eres un asistente experto en ventas para Naturel...'
+        }
+      : {
+          name: 'Nueva Empresa',
+          user_id: session.user.id,
+          phone_number_id: 'PENDIENTE',
+          whatsapp_token: '',
+          prompt: 'Eres un asistente de IA...'
+        };
+
     const { error } = await supabase
       .from('clients')
-      .upsert([{ 
-        id: NEW_CLIENT_ID,
-        name: 'Naturel',
-        user_id: session.user.id,
-        phone_number_id: 'Naturel_Default',
-        whatsapp_token: 'EAA...',
-        prompt: 'Eres un asistente experto en ventas para Naturel...'
-      }])
+      .insert([payload]) // Changed to insert to safely create new tenants or restore Naturel
     
     if (!error) {
        setShowSuccess(true)
@@ -187,11 +197,11 @@ export default function Settings() {
                     <Database size={40} style={{ color: 'var(--primary-400)', marginBottom: 16 }} />
                     <h4 style={{ marginBottom: 8 }}>Workspace no inicializado</h4>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 24 }}>
-                      Detectamos que tu cuenta no está vinculada a un Workspace de Naturel. 
-                      Haz clic abajo para restaurar la conexión y ver tus mensajes y leads.
+                      Detectamos que tu cuenta aún no tiene un espacio de trabajo configurado. 
+                      Haz clic abajo para crear tu empresa y habilitar el CRM.
                     </p>
                     <button className="btn btn-primary" onClick={handleInitializeWorkspace} disabled={isSaving}>
-                        {isSaving ? 'Inicializando...' : 'Vincular mi cuenta a Naturel'}
+                        {isSaving ? 'Creando entorno...' : 'Crear mi Empresa'}
                     </button>
                   </div>
                 ) : (
