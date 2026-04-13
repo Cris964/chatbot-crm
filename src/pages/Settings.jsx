@@ -56,7 +56,8 @@ export default function Settings() {
   // Workspace Form State
   const [workspaceData, setWorkspaceData] = useState({
     companyName: 'Naturel',
-    slug: 'naturel',
+    whatsapp_token: '',
+    prompt: 'Eres un asistente experto en ventas para Naturel...',
     email: 'email@dominio.com',
     timezone: 'America/Bogota (UTC-5)'
   })
@@ -82,7 +83,8 @@ export default function Settings() {
       setWorkspaceData({
         id: client.id,
         companyName: client.name || 'Mi Empresa',
-        slug: client.slug || (client.name || 'mi-empresa').toLowerCase()?.replace(/\s+/g, '-'),
+        whatsapp_token: client.whatsapp_token || '',
+        prompt: client.prompt || '',
         email: client.email || session.user.email,
         timezone: client.timezone || 'America/Bogota (UTC-5)'
       })
@@ -104,7 +106,9 @@ export default function Settings() {
         id: NEW_CLIENT_ID,
         name: 'Naturel',
         user_id: session.user.id,
-        phone_number_id: 'Naturel_Default' // Mandatory field to avoid PGRST204/23502 error
+        phone_number_id: 'Naturel_Default',
+        whatsapp_token: 'EAA...',
+        prompt: 'Eres un asistente experto en ventas para Naturel...'
       }])
     
     if (!error) {
@@ -197,8 +201,12 @@ export default function Settings() {
                       <input className="form-input" name="companyName" value={workspaceData.companyName} onChange={handleWorkspaceChange} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Slug</label>
-                      <input className="form-input" name="slug" value={workspaceData.slug} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                      <label className="form-label">WhatsApp Token</label>
+                      <input className="form-input" name="whatsapp_token" value={workspaceData.whatsapp_token} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Prompt del Bot (AI)</label>
+                      <textarea className="form-input" name="prompt" value={workspaceData.prompt} onChange={handleWorkspaceChange} rows={4} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Email de contacto</label>
