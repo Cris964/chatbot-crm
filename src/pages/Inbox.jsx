@@ -356,7 +356,7 @@ export default function Inbox() {
                       </div>
                       <div style={{ flex: 1 }}>
                          <div style={{ fontSize: '0.7rem', color: 'var(--primary-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Sugerencia de IA</div>
-                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>¿Enviar información y catálogo al cliente?</span>
+                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>¿Generar una respuesta sugerida basada en tu IA?</span>
                       </div>
                    </div>
                    <div className="flex gap-2" style={{ flexShrink: 0 }}>
