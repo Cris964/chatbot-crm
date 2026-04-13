@@ -55,11 +55,12 @@ export default function Settings() {
 
   // Workspace Form State
   const [workspaceData, setWorkspaceData] = useState({
-    companyName: 'Cargando...',
-    slug: 'workspace',
+    companyName: 'Naturel',
+    slug: 'naturel',
     email: 'email@dominio.com',
     timezone: 'America/Bogota (UTC-5)'
   })
+  const [noWorkspace, setNoWorkspace] = useState(false)
 
   useEffect(() => {
     if (session?.user) {
@@ -81,12 +82,38 @@ export default function Settings() {
       setWorkspaceData({
         id: client.id,
         companyName: client.name || 'Mi Empresa',
-        slug: client.slug || (client.name || 'mi-empresa').toLowerCase().replace(/\s+/g, '-'),
+        slug: client.slug || (client.name || 'mi-empresa').toLowerCase()?.replace(/\s+/g, '-'),
         email: client.email || session.user.email,
         timezone: client.timezone || 'America/Bogota (UTC-5)'
       })
+      setNoWorkspace(false)
+    } else {
+      setNoWorkspace(true)
     }
     setIsLoading(false)
+  }
+
+  const handleInitializeWorkspace = async () => {
+    setIsSaving(true)
+    // Usamos el ID de cliente que encontramos vinculado a los pedidos existentes para restaurar la conexión
+    const NEW_CLIENT_ID = '98b9fafd-90ad-4ed9-9616-b8ed992b0e7d'
+    
+    const { error } = await supabase
+      .from('clients')
+      .upsert([{ 
+        id: NEW_CLIENT_ID,
+        name: 'Naturel',
+        user_id: session.user.id
+      }])
+    
+    if (!error) {
+       setShowSuccess(true)
+       fetchSettings()
+    } else {
+       console.error("Error initializing workspace:", error)
+       alert("Error al inicializar: " + error.message)
+    }
+    setIsSaving(false)
   }
 
   const handleWorkspaceChange = (e) => {
@@ -150,52 +177,68 @@ export default function Settings() {
                 <h3>Información del Workspace</h3>
                 <p>Configura la información general de tu empresa en la plataforma</p>
 
-                <div className="form-group">
-                  <label className="form-label">Nombre de la empresa</label>
-                  <input className="form-input" name="companyName" value={workspaceData.companyName} onChange={handleWorkspaceChange} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Slug</label>
-                  <input className="form-input" name="slug" value={workspaceData.slug} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Email de contacto</label>
-                  <input className="form-input" name="email" value={workspaceData.email} onChange={handleWorkspaceChange} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Zona horaria</label>
-                  <input className="form-input" name="timezone" value={workspaceData.timezone} onChange={handleWorkspaceChange} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Plan actual</label>
-                  <div className="flex items-center gap-3">
-                    <span className="badge purple" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>
-                      <Crown size={14} /> Enterprise
-                    </span>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>Renovación: Dic 31, 2026</span>
+                {noWorkspace ? (
+                  <div className="card" style={{ padding: 32, textAlign: 'center', background: 'rgba(99, 102, 241, 0.05)', border: '1px dashed var(--primary-400)' }}>
+                    <Database size={40} style={{ color: 'var(--primary-400)', marginBottom: 16 }} />
+                    <h4 style={{ marginBottom: 8 }}>Workspace no inicializado</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 24 }}>
+                      Detectamos que tu cuenta no está vinculada a un Workspace de Naturel. 
+                      Haz clic abajo para restaurar la conexión y ver tus mensajes y leads.
+                    </p>
+                    <button className="btn btn-primary" onClick={handleInitializeWorkspace} disabled={isSaving}>
+                        {isSaving ? 'Inicializando...' : 'Vincular mi cuenta a Naturel'}
+                    </button>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-4 mt-4">
-                  <button 
-                    className="btn btn-primary" 
-                    onClick={handleSaveWorkspace}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <div className="spinner" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <Save size={16} />
-                    )}
-                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-                  </button>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Nombre de la empresa</label>
+                      <input className="form-input" name="companyName" value={workspaceData.companyName} onChange={handleWorkspaceChange} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Slug</label>
+                      <input className="form-input" name="slug" value={workspaceData.slug} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email de contacto</label>
+                      <input className="form-input" name="email" value={workspaceData.email} onChange={handleWorkspaceChange} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Zona horaria</label>
+                      <input className="form-input" name="timezone" value={workspaceData.timezone} onChange={handleWorkspaceChange} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Plan actual</label>
+                      <div className="flex items-center gap-3">
+                        <span className="badge purple" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>
+                          <Crown size={14} /> Enterprise
+                        </span>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>Renovación: Dic 31, 2026</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 mt-4">
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={handleSaveWorkspace}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <div className="spinner" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                        ) : (
+                          <Save size={16} />
+                        )}
+                        {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                      </button>
 
-                  {showSuccess && (
-                    <span className="badge emerald" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', animation: 'slideUp 0.3s ease-out' }}>
-                      <CheckCircle2 size={16} /> Guardado exitosamente
-                    </span>
-                  )}
-                </div>
+                      {showSuccess && (
+                        <span className="badge emerald" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', animation: 'slideUp 0.3s ease-out' }}>
+                          <CheckCircle2 size={16} /> Guardado exitosamente
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
