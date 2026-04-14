@@ -57,10 +57,10 @@ export default async function handler(req, res) {
       console.log(`[WHATSAPP WEBHOOK] Nuevo mensaje de ${senderName} (${senderPhone}): ${textResponse}`);
 
       // Instanciamos Supabase desde el Edge
-      const supabase = createClient(
-        process.env.VITE_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-      );
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
       // 1. Identificar de qué empresa/tenant es el webhook según el `phone_number_id` al que escribieron
       const { data: clients, error: clientErr } = await supabase
