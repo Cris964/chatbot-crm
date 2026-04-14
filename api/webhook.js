@@ -209,20 +209,25 @@ export default async function handler(req, res) {
                             updated_at: new Date().toISOString()
                         }).eq('id', conversationId);
 
-                        // 2. Envío directo a WhatsApp
+                        // 2. Envío directo a WhatsApp (Sincronizado con api/send.js)
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
                             const metaRes = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
                               method: 'POST',
-                              headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                              headers: {
+                                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                                'Content-Type': 'application/json'
+                              },
                               body: JSON.stringify({
                                 messaging_product: 'whatsapp',
-                                recipient_type: 'individual',
                                 to: senderPhone,
                                 type: 'text',
-                                text: { body: botReplyText }
+                                text: {
+                                  preview_url: false,
+                                  body: botReplyText
+                                }
                               })
                             });
 
@@ -230,7 +235,6 @@ export default async function handler(req, res) {
                                 const metaErr = await metaRes.text();
                                 await logErrorToCRM(`Error Meta: ${metaErr}`);
                                 
-                                // Registrar fallo en outbox
                                 await supabase.from('outbox').insert([{
                                     client_id: clientId,
                                     user_id: userId,
@@ -242,7 +246,6 @@ export default async function handler(req, res) {
                                     sent_at: new Date().toISOString()
                                 }]);
                             } else {
-                                // Registrar éxito en outbox
                                 await supabase.from('outbox').insert([{
                                     client_id: clientId,
                                     user_id: userId,
