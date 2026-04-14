@@ -148,13 +148,13 @@ export default async function handler(req, res) {
       }
 
       // ==========================================
-      // FASE 3: OPENAI / OPENROUTER (SARA ACTIVA)
+      // FASE 3: OPENAI / OPENROUTER (SEGURO)
       // ==========================================
       
       if (clients && clients.length > 0) {
         const clientSetup = clients[0];
-        // NUEVA LLAVE PROPORCIONADA POR EL USUARIO
-        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
+        // SEGURIDAD: Solo usamos variables de entorno de Vercel
+        const openRouterKey = process.env.OPENROUTER_API_KEY;
         const conversationId = existingChats?.[0]?.id;
 
         const logErrorToCRM = async (logText) => {
@@ -213,19 +213,21 @@ export default async function handler(req, res) {
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
-                        const metaRes = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
-                          method: 'POST',
-                          headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            messaging_product: 'whatsapp',
-                            to: senderPhone,
-                            type: 'text',
-                            text: { body: botReplyText }
-                          })
-                        });
+                        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
+                            const metaRes = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
+                              method: 'POST',
+                              headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                messaging_product: 'whatsapp',
+                                to: senderPhone,
+                                type: 'text',
+                                text: { body: botReplyText }
+                              })
+                            });
 
-                        if (!metaRes.ok) {
-                            await logErrorToCRM(`Error Envío WhatsApp: ${await metaRes.text()}`);
+                            if (!metaRes.ok) {
+                                await logErrorToCRM(`Error Envío WhatsApp: ${await metaRes.text()}`);
+                            }
                         }
 
                         // 3. Registrar en Outbox
@@ -235,13 +237,17 @@ export default async function handler(req, res) {
                             phone: senderPhone,
                             user_phone: senderPhone,
                             message: botReplyText,
-                            status: metaRes.ok ? 'sent' : 'error',
+                            status: 'sent',
                             sent_at: new Date().toISOString()
                         }]);
                     }
                 }
             } catch (aiErr) {
                 await logErrorToCRM(`Error Crítico: ${aiErr.message}`);
+            }
+        } else {
+            if (!openRouterKey) {
+                await logErrorToCRM("ERROR SEGUIDAD: La variable OPENROUTER_API_KEY no está configurada en Vercel.");
             }
         }
       }
