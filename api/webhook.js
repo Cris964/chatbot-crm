@@ -219,6 +219,7 @@ export default async function handler(req, res) {
                               headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
                               body: JSON.stringify({
                                 messaging_product: 'whatsapp',
+                                recipient_type: 'individual',
                                 to: senderPhone,
                                 type: 'text',
                                 text: { body: botReplyText }
@@ -226,28 +227,43 @@ export default async function handler(req, res) {
                             });
 
                             if (!metaRes.ok) {
-                                await logErrorToCRM(`Error Envío WhatsApp: ${await metaRes.text()}`);
+                                const metaErr = await metaRes.text();
+                                await logErrorToCRM(`Error Meta: ${metaErr}`);
+                                
+                                // Registrar fallo en outbox
+                                await supabase.from('outbox').insert([{
+                                    client_id: clientId,
+                                    user_id: userId,
+                                    phone: senderPhone,
+                                    user_phone: senderPhone,
+                                    message: botReplyText,
+                                    status: 'error',
+                                    error: metaErr,
+                                    sent_at: new Date().toISOString()
+                                }]);
+                            } else {
+                                // Registrar éxito en outbox
+                                await supabase.from('outbox').insert([{
+                                    client_id: clientId,
+                                    user_id: userId,
+                                    phone: senderPhone,
+                                    user_phone: senderPhone,
+                                    message: botReplyText,
+                                    status: 'sent',
+                                    sent_at: new Date().toISOString()
+                                }]);
                             }
+                        } else {
+                             await logErrorToCRM("No se encontró WHATSAPP_TOKEN o PHONE_NUMBER_ID para este cliente.");
                         }
-
-                        // 3. Registrar en Outbox
-                        await supabase.from('outbox').insert([{
-                            client_id: clientId,
-                            user_id: userId,
-                            phone: senderPhone,
-                            user_phone: senderPhone,
-                            message: botReplyText,
-                            status: 'sent',
-                            sent_at: new Date().toISOString()
-                        }]);
                     }
                 }
             } catch (aiErr) {
-                await logErrorToCRM(`Error Crítico: ${aiErr.message}`);
+                await logErrorToCRM(`Error Crítico Interno: ${aiErr.message}`);
             }
         } else {
             if (!openRouterKey) {
-                await logErrorToCRM("ERROR SEGUIDAD: La variable OPENROUTER_API_KEY no está configurada en Vercel.");
+                await logErrorToCRM("ERROR SEGURIDAD: La variable OPENROUTER_API_KEY no está configurada en Vercel.");
             }
         }
       }
