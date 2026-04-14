@@ -148,89 +148,48 @@ export default async function handler(req, res) {
       }
 
       // ==========================================
-      // FASE 3: OPENAI / OPENROUTER INTEGRATION
+      // FASE 3: DIAGNOSTIC TEST (Bypass OpenRouter)
       // ==========================================
-      if (shouldTriggerBot && clients && clients.length > 0) {
-        const clientSetup = clients[0];
-        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
-        
-        if (openRouterKey && clientSetup.prompt) {
-            try {
-                console.log("Activando Cerebro OpenRouter...");
-                
-                // Formatear historial para OpenAI
-                const oaiMessages = [
-                    { role: 'system', content: clientSetup.prompt }
-                ];
+      if (shouldTriggerBot) {
+          console.log("EJECUTANDO PRUEBA DE ECHO DIAGNÓSTICO...");
+          const botReplyText = "¡Hola! Soy Sara (Prueba Técnica). He recibido tu mensaje: " + textResponse;
 
-                // Agarrar los últimos 10 mensajes para dar contexto sin saturar el token limit
-                const contextWindow = finalMessages.slice(-10);
-                contextWindow.forEach(m => {
-                    oaiMessages.push({
-                        role: m.role === 'agent' ? 'assistant' : 'user',
-                        content: m.content
-                    });
-                });
+          // 1. Guardar la respuesta en la base de datos (Inbox UI)
+          const botMsgNode = {
+              role: 'agent',
+              content: botReplyText,
+              timestamp: new Date().toISOString()
+          };
 
-                const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${openRouterKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: clientSetup.model || 'openai/gpt-4o-mini',
-                        messages: oaiMessages
-                    })
-                });
+          const conversationIdToUpdate = existingChats?.[0]?.id;
 
-                if (aiResponse.ok) {
-                    const aiData = await aiResponse.json();
-                    const botReplyText = aiData.choices?.[0]?.message?.content;
-                    
-                    if (botReplyText) {
-                        console.log("Respuesta generada por la IA:", botReplyText);
-                        
-                        // 1. Guardar la respuesta de la IA en la base de datos (Inbox UI)
-                        const botMsgNode = {
-                            role: 'agent',
-                            content: botReplyText,
-                            timestamp: new Date().toISOString()
-                        };
+          if (conversationIdToUpdate) {
+              await supabase
+                .from('conversations')
+                .update({
+                    messages: [...finalMessages, botMsgNode],
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', conversationIdToUpdate);
+          }
 
-                        const conversationIdToUpdate = existingChats?.[0]?.id;
-
-                        if (conversationIdToUpdate) {
-                            await supabase
-                              .from('conversations')
-                              .update({
-                                 messages: [...finalMessages, botMsgNode],
-                                 updated_at: new Date().toISOString()
-                              })
-                              .eq('id', conversationIdToUpdate);
-                        }
-
-                        // 2. Insertar en Outbox para despacho automático vía Meta Graph
-                        // Aseguramos que guardamos el teléfono en ambos campos por compatibilidad
-                        await supabase.from('outbox').insert([{
-                            client_id: clientId,
-                            user_id: userId,
-                            phone: senderPhone,
-                            user_phone: senderPhone,
-                            message: botReplyText
-                        }]);
-                        
-                        console.log("IA Respondió y se encoló en el Outbox exitosamente.");
-                    }
-                } else {
-                    const errorText = await aiResponse.text();
-                    console.error(`OpenRouter API Error (${aiResponse.status}):`, errorText);
-                }
-            } catch (aiErr) {
-                console.error("Fallo interno OpenRouter:", aiErr);
-            }
-        }
+          // 2. Insertar en Outbox para despacho automático
+          await supabase.from('outbox').insert([{
+              client_id: clientId,
+              user_id: userId,
+              phone: senderPhone,
+              user_phone: senderPhone,
+              message: botReplyText
+          }]);
+          
+          console.log("Eco diagnóstico enviado al Outbox.");
       }
+
+      /* COMENTADO TEMPORALMENTE PARA DIAGNÓSTICO
+      if (shouldTriggerBot && clients && clients.length > 0) {
+        ...
+      }
+      */
 
       // Devolver Status 200 INMEDIATO a Meta
       return res.status(200).send('EVENT_RECEIVED');
