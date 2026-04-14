@@ -53,8 +53,9 @@ export default async function handler(req, res) {
       const senderPhone = messageObj.from;
       const senderName = contactObj?.profile?.name || 'Cliente';
       const textResponse = messageObj.text?.body || '[Multimedia/No Text]';
+      const messageId = messageObj.id; // ID Único de Meta para seguimiento
 
-      console.log(`[WHATSAPP WEBHOOK] Nuevo mensaje de ${senderName} (${senderPhone}): ${textResponse}`);
+      console.log(`[WHATSAPP WEBHOOK] Nuevo mensaje de ${senderName} (${senderPhone}) ID: ${messageId}: ${textResponse}`);
 
       // Instanciamos Supabase desde el Edge
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -98,8 +99,20 @@ export default async function handler(req, res) {
       const newMsgNode = {
         role: 'user',
         content: textResponse,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        meta_id: messageId // Guardamos el ID de Meta para evitar duplicados
       };
+
+      // --- ESCUDO DE DUPLICADOS ---
+      if (existingChats && existingChats.length > 0) {
+        const lastMessages = existingChats[0].messages || [];
+        const isDuplicate = lastMessages.some(m => m.meta_id === messageId);
+        
+        if (isDuplicate) {
+          console.log(`[IDEMPOTENCIA] Mensaje ${messageId} ya procesado. Ignorando.`);
+          return res.status(200).send('DUPLICATE_IGNORED');
+        }
+      }
 
       let shouldTriggerBot = false;
       let finalMessages = [];
@@ -169,8 +182,22 @@ export default async function handler(req, res) {
 
         if (openRouterKey && clientSetup.prompt) {
             try {
+                // --- INYECCIÓN DE INVENTARIO REAL ---
+                const inventoryContext = `
+PRODUCTOS DISPONIBLES EN NATUREL:
+- KOLOSAL: Limpieza profunda de colon, mejora digestión y estreñimiento.
+- MR. FIBRA (Té Verde o Ciruela): Fibra natural de linaza y psyllium para tránsito intestinal.
+- BERENLIN: Antioxidante potente, ayuda a la salud de la piel y control de peso.
+- CIR/LAN: Mejora la circulación y depuración de la sangre.
+- BRIL-PROS: Salud de la próstata y sistema urinario.
+- OXTMAX: Regenerador de cartílagos y salud articular.
+- 7 TOROS: Energizante natural y vigorizante.
+
+REGLAS: Solo recomienda estos productos. Si preguntan por algo diferente, ofrece la asesoría natural basada en estos beneficios.
+`;
+
                 const oaiMessages = [
-                    { role: 'system', content: clientSetup.prompt },
+                    { role: 'system', content: `${clientSetup.prompt}\n\n${inventoryContext}` },
                     ...finalMessages.slice(-10).map(m => ({
                         role: m.role === 'agent' ? 'assistant' : 'user',
                         content: m.content
