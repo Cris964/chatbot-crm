@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       // 1. Identificar de qué empresa/tenant es el webhook según el `phone_number_id` al que escribieron
       const { data: clients, error: clientErr } = await supabase
         .from('clients')
-        .select('id')
+        .select('id, user_id')
         .eq('phone_number_id', phoneNumberId)
         .limit(1);
 
@@ -74,8 +74,10 @@ export default async function handler(req, res) {
       // Fallback a un ID genérico por si no encuentra el número de teléfono
       // (Para no perder el log en caso de que Meta mande algo que no coincida).
       let clientId = null;
+      let userId = null;
       if (clients && clients.length > 0) {
         clientId = clients[0].id;
+        userId = clients[0].user_id;
       }
 
       // 2. Buscar si la conversación del cliente ya existe
@@ -122,6 +124,7 @@ export default async function handler(req, res) {
         };
 
         if (clientId) newChatPayload.client_id = clientId;
+        if (userId) newChatPayload.user_id = userId;
 
         await supabase
           .from('conversations')
