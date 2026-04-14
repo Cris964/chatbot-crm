@@ -148,17 +148,16 @@ export default async function handler(req, res) {
       }
 
       // ==========================================
-      // FASE 3: OPENAI / OPENROUTER (BLINDADO)
+      // FASE 3: OPENAI / OPENROUTER (SARA ACTIVA)
       // ==========================================
       
-      // Forzamos el trigger para diagnóstico
       if (clients && clients.length > 0) {
         const clientSetup = clients[0];
-        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
+        // NUEVA LLAVE PROPORCIONADA POR EL USUARIO
+        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
         const conversationId = existingChats?.[0]?.id;
 
-        // Función para guardar bitácora de error en el CRM
-        const logToCRM = async (logText) => {
+        const logErrorToCRM = async (logText) => {
             if (!conversationId) return;
             const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
             const currentMsgs = latest?.messages || finalMessages;
@@ -170,8 +169,6 @@ export default async function handler(req, res) {
 
         if (openRouterKey && clientSetup.prompt) {
             try {
-                console.log("Iniciando llamada a OpenRouter...");
-                
                 const oaiMessages = [
                     { role: 'system', content: clientSetup.prompt },
                     ...finalMessages.slice(-10).map(m => ({
@@ -197,13 +194,13 @@ export default async function handler(req, res) {
 
                 if (!aiResponse.ok) {
                     const errData = await aiResponse.text();
-                    await logToCRM(`Error OpenRouter (${aiResponse.status}): ${errData}`);
+                    await logErrorToCRM(`Error IA: ${errData}`);
                 } else {
                     const aiData = await aiResponse.json();
                     const botReplyText = aiData.choices?.[0]?.message?.content;
                     
                     if (botReplyText) {
-                        // 1. Guardar respuesta real
+                        // 1. Guardar respuesta limpia en CRM
                         const botMsgNode = { role: 'agent', content: botReplyText, timestamp: new Date().toISOString() };
                         const { data: latestChat } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
                         
@@ -212,7 +209,7 @@ export default async function handler(req, res) {
                             updated_at: new Date().toISOString()
                         }).eq('id', conversationId);
 
-                        // 2. Intentar envío a WhatsApp
+                        // 2. Envío directo a WhatsApp
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
@@ -228,7 +225,7 @@ export default async function handler(req, res) {
                         });
 
                         if (!metaRes.ok) {
-                            await logToCRM(`Error WhatsApp Meta: ${await metaRes.text()}`);
+                            await logErrorToCRM(`Error Envío WhatsApp: ${await metaRes.text()}`);
                         }
 
                         // 3. Registrar en Outbox
@@ -244,10 +241,8 @@ export default async function handler(req, res) {
                     }
                 }
             } catch (aiErr) {
-                await logToCRM(`Excepción Crítica: ${aiErr.message}`);
+                await logErrorToCRM(`Error Crítico: ${aiErr.message}`);
             }
-        } else {
-            await logToCRM("Falta API Key o Prompt en la base de datos.");
         }
       }
 
