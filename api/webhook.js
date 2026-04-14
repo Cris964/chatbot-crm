@@ -148,48 +148,37 @@ export default async function handler(req, res) {
       }
 
       // ==========================================
-      // FASE 3: OPENAI / OPENROUTER + DIRECT DISPATCH (VERBOSE DEBUG)
+      // FASE 3: OPENAI / OPENROUTER (BLINDADO)
       // ==========================================
-      if (shouldTriggerBot && clients && clients.length > 0) {
+      
+      // Forzamos el trigger para diagnóstico
+      if (clients && clients.length > 0) {
         const clientSetup = clients[0];
         const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
-        
-        // Helper para enviar mensaje rápido de debug a WhatsApp
-        const sendDebug = async (text) => {
-            const token = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
-            const pid = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
-            if (token && pid) {
-                await fetch(`https://graph.facebook.com/v17.0/${pid}/messages`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        messaging_product: 'whatsapp',
-                        to: senderPhone,
-                        type: 'text',
-                        text: { body: `[Debug] ${text}` }
-                    })
-                });
-            }
+        const conversationId = existingChats?.[0]?.id;
+
+        // Función para guardar bitácora de error en el CRM
+        const logToCRM = async (logText) => {
+            if (!conversationId) return;
+            const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
+            const currentMsgs = latest?.messages || finalMessages;
+            await supabase.from('conversations').update({
+                messages: [...currentMsgs, { role: 'agent', content: `[SISTEMA]: ${logText}`, timestamp: new Date().toISOString() }],
+                updated_at: new Date().toISOString()
+            }).eq('id', conversationId);
         };
 
         if (openRouterKey && clientSetup.prompt) {
             try {
-                console.log("Activando Cerebro OpenRouter...");
-                // await sendDebug("🤖 Sara está pensando su respuesta...");
+                console.log("Iniciando llamada a OpenRouter...");
                 
-                // Formatear historial para OpenAI
                 const oaiMessages = [
-                    { role: 'system', content: clientSetup.prompt }
-                ];
-
-                // Agarrar los últimos 10 mensajes para dar contexto
-                const contextWindow = finalMessages.slice(-10);
-                contextWindow.forEach(m => {
-                    oaiMessages.push({
+                    { role: 'system', content: clientSetup.prompt },
+                    ...finalMessages.slice(-10).map(m => ({
                         role: m.role === 'agent' ? 'assistant' : 'user',
                         content: m.content
-                    });
-                });
+                    }))
+                ];
 
                 const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
@@ -200,46 +189,36 @@ export default async function handler(req, res) {
                         'X-Title': 'NexusCRM Sara'
                     },
                     body: JSON.stringify({
-                        model: 'openai/gpt-4o-mini', // Forzamos el más rápido
+                        model: 'openai/gpt-4o-mini',
                         messages: oaiMessages,
-                        max_tokens: 300
+                        max_tokens: 400
                     })
                 });
 
-                if (aiResponse.ok) {
+                if (!aiResponse.ok) {
+                    const errData = await aiResponse.text();
+                    await logToCRM(`Error OpenRouter (${aiResponse.status}): ${errData}`);
+                } else {
                     const aiData = await aiResponse.json();
                     const botReplyText = aiData.choices?.[0]?.message?.content;
                     
                     if (botReplyText) {
-                        // 1. Guardar la respuesta de la IA en la base de datos (Inbox UI)
-                        const botMsgNode = {
-                            role: 'agent',
-                            content: botReplyText,
-                            timestamp: new Date().toISOString()
-                        };
+                        // 1. Guardar respuesta real
+                        const botMsgNode = { role: 'agent', content: botReplyText, timestamp: new Date().toISOString() };
+                        const { data: latestChat } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
+                        
+                        await supabase.from('conversations').update({
+                            messages: [...(latestChat?.messages || finalMessages), botMsgNode],
+                            updated_at: new Date().toISOString()
+                        }).eq('id', conversationId);
 
-                        const conversationIdToUpdate = existingChats?.[0]?.id;
-
-                        if (conversationIdToUpdate) {
-                            await supabase
-                              .from('conversations')
-                              .update({
-                                 messages: [...finalMessages, botMsgNode],
-                                 updated_at: new Date().toISOString()
-                              })
-                              .eq('id', conversationIdToUpdate);
-                        }
-
-                        // 2. DISPACHO DIRECTO A WHATSAPP
+                        // 2. Intentar envío a WhatsApp
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
-                        const metaResponse = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
+                        const metaRes = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
                           method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-                            'Content-Type': 'application/json'
-                          },
+                          headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             messaging_product: 'whatsapp',
                             to: senderPhone,
@@ -248,6 +227,10 @@ export default async function handler(req, res) {
                           })
                         });
 
+                        if (!metaRes.ok) {
+                            await logToCRM(`Error WhatsApp Meta: ${await metaRes.text()}`);
+                        }
+
                         // 3. Registrar en Outbox
                         await supabase.from('outbox').insert([{
                             client_id: clientId,
@@ -255,21 +238,16 @@ export default async function handler(req, res) {
                             phone: senderPhone,
                             user_phone: senderPhone,
                             message: botReplyText,
-                            status: metaResponse.ok ? 'sent' : 'error',
-                            error: metaResponse.ok ? null : await metaResponse.text(),
+                            status: metaRes.ok ? 'sent' : 'error',
                             sent_at: new Date().toISOString()
                         }]);
                     }
-                } else {
-                    const errorText = await aiResponse.json();
-                    await sendDebug(`❌ Error IA: ${errorText.error?.message || 'Error desconocido'}`);
                 }
             } catch (aiErr) {
-                console.error("Fallo interno en el flujo de IA:", aiErr);
-                await sendDebug(`⚠️ Fallo crítico: ${aiErr.message}`);
+                await logToCRM(`Excepción Crítica: ${aiErr.message}`);
             }
         } else {
-            // await sendDebug("🔍 No encontré una configuración de Prompt válida.");
+            await logToCRM("Falta API Key o Prompt en la base de datos.");
         }
       }
 
