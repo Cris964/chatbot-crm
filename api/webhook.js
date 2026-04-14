@@ -11,13 +11,11 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // META WEBHOOK VERIFICATION (Fase 1)
+  // META WEBHOOK VERIFICATION
   if (req.method === 'GET') {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
-
-    // Este es el token que el usuario pega en la casilla de Meta Developers
     const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'nexus_secure_123';
 
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
@@ -28,12 +26,10 @@ export default async function handler(req, res) {
     }
   }
 
-  // INCOMING MESSAGES (Fase 2)
+  // INCOMING MESSAGES
   if (req.method === 'POST') {
     try {
       const body = req.body;
-
-      // Checking if this is an Event from WhatsApp
       if (body.object !== 'whatsapp_business_account') {
         return res.status(404).send('Not a WhatsApp event');
       }
@@ -41,7 +37,6 @@ export default async function handler(req, res) {
       const entry = body.entry?.[0];
       const changes = entry?.changes?.[0]?.value;
 
-      // Filter out empty payloads or status updates for now
       if (!changes || !changes.messages || changes.messages.length === 0) {
         return res.status(200).send('No message payload');
       }
@@ -53,47 +48,35 @@ export default async function handler(req, res) {
       const senderPhone = messageObj.from;
       const senderName = contactObj?.profile?.name || 'Cliente';
       const textResponse = messageObj.text?.body || '[Multimedia/No Text]';
-      const messageId = messageObj.id; // ID Único de Meta para seguimiento
+      const messageId = messageObj.id;
 
       console.log(`[WHATSAPP WEBHOOK] Nuevo mensaje de ${senderName} (${senderPhone}) ID: ${messageId}: ${textResponse}`);
 
-      // Instanciamos Supabase desde el Edge
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
       const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // --- ESCUDO ATÓMICO FINAL ---
-      // Intentamos registrar el mensaje en una tabla dedicada. 
-      // Si el insert falla por ID duplicado, salimos inmediatamente.
+      // --- ESCUDO ATÓMICO ---
       try {
         const { error: lockError } = await supabase
           .from('processed_messages')
           .insert([{ id: messageId }]);
         
-        if (lockError) {
-          // Si el error es de llave duplicada, es que ya se está procesando
-          if (lockError.code === '23505') { 
+        if (lockError && lockError.code === '23505') { 
             console.log(`[BLOQUEO ATÓMICO] Mensaje ${messageId} ya en proceso. Abortando.`);
             return res.status(200).send('ALREADY_PROCESSING');
-          }
-          console.error('[LOCK ERROR]', lockError);
         }
       } catch (e) {
         console.error('[LOCK EXCEPTION]', e);
       }
 
-      // 1. Identificar de qué empresa/tenant es el webhook según el `phone_number_id` al que escribieron
-      const { data: clients, error: clientErr } = await supabase
+      // 1. Identificar cliente
+      const { data: clients } = await supabase
         .from('clients')
         .select('id, user_id, active, prompt, model, whatsapp_token')
         .eq('phone_number_id', phoneNumberId)
         .limit(1);
 
-      if (clientErr) console.error("Error fetching client:", clientErr);
-
-      // Fallback a un ID genérico por si no encuentra el número de teléfono
-      // (Para no perder el log en caso de que Meta mande algo que no coincida).
       let clientId = null;
       let userId = null;
       if (clients && clients.length > 0) {
@@ -101,18 +84,13 @@ export default async function handler(req, res) {
         userId = clients[0].user_id;
       }
 
-      // 2. Buscar si la conversación del cliente ya existe
-      let query = supabase.from('conversations').select('id, messages, needs_human');
-      
-      // Asegurar que asociamos la conversación a la empresa correcta.
-      // Si clientId es nulo (no sabemos a quién escribió), buscamos globalmente.
-      if (clientId) {
-          query = query.eq('client_id', clientId).eq('user_phone', senderPhone).limit(1);
-      } else {
-          query = query.eq('user_phone', senderPhone).limit(1);
-      }
-
-      let { data: existingChats, error: chatErr } = await query;
+      // 2. Gestionar Conversación
+      let { data: existingChats, error: chatErr } = await supabase
+        .from('conversations')
+        .select('id, messages, needs_human')
+        .eq('client_id', clientId || '')
+        .eq('user_phone', senderPhone)
+        .limit(1);
 
       if (chatErr) throw chatErr;
 
@@ -120,89 +98,52 @@ export default async function handler(req, res) {
         role: 'user',
         content: textResponse,
         timestamp: new Date().toISOString(),
-        meta_id: messageId // Guardamos el ID de Meta para evitar duplicados
+        meta_id: messageId
       };
 
-      // --- ESCUDO DE DUPLICADOS (Backup) ---
+      let finalMessages = [];
+      let conversationId = null;
+
       if (existingChats && existingChats.length > 0) {
-        const lastMessages = existingChats[0].messages || [];
-        const isDuplicate = lastMessages.some(m => m.meta_id === messageId);
-        
-        if (isDuplicate) {
-          console.log(`[IDEMPOTENCIA BACKUP] Mensaje ${messageId} detectado en historial. Ignorando.`);
+        const chat = existingChats[0];
+        // Idempotencia Backup
+        if ((chat.messages || []).some(m => m.meta_id === messageId)) {
           return res.status(200).send('DUPLICATE_IGNORED');
         }
-      }
 
-      let shouldTriggerBot = false;
-      let finalMessages = [];
-
-      if (existingChats && existingChats.length > 0) {
-        // ACTUALIZAR CONVERSACIÓN EXISTENTE
-        const chat = existingChats[0];
         finalMessages = [...(chat.messages || []), newMsgNode];
-
-        await supabase
-          .from('conversations')
-          .update({
+        await supabase.from('conversations').update({
              messages: finalMessages,
              updated_at: new Date().toISOString()
-          })
-          .eq('id', chat.id);
-        
-        console.log(`Conversación ${chat.id} actualizada exitosamente.`);
-        if (!chat.needs_human) shouldTriggerBot = true;
+        }).eq('id', chat.id);
+        conversationId = chat.id;
       } else {
-        // CREAR NUEVA CONVERSACIÓN
         finalMessages = [newMsgNode];
-        const newChatPayload = {
+        const { data: insertedChat } = await supabase.from('conversations').insert([{
           user_phone: senderPhone,
           user_name: senderName,
-          messages: finalMessages
-        };
-
-        if (clientId) newChatPayload.client_id = clientId;
-        if (userId) newChatPayload.user_id = userId;
-
-        const { data: insertedChat } = await supabase
-          .from('conversations')
-          .insert([newChatPayload])
-          .select('id')
-          .single();
-          
-        if (insertedChat) existingChats = [insertedChat];
-        console.log(`Nueva conversación registrada en CRM.`);
-        shouldTriggerBot = true;
+          messages: finalMessages,
+          client_id: clientId,
+          user_id: userId
+        }]).select('id').single();
+        conversationId = insertedChat?.id;
       }
 
-      // Check if Client Bot is globally active
-      if (clients && clients.length > 0 && clients[0].active === false) {
-          shouldTriggerBot = false;
-      }
-
-      // ==========================================
-      // FASE 3: OPENAI / OPENROUTER (SEGURO)
-      // ==========================================
-      
-      if (clients && clients.length > 0) {
+      // 3. AI Dispatch (SARA)
+      if (clients?.[0]?.active !== false && conversationId) {
         const clientSetup = clients[0];
-        // SEGURIDAD: Solo usamos variables de entorno de Vercel
         const openRouterKey = process.env.OPENROUTER_API_KEY;
-        const conversationId = existingChats?.[0]?.id;
 
         const logErrorToCRM = async (logText) => {
-            if (!conversationId) return;
             const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
-            const currentMsgs = latest?.messages || finalMessages;
             await supabase.from('conversations').update({
-                messages: [...currentMsgs, { role: 'agent', content: `[SISTEMA]: ${logText}`, timestamp: new Date().toISOString() }],
+                messages: [...(latest?.messages || []), { role: 'agent', content: `[SISTEMA]: ${logText}`, timestamp: new Date().toISOString() }],
                 updated_at: new Date().toISOString()
             }).eq('id', conversationId);
         };
 
         if (openRouterKey && clientSetup.prompt) {
             try {
-                // --- INYECCIÓN DE INVENTARIO REAL ---
                 const inventoryContext = `
 PRODUCTOS DISPONIBLES EN NATUREL:
 - KOLOSAL: Limpieza profunda de colon, mejora digestión y estreñimiento.
@@ -213,17 +154,8 @@ PRODUCTOS DISPONIBLES EN NATUREL:
 - OXTMAX: Regenerador de cartílagos y salud articular.
 - 7 TOROS: Energizante natural y vigorizante.
 
-REGLAS: Solo recomienda estos productos. Si preguntan por algo diferente, ofrece la asesoría natural basada en estos beneficios.
+REGLAS: Solo recomienda estos productos reales. Responde de forma amable y profesional.
 `;
-
-                const oaiMessages = [
-                    { role: 'system', content: `${clientSetup.prompt}\n\n${inventoryContext}` },
-                    ...finalMessages.slice(-10).map(m => ({
-                        role: m.role === 'agent' ? 'assistant' : 'user',
-                        content: m.content
-                    }))
-                ];
-
                 const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -234,34 +166,35 @@ REGLAS: Solo recomienda estos productos. Si preguntan por algo diferente, ofrece
                     },
                     body: JSON.stringify({
                         model: 'openai/gpt-4o-mini',
-                        messages: oaiMessages,
+                        messages: [
+                            { role: 'system', content: `${clientSetup.prompt}\n\n${inventoryContext}` },
+                            ...finalMessages.slice(-10).map(m => ({
+                                role: m.role === 'agent' ? 'assistant' : 'user',
+                                content: m.content
+                            }))
+                        ],
                         max_tokens: 400
                     })
                 });
 
-                if (!aiResponse.ok) {
-                    const errData = await aiResponse.text();
-                    await logErrorToCRM(`Error IA: ${errData}`);
-                } else {
+                if (aiResponse.ok) {
                     const aiData = await aiResponse.json();
                     const botReplyText = aiData.choices?.[0]?.message?.content;
                     
                     if (botReplyText) {
-                        // 1. Guardar respuesta limpia en CRM
-                        const botMsgNode = { role: 'agent', content: botReplyText, timestamp: new Date().toISOString() };
-                        const { data: latestChat } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
-                        
+                        // Guardar en CRM
+                        const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
                         await supabase.from('conversations').update({
-                            messages: [...(latestChat?.messages || finalMessages), botMsgNode],
+                            messages: [...(latest?.messages || []), { role: 'agent', content: botReplyText, timestamp: new Date().toISOString() }],
                             updated_at: new Date().toISOString()
                         }).eq('id', conversationId);
 
-                        // 2. Envío directo a WhatsApp (Sincronizado con api/send.js y actualizado a v20.0)
+                        // Enviar a WhatsApp
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            const metaRes = await fetch(`https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`, {
+                            await fetch(`https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`, {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
@@ -271,32 +204,21 @@ REGLAS: Solo recomienda estos productos. Si preguntan por algo diferente, ofrece
                                 messaging_product: 'whatsapp',
                                 to: senderPhone,
                                 type: 'text',
-                                text: {
-                                  preview_url: false,
-                                  body: botReplyText
-                                }
+                                text: { preview_url: false, body: botReplyText }
                               })
                             });
-
-                                // Finalizamos exitosamente
-                                console.log('[DISPATCH] Mensaje entregado por Sara y registrado en conversaciones.');
-                            }
-                        } else {
-                             await logErrorToCRM("No se encontró WHATSAPP_TOKEN o PHONE_NUMBER_ID para este cliente.");
                         }
                     }
+                } else {
+                    const err = await aiResponse.text();
+                    await logErrorToCRM(`Error IA: ${err}`);
                 }
             } catch (aiErr) {
-                await logErrorToCRM(`Error Crítico Interno: ${aiErr.message}`);
-            }
-        } else {
-            if (!openRouterKey) {
-                await logErrorToCRM("ERROR SEGURIDAD: La variable OPENROUTER_API_KEY no está configurada en Vercel.");
+                await logErrorToCRM(`Error Crítico: ${aiErr.message}`);
             }
         }
       }
 
-      // Devolver Status 200 INMEDIATO a Meta
       return res.status(200).send('EVENT_RECEIVED');
 
     } catch (e) {
