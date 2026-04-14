@@ -148,16 +148,34 @@ export default async function handler(req, res) {
       }
 
       // ==========================================
-      // FASE 3: OPENAI / OPENROUTER + DIRECT DISPATCH
+      // FASE 3: OPENAI / OPENROUTER + DIRECT DISPATCH (VERBOSE DEBUG)
       // ==========================================
       if (shouldTriggerBot && clients && clients.length > 0) {
         const clientSetup = clients[0];
-        // Usamos la LLAVE VERIFICADA (Key #2)
         const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
         
+        // Helper para enviar mensaje rápido de debug a WhatsApp
+        const sendDebug = async (text) => {
+            const token = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
+            const pid = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
+            if (token && pid) {
+                await fetch(`https://graph.facebook.com/v17.0/${pid}/messages`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messaging_product: 'whatsapp',
+                        to: senderPhone,
+                        type: 'text',
+                        text: { body: `[Debug] ${text}` }
+                    })
+                });
+            }
+        };
+
         if (openRouterKey && clientSetup.prompt) {
             try {
                 console.log("Activando Cerebro OpenRouter...");
+                // await sendDebug("🤖 Sara está pensando su respuesta...");
                 
                 // Formatear historial para OpenAI
                 const oaiMessages = [
@@ -177,11 +195,14 @@ export default async function handler(req, res) {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${openRouterKey}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://chatbot-crm-xi.vercel.app/',
+                        'X-Title': 'NexusCRM Sara'
                     },
                     body: JSON.stringify({
-                        model: clientSetup.model || 'openai/gpt-4o-mini',
-                        messages: oaiMessages
+                        model: 'openai/gpt-4o-mini', // Forzamos el más rápido
+                        messages: oaiMessages,
+                        max_tokens: 300
                     })
                 });
 
@@ -190,8 +211,6 @@ export default async function handler(req, res) {
                     const botReplyText = aiData.choices?.[0]?.message?.content;
                     
                     if (botReplyText) {
-                        console.log("Respuesta generada por la IA:", botReplyText);
-                        
                         // 1. Guardar la respuesta de la IA en la base de datos (Inbox UI)
                         const botMsgNode = {
                             role: 'agent',
@@ -211,55 +230,46 @@ export default async function handler(req, res) {
                               .eq('id', conversationIdToUpdate);
                         }
 
-                        // 2. DISPACHO DIRECTO A WHATSAPP (Meta API)
-                        // Bypasseamos el outbox para que el envío sea INSTANTÁNEO.
+                        // 2. DISPACHO DIRECTO A WHATSAPP
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
-                        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            console.log(`Enviando respuesta física a ${senderPhone} vía Meta...`);
-                            const metaUrl = `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`;
-                            
-                            const metaResponse = await fetch(metaUrl, {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                messaging_product: 'whatsapp',
-                                recipient_type: 'individual',
-                                to: senderPhone,
-                                type: 'text',
-                                text: { preview_url: false, body: botReplyText }
-                              })
-                            });
+                        const metaResponse = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                            'Content-Type': 'application/json'
+                          },
+                          body: JSON.stringify({
+                            messaging_product: 'whatsapp',
+                            to: senderPhone,
+                            type: 'text',
+                            text: { body: botReplyText }
+                          })
+                        });
 
-                            if (metaResponse.ok) {
-                                console.log("Mensaje enviado exitosamente a WhatsApp.");
-                            } else {
-                                console.error("Error al enviar a WhatsApp:", await metaResponse.text());
-                            }
-                        }
-
-                        // 3. Registrar en Outbox (marcado como sent) para auditoría en el CRM
+                        // 3. Registrar en Outbox
                         await supabase.from('outbox').insert([{
                             client_id: clientId,
                             user_id: userId,
                             phone: senderPhone,
                             user_phone: senderPhone,
                             message: botReplyText,
-                            status: 'sent',
+                            status: metaResponse.ok ? 'sent' : 'error',
+                            error: metaResponse.ok ? null : await metaResponse.text(),
                             sent_at: new Date().toISOString()
                         }]);
                     }
                 } else {
-                    const errorText = await aiResponse.text();
-                    console.error(`OpenRouter API Error (${aiResponse.status}):`, errorText);
+                    const errorText = await aiResponse.json();
+                    await sendDebug(`❌ Error IA: ${errorText.error?.message || 'Error desconocido'}`);
                 }
             } catch (aiErr) {
                 console.error("Fallo interno en el flujo de IA:", aiErr);
+                await sendDebug(`⚠️ Fallo crítico: ${aiErr.message}`);
             }
+        } else {
+            // await sendDebug("🔍 No encontré una configuración de Prompt válida.");
         }
       }
 
