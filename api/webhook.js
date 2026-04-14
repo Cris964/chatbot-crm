@@ -84,9 +84,9 @@ export default async function handler(req, res) {
       // Asegurar que asociamos la conversación a la empresa correcta.
       // Si clientId es nulo (no sabemos a quién escribió), buscamos globalmente.
       if (clientId) {
-          query = query.eq('client_id', clientId).eq('phone', senderPhone).limit(1);
+          query = query.eq('client_id', clientId).eq('user_phone', senderPhone).limit(1);
       } else {
-          query = query.eq('phone', senderPhone).limit(1);
+          query = query.eq('user_phone', senderPhone).limit(1);
       }
 
       const { data: existingChats, error: chatErr } = await query;
@@ -117,12 +117,9 @@ export default async function handler(req, res) {
       } else {
         // CREAR NUEVA CONVERSACIÓN
         const newChatPayload = {
-          phone: senderPhone,
-          name: senderName,
-          channel: 'whatsapp',
-          unread: true,
-          messages: [newMsgNode],
-          needs_human: true
+          user_phone: senderPhone,
+          user_name: senderName,
+          messages: [newMsgNode]
         };
 
         if (clientId) newChatPayload.client_id = clientId;
