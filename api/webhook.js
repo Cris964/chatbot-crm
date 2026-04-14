@@ -209,12 +209,12 @@ export default async function handler(req, res) {
                             updated_at: new Date().toISOString()
                         }).eq('id', conversationId);
 
-                        // 2. Envío directo a WhatsApp (Sincronizado con api/send.js)
+                        // 2. Envío directo a WhatsApp (Sincronizado con api/send.js y actualizado a v20.0)
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            const metaRes = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
+                            const metaRes = await fetch(`https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`, {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
