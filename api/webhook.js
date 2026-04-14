@@ -63,6 +63,26 @@ export default async function handler(req, res) {
       
       const supabase = createClient(supabaseUrl, supabaseKey);
 
+      // --- ESCUDO ATÓMICO FINAL ---
+      // Intentamos registrar el mensaje en una tabla dedicada. 
+      // Si el insert falla por ID duplicado, salimos inmediatamente.
+      try {
+        const { error: lockError } = await supabase
+          .from('processed_messages')
+          .insert([{ id: messageId }]);
+        
+        if (lockError) {
+          // Si el error es de llave duplicada, es que ya se está procesando
+          if (lockError.code === '23505') { 
+            console.log(`[BLOQUEO ATÓMICO] Mensaje ${messageId} ya en proceso. Abortando.`);
+            return res.status(200).send('ALREADY_PROCESSING');
+          }
+          console.error('[LOCK ERROR]', lockError);
+        }
+      } catch (e) {
+        console.error('[LOCK EXCEPTION]', e);
+      }
+
       // 1. Identificar de qué empresa/tenant es el webhook según el `phone_number_id` al que escribieron
       const { data: clients, error: clientErr } = await supabase
         .from('clients')
@@ -103,13 +123,13 @@ export default async function handler(req, res) {
         meta_id: messageId // Guardamos el ID de Meta para evitar duplicados
       };
 
-      // --- ESCUDO DE DUPLICADOS ---
+      // --- ESCUDO DE DUPLICADOS (Backup) ---
       if (existingChats && existingChats.length > 0) {
         const lastMessages = existingChats[0].messages || [];
         const isDuplicate = lastMessages.some(m => m.meta_id === messageId);
         
         if (isDuplicate) {
-          console.log(`[IDEMPOTENCIA] Mensaje ${messageId} ya procesado. Ignorando.`);
+          console.log(`[IDEMPOTENCIA BACKUP] Mensaje ${messageId} detectado en historial. Ignorando.`);
           return res.status(200).send('DUPLICATE_IGNORED');
         }
       }
