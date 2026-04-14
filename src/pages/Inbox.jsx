@@ -145,6 +145,23 @@ export default function Inbox() {
     }
   }
 
+  // Realtime updater for the entire inbox list
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    
+    const listUpdateSub = supabase
+      .channel('public:conversations_list')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
+        console.log('Realtime tick: Fetching new conversation data...');
+        fetchConversations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(listUpdateSub);
+    }
+  }, [session]);
+
   const [filterChannel, setFilterChannel] = useState('All')
   const filteredConversations = conversationsList.filter(c => 
     filterChannel === 'All' || c.channel?.toLowerCase() === filterChannel.toLowerCase()
