@@ -211,17 +211,20 @@ export default async function handler(req, res) {
                         }
 
                         // 2. Insertar en Outbox para despacho automático vía Meta Graph
+                        // Aseguramos que guardamos el teléfono en ambos campos por compatibilidad
                         await supabase.from('outbox').insert([{
                             client_id: clientId,
                             user_id: userId,
                             phone: senderPhone,
+                            user_phone: senderPhone,
                             message: botReplyText
                         }]);
                         
                         console.log("IA Respondió y se encoló en el Outbox exitosamente.");
                     }
                 } else {
-                    console.error("OpenRouter API Error:", await aiResponse.text());
+                    const errorText = await aiResponse.text();
+                    console.error(`OpenRouter API Error (${aiResponse.status}):`, errorText);
                 }
             } catch (aiErr) {
                 console.error("Fallo interno OpenRouter:", aiErr);
