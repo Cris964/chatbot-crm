@@ -108,7 +108,6 @@ export default async function handler(req, res) {
           .from('conversations')
           .update({
              messages: [...oldMessages, newMsgNode],
-             unread: true,
              updated_at: new Date().toISOString()
           })
           .eq('id', chat.id);
