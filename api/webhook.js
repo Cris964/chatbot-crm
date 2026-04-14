@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       // 1. Identificar de qué empresa/tenant es el webhook según el `phone_number_id` al que escribieron
       const { data: clients, error: clientErr } = await supabase
         .from('clients')
-        .select('id, user_id')
+        .select('id, user_id, active, prompt, model, whatsapp_token')
         .eq('phone_number_id', phoneNumberId)
         .limit(1);
 
@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       }
 
       // 2. Buscar si la conversación del cliente ya existe
-      let query = supabase.from('conversations').select('id, messages');
+      let query = supabase.from('conversations').select('id, messages, needs_human');
       
       // Asegurar que asociamos la conversación a la empresa correcta.
       // Si clientId es nulo (no sabemos a quién escribió), buscamos globalmente.
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
           query = query.eq('user_phone', senderPhone).limit(1);
       }
 
-      const { data: existingChats, error: chatErr } = await query;
+      let { data: existingChats, error: chatErr } = await query;
 
       if (chatErr) throw chatErr;
 
@@ -101,39 +101,135 @@ export default async function handler(req, res) {
         timestamp: new Date().toISOString()
       };
 
+      let shouldTriggerBot = false;
+      let finalMessages = [];
+
       if (existingChats && existingChats.length > 0) {
         // ACTUALIZAR CONVERSACIÓN EXISTENTE
         const chat = existingChats[0];
-        const oldMessages = chat.messages || [];
+        finalMessages = [...(chat.messages || []), newMsgNode];
 
         await supabase
           .from('conversations')
           .update({
-             messages: [...oldMessages, newMsgNode],
+             messages: finalMessages,
              updated_at: new Date().toISOString()
           })
           .eq('id', chat.id);
         
         console.log(`Conversación ${chat.id} actualizada exitosamente.`);
+        if (!chat.needs_human) shouldTriggerBot = true;
       } else {
         // CREAR NUEVA CONVERSACIÓN
+        finalMessages = [newMsgNode];
         const newChatPayload = {
           user_phone: senderPhone,
           user_name: senderName,
-          messages: [newMsgNode]
+          messages: finalMessages
         };
 
         if (clientId) newChatPayload.client_id = clientId;
         if (userId) newChatPayload.user_id = userId;
 
-        await supabase
+        const { data: insertedChat } = await supabase
           .from('conversations')
-          .insert([newChatPayload]);
+          .insert([newChatPayload])
+          .select('id')
+          .single();
           
+        if (insertedChat) existingChats = [insertedChat];
         console.log(`Nueva conversación registrada en CRM.`);
+        shouldTriggerBot = true;
       }
 
-      // Devolver Status 200 INMEDIATO a Meta para que no hagan reintentos eternos de webhook
+      // Check if Client Bot is globally active
+      if (clients && clients.length > 0 && clients[0].active === false) {
+          shouldTriggerBot = false;
+      }
+
+      // ==========================================
+      // FASE 3: OPENAI / OPENROUTER INTEGRATION
+      // ==========================================
+      if (shouldTriggerBot && clients && clients.length > 0) {
+        const clientSetup = clients[0];
+        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
+        
+        if (openRouterKey && clientSetup.prompt) {
+            try {
+                console.log("Activando Cerebro OpenRouter...");
+                
+                // Formatear historial para OpenAI
+                const oaiMessages = [
+                    { role: 'system', content: clientSetup.prompt }
+                ];
+
+                // Agarrar los últimos 10 mensajes para dar contexto sin saturar el token limit
+                const contextWindow = finalMessages.slice(-10);
+                contextWindow.forEach(m => {
+                    oaiMessages.push({
+                        role: m.role === 'agent' ? 'assistant' : 'user',
+                        content: m.content
+                    });
+                });
+
+                const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${openRouterKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: clientSetup.model || 'openai/gpt-4o-mini',
+                        messages: oaiMessages
+                    })
+                });
+
+                if (aiResponse.ok) {
+                    const aiData = await aiResponse.json();
+                    const botReplyText = aiData.choices?.[0]?.message?.content;
+                    
+                    if (botReplyText) {
+                        console.log("Respuesta generada por la IA:", botReplyText);
+                        
+                        // 1. Guardar la respuesta de la IA en la base de datos (Inbox UI)
+                        const botMsgNode = {
+                            role: 'agent',
+                            content: botReplyText,
+                            timestamp: new Date().toISOString()
+                        };
+
+                        const conversationIdToUpdate = existingChats?.[0]?.id;
+
+                        if (conversationIdToUpdate) {
+                            await supabase
+                              .from('conversations')
+                              .update({
+                                 messages: [...finalMessages, botMsgNode],
+                                 updated_at: new Date().toISOString()
+                              })
+                              .eq('id', conversationIdToUpdate);
+                        }
+
+                        // 2. Insertar en Outbox para despacho automático vía Meta Graph
+                        await supabase.from('outbox').insert([{
+                            client_id: clientId,
+                            user_id: userId,
+                            phone: senderPhone,
+                            message: botReplyText
+                        }]);
+                        
+                        console.log("IA Respondió y se encoló en el Outbox exitosamente.");
+                    }
+                } else {
+                    console.error("OpenRouter API Error:", await aiResponse.text());
+                }
+            } catch (aiErr) {
+                console.error("Fallo interno OpenRouter:", aiErr);
+            }
+        }
+      }
+
+      // Devolver Status 200 INMEDIATO a Meta
       return res.status(200).send('EVENT_RECEIVED');
 
     } catch (e) {

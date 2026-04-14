@@ -225,7 +225,7 @@ export default function Inbox() {
        await supabase.from('outbox').insert([{
          client_id: selectedConv.client?.id,
          phone: selectedConv.phone,
-         text: newMessage,
+         message: newMessage,
          user_id: session.user.id
        }])
     }
