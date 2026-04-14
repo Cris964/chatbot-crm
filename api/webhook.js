@@ -148,48 +148,120 @@ export default async function handler(req, res) {
       }
 
       // ==========================================
-      // FASE 3: DIAGNOSTIC TEST (Bypass OpenRouter)
+      // FASE 3: OPENAI / OPENROUTER + DIRECT DISPATCH
       // ==========================================
-      if (shouldTriggerBot) {
-          console.log("EJECUTANDO PRUEBA DE ECHO DIAGNÓSTICO...");
-          const botReplyText = "¡Hola! Soy Sara (Prueba Técnica). He recibido tu mensaje: " + textResponse;
-
-          // 1. Guardar la respuesta en la base de datos (Inbox UI)
-          const botMsgNode = {
-              role: 'agent',
-              content: botReplyText,
-              timestamp: new Date().toISOString()
-          };
-
-          const conversationIdToUpdate = existingChats?.[0]?.id;
-
-          if (conversationIdToUpdate) {
-              await supabase
-                .from('conversations')
-                .update({
-                    messages: [...finalMessages, botMsgNode],
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', conversationIdToUpdate);
-          }
-
-          // 2. Insertar en Outbox para despacho automático
-          await supabase.from('outbox').insert([{
-              client_id: clientId,
-              user_id: userId,
-              phone: senderPhone,
-              user_phone: senderPhone,
-              message: botReplyText
-          }]);
-          
-          console.log("Eco diagnóstico enviado al Outbox.");
-      }
-
-      /* COMENTADO TEMPORALMENTE PARA DIAGNÓSTICO
       if (shouldTriggerBot && clients && clients.length > 0) {
-        ...
+        const clientSetup = clients[0];
+        // Usamos la LLAVE VERIFICADA (Key #2)
+        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
+        
+        if (openRouterKey && clientSetup.prompt) {
+            try {
+                console.log("Activando Cerebro OpenRouter...");
+                
+                // Formatear historial para OpenAI
+                const oaiMessages = [
+                    { role: 'system', content: clientSetup.prompt }
+                ];
+
+                // Agarrar los últimos 10 mensajes para dar contexto
+                const contextWindow = finalMessages.slice(-10);
+                contextWindow.forEach(m => {
+                    oaiMessages.push({
+                        role: m.role === 'agent' ? 'assistant' : 'user',
+                        content: m.content
+                    });
+                });
+
+                const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${openRouterKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: clientSetup.model || 'openai/gpt-4o-mini',
+                        messages: oaiMessages
+                    })
+                });
+
+                if (aiResponse.ok) {
+                    const aiData = await aiResponse.json();
+                    const botReplyText = aiData.choices?.[0]?.message?.content;
+                    
+                    if (botReplyText) {
+                        console.log("Respuesta generada por la IA:", botReplyText);
+                        
+                        // 1. Guardar la respuesta de la IA en la base de datos (Inbox UI)
+                        const botMsgNode = {
+                            role: 'agent',
+                            content: botReplyText,
+                            timestamp: new Date().toISOString()
+                        };
+
+                        const conversationIdToUpdate = existingChats?.[0]?.id;
+
+                        if (conversationIdToUpdate) {
+                            await supabase
+                              .from('conversations')
+                              .update({
+                                 messages: [...finalMessages, botMsgNode],
+                                 updated_at: new Date().toISOString()
+                              })
+                              .eq('id', conversationIdToUpdate);
+                        }
+
+                        // 2. DISPACHO DIRECTO A WHATSAPP (Meta API)
+                        // Bypasseamos el outbox para que el envío sea INSTANTÁNEO.
+                        const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
+                        const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
+
+                        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
+                            console.log(`Enviando respuesta física a ${senderPhone} vía Meta...`);
+                            const metaUrl = `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`;
+                            
+                            const metaResponse = await fetch(metaUrl, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                messaging_product: 'whatsapp',
+                                recipient_type: 'individual',
+                                to: senderPhone,
+                                type: 'text',
+                                text: { preview_url: false, body: botReplyText }
+                              })
+                            });
+
+                            if (metaResponse.ok) {
+                                console.log("Mensaje enviado exitosamente a WhatsApp.");
+                            } else {
+                                console.error("Error al enviar a WhatsApp:", await metaResponse.text());
+                            }
+                        }
+
+                        // 3. Registrar en Outbox (marcado como sent) para auditoría en el CRM
+                        await supabase.from('outbox').insert([{
+                            client_id: clientId,
+                            user_id: userId,
+                            phone: senderPhone,
+                            user_phone: senderPhone,
+                            message: botReplyText,
+                            status: 'sent',
+                            sent_at: new Date().toISOString()
+                        }]);
+                    }
+                } else {
+                    const errorText = await aiResponse.text();
+                    console.error(`OpenRouter API Error (${aiResponse.status}):`, errorText);
+                }
+            } catch (aiErr) {
+                console.error("Fallo interno en el flujo de IA:", aiErr);
+            }
+        }
       }
-      */
 
       // Devolver Status 200 INMEDIATO a Meta
       return res.status(200).send('EVENT_RECEIVED');
