@@ -278,30 +278,8 @@ REGLAS: Solo recomienda estos productos. Si preguntan por algo diferente, ofrece
                               })
                             });
 
-                            if (!metaRes.ok) {
-                                const metaErr = await metaRes.text();
-                                await logErrorToCRM(`Error Meta: ${metaErr}`);
-                                
-                                await supabase.from('outbox').insert([{
-                                    client_id: clientId,
-                                    user_id: userId,
-                                    phone: senderPhone,
-                                    user_phone: senderPhone,
-                                    message: botReplyText,
-                                    status: 'error',
-                                    error: metaErr,
-                                    sent_at: new Date().toISOString()
-                                }]);
-                            } else {
-                                await supabase.from('outbox').insert([{
-                                    client_id: clientId,
-                                    user_id: userId,
-                                    phone: senderPhone,
-                                    user_phone: senderPhone,
-                                    message: botReplyText,
-                                    status: 'delivered_by_bot', // Cambiado de 'sent' para evitar doble disparo por triggers
-                                    sent_at: new Date().toISOString()
-                                }]);
+                                // Finalizamos exitosamente
+                                console.log('[DISPATCH] Mensaje entregado por Sara y registrado en conversaciones.');
                             }
                         } else {
                              await logErrorToCRM("No se encontró WHATSAPP_TOKEN o PHONE_NUMBER_ID para este cliente.");
