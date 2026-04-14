@@ -299,7 +299,7 @@ REGLAS: Solo recomienda estos productos. Si preguntan por algo diferente, ofrece
                                     phone: senderPhone,
                                     user_phone: senderPhone,
                                     message: botReplyText,
-                                    status: 'sent',
+                                    status: 'delivered_by_bot', // Cambiado de 'sent' para evitar doble disparo por triggers
                                     sent_at: new Date().toISOString()
                                 }]);
                             }
