@@ -152,7 +152,7 @@ export default async function handler(req, res) {
       // ==========================================
       if (shouldTriggerBot && clients && clients.length > 0) {
         const clientSetup = clients[0];
-        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
+        const openRouterKey = process.env.OPENROUTER_API_KEY || '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';
         
         if (openRouterKey && clientSetup.prompt) {
             try {
