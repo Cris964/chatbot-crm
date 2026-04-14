@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       }
 
       // 2. Buscar si la conversación del cliente ya existe
-      let query = supabase.from('conversations').select('id, rawMessages, messages');
+      let query = supabase.from('conversations').select('id, messages');
       
       // Asegurar que asociamos la conversación a la empresa correcta.
       // Si clientId es nulo (no sabemos a quién escribió), buscamos globalmente.
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
       if (existingChats && existingChats.length > 0) {
         // ACTUALIZAR CONVERSACIÓN EXISTENTE
         const chat = existingChats[0];
-        const oldMessages = chat.messages || chat.rawMessages || [];
+        const oldMessages = chat.messages || [];
 
         await supabase
           .from('conversations')
