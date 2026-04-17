@@ -14,7 +14,7 @@ export default function Calendar() {
 
   // Mock appointments
   const appointments = [
-    { id: 1, title: 'Demo NexusCRM - Naturel', time: '10:00 AM', date: '2026-04-12', type: 'Demo', status: 'Confirmed', contact: 'Juan Pérez' },
+    { id: 1, title: 'Reunión NexusCRM', time: '10:00 AM', date: '2026-04-12', type: 'Demo', status: 'Confirmed', contact: 'Juan Pérez' },
     { id: 2, title: 'Cierre de Venta - Bot Auto', time: '02:30 PM', date: '2026-04-12', type: 'Sales', status: 'Pending', contact: 'Maria Lopez' },
   ]
 

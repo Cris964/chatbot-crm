@@ -72,11 +72,17 @@ export default function Settings() {
   const fetchSettings = async () => {
     setIsLoading(true)
     // Get the client record associated with this user
-    const { data: clients, error } = await supabase
+    let { data: clients, error } = await supabase
       .from('clients')
       .select('*')
       .eq('user_id', session.user.id)
       .limit(1)
+
+    if (!clients || clients.length === 0) {
+      // Fallback: fetch the first available client if user has permissions
+      const { data: allClients } = await supabase.from('clients').select('*').limit(1)
+      clients = allClients
+    }
 
     if (clients && clients.length > 0) {
       const client = clients[0]
@@ -99,7 +105,7 @@ export default function Settings() {
     setIsSaving(true)
     // Si el usuario es el administrador principal, aseguramos su conexión con Naturel
     // De lo contrario, creamos una empresa nueva y genérica para el nuevo cliente SaaS
-    const isNaturelAdmin = session.user.email === 'admin@chekadmin.com';
+    const isNaturelAdmin = ['admin@chekadmin.com', 'admin@naturel.com', 'naturel@admin.com', 'naturel'].includes(session.user.email?.toLowerCase());
     const payload = isNaturelAdmin 
       ? { 
           id: '98b9fafd-90ad-4ed9-9616-b8ed992b0e7d',
@@ -419,7 +425,7 @@ export default function Settings() {
 
                 <div className="form-group">
                   <label className="form-label">Webhook URL</label>
-                  <input className="form-input" defaultValue="https://api.yourapp.com/webhooks/nexuscrm" style={{ fontFamily: 'monospace', maxWidth: 500 }} />
+                  <input className="form-input" defaultValue="https://nexuscrmia.vercel.app/api/webhooks" style={{ fontFamily: 'monospace', maxWidth: 500 }} />
                 </div>
 
                 <div className="form-group">

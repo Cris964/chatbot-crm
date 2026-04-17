@@ -58,7 +58,7 @@ export default function Layout({ session }) {
              {!collapsed && (
                <div className="logo-text">
                  <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.03em' }}>NexusCRM</h1>
-                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em' }}>PRECISION SAAS</span>
+                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em' }}>https://nexuscrmia.vercel.app/</span>
                </div>
              )}
           </div>
