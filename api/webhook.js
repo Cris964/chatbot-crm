@@ -154,7 +154,12 @@ PRODUCTOS DISPONIBLES EN NATUREL:
 - OXTMAX: Regenerador de cartílagos y salud articular.
 - 7 TOROS: Energizante natural y vigorizante.
 
-REGLAS: Solo recomienda estos productos reales. Responde de forma amable y profesional.
+📢 PROMOCIÓN ACTIVA Y POLÍTICA DE ENVÍOS:
+- Por la compra de un MR. FIBRA VERDE, el cliente se lleva GRATIS una "CASIGUA". ¡Menciona y ofrece esta promoción!
+- El domicilio/envío en CALI es totalmente GRATIS.
+- Los domicilios/envíos FUERA DE CALI tienen un costo adicional. Informa esto de manera transparente.
+
+REGLAS: Solo recomienda estos productos reales. Aplica la promoción activa. Responde de forma amable, profesional y persuasiva para cerrar la venta.
 `;
                 const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
