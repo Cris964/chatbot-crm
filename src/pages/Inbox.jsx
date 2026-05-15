@@ -573,12 +573,15 @@ export default function Inbox() {
                    <div className="flex items-center gap-3">
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Tag size={16} /></div>
                       <div>
-                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Channel</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Channel</div>
                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.channel || 'whatsapp'}</div>
                       </div>
                    </div>
                 </div>
-             </div>
+               </div>
+          </div>
+       </div>
+
        {/* Simulation Modal */}
        {showSimModal && (
          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
@@ -619,5 +622,3 @@ export default function Inbox() {
     </div>
   )
 }
-
-
