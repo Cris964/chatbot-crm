@@ -6,6 +6,8 @@ const TenantContext = createContext(null)
 // Super admin emails that can access the SuperAdmin panel
 const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com']
 
+
+
 export function TenantProvider({ session, children }) {
   const [tenantState, setTenantState] = useState({
     clientId: null,
@@ -43,7 +45,7 @@ export function TenantProvider({ session, children }) {
           clientName: membership.clients?.name || 'Mi Empresa',
           role: membership.role,
           membership,
-          isAdmin: membership.role === 'admin',
+          isAdmin: membership.role?.toLowerCase() === 'admin',
           isSuperAdmin,
           isLoading: false,
           error: null,

@@ -42,6 +42,24 @@ export default function Inbox() {
     fetchConversations()
     fetchTeamMembers()
 
+    const simulateChat = async () => {
+      const testMsg = prompt("Escribe un mensaje para probar la IA de Trazzos:")
+      if (!testMsg) return
+      
+      // Create a temporary conversation for testing
+      const { data: conv } = await supabase.from('conversations').insert([{
+        client_id: tenant.clientId,
+        user_phone: 'TEST_USER',
+        user_name: 'Usuario de Prueba',
+        messages: [{ role: 'user', content: testMsg, timestamp: new Date().toISOString() }]
+      }]).select().single()
+      
+      if (conv) {
+        alert("Mensaje enviado. En unos segundos Cami responderá. Refresca el Inbox.")
+        fetchConversations()
+      }
+    }
+
     // Realtime listener for new conversations or updates
     const convSub = supabase
       .channel('public:conversations')
@@ -292,10 +310,17 @@ export default function Inbox() {
       <div className="inbox-sidebar" style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)' }}>
         <div className="inbox-sidebar-header" style={{ padding: '24px' }}>
            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 16 }}>CRM Inbox</h2>
-           <div className="inbox-search">
+           <div className="search-bar">
              <Search size={18} />
-             <input type="text" placeholder="Search chats..." />
+             <input type="text" placeholder="Buscar chats..." />
            </div>
+           <button 
+             className="btn btn-secondary btn-sm" 
+             style={{ width: '100%', marginTop: 12, background: 'rgba(99,102,241,0.1)', border: '1px solid var(--primary-500)', color: 'var(--primary-400)' }}
+             onClick={simulateChat}
+           >
+             <Sparkles size={14} /> Simular Chat de Prueba
+           </button>
         </div>
         
         <div className="conversation-list" style={{ padding: 12 }}>
