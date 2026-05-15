@@ -24,6 +24,9 @@ export default function Inbox() {
   const [recordingTime, setRecordingTime] = useState(0)
   const [teamMembers, setTeamMembers] = useState([])
   const [activeInfoTab, setActiveInfoTab] = useState('Contact')
+  const [showSimModal, setShowSimModal] = useState(false)
+  const [simMessage, setSimMessage] = useState('')
+  const [isSimulating, setIsSimulating] = useState(false)
   const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
@@ -34,20 +37,23 @@ export default function Inbox() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const simulateChat = async () => {
-    const testMsg = prompt("Escribe un mensaje para probar la IA de Trazzos:")
-    if (!testMsg) return
+  const handleSimulateChat = async (e) => {
+    if (e) e.preventDefault()
+    if (!simMessage.trim()) return
+    setIsSimulating(true)
     
     // Create a temporary conversation for testing
     const { data: conv } = await supabase.from('conversations').insert([{
       client_id: tenant.clientId,
-      user_phone: 'TEST_USER',
-      user_name: 'Usuario de Prueba',
-      messages: [{ role: 'user', content: testMsg, timestamp: new Date().toISOString() }]
+      user_phone: 'TEST_USER_' + Date.now(),
+      user_name: 'Cliente de Prueba',
+      messages: [{ role: 'user', content: simMessage, timestamp: new Date().toISOString() }]
     }]).select().single()
     
     if (conv) {
-      alert("Mensaje enviado. En unos segundos Cami responderá. Refresca el Inbox.")
+      setSimMessage('')
+      setShowSimModal(false)
+      setIsSimulating(false)
       fetchConversations()
     }
   }
@@ -319,11 +325,17 @@ export default function Inbox() {
              <input type="text" placeholder="Buscar chats..." />
            </div>
            <button 
-             className="btn btn-secondary btn-sm" 
-             style={{ width: '100%', marginTop: 12, background: 'rgba(99,102,241,0.1)', border: '1px solid var(--primary-500)', color: 'var(--primary-400)' }}
-             onClick={simulateChat}
+             className="btn btn-primary btn-sm" 
+             style={{ 
+               width: '100%', 
+               marginTop: 12, 
+               background: 'linear-gradient(135deg, var(--primary-600), var(--primary-400))',
+               boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.4)',
+               fontWeight: 700
+             }}
+             onClick={() => setShowSimModal(true)}
            >
-             <Sparkles size={14} /> Simular Chat de Prueba
+             <Sparkles size={14} /> Probar Agente IA
            </button>
         </div>
         
@@ -567,8 +579,43 @@ export default function Inbox() {
                    </div>
                 </div>
              </div>
-          </div>
-       </div>
+       {/* Simulation Modal */}
+       {showSimModal && (
+         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+            <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 460, padding: 0, overflow: 'hidden' }}>
+               <div className="card-header" style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.05), transparent)' }}>
+                  <div className="flex items-center gap-3">
+                    <div style={{ background: 'var(--primary-600)', padding: 8, borderRadius: 10 }}><Bot size={20} color="white" /></div>
+                    <h3 style={{ fontWeight: 800 }}>Prueba a tu Agente IA</h3>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setShowSimModal(false)}><Close size={20} /></button>
+               </div>
+               <div style={{ padding: '24px' }}>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-tertiary)', marginBottom: 20 }}>
+                    Envía un mensaje como si fueras un cliente. Cami responderá usando su conocimiento de Trazzos y reglas de agendamiento.
+                  </p>
+                  <form onSubmit={handleSimulateChat}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary-400)', marginBottom: 8, letterSpacing: '0.05em' }}>Tu Mensaje</label>
+                    <textarea 
+                      className="form-input" 
+                      rows={4} 
+                      placeholder="Ej: Hola, quiero remodelar mi cocina, ¿qué opciones tienen?"
+                      value={simMessage}
+                      onChange={e => setSimMessage(e.target.value)}
+                      required
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-3" style={{ marginTop: 24 }}>
+                       <button type="button" className="btn btn-secondary" onClick={() => setShowSimModal(false)}>Cancelar</button>
+                       <button type="submit" className="btn btn-primary" disabled={isSimulating}>
+                          {isSimulating ? 'Iniciando...' : 'Enviar Mensaje'}
+                       </button>
+                    </div>
+                  </form>
+               </div>
+            </div>
+         </div>
+       )}
     </div>
   )
 }
