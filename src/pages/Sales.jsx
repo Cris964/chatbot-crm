@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
   Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search, Truck
@@ -20,10 +21,10 @@ function getPaymentBadge(status) {
 
 export default function Sales() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [searchQuery, setSearchQuery] = useState('')
   const [salesList, setSalesList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [currentUserClient, setCurrentUserClient] = useState(null)
   
   // New Modal States
   const [showModal, setShowModal] = useState(false)
@@ -38,33 +39,17 @@ export default function Sales() {
   })
 
   useEffect(() => {
-    const init = async () => {
-      if (session?.user?.id) {
-        // Encontrar a qué client_id pertenece este usuario
-        const { data: client } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .single()
-        
-        if (client) {
-          setCurrentUserClient(client.id)
-          fetchSales(client.id)
-        } else {
-          // Si no está vinculado a un cliente, intentar cargar todos por si acaso (o avisar)
-          fetchSales()
-        }
-      }
+    if (tenant.clientId && !tenant.isLoading) {
+      fetchSales(tenant.clientId)
     }
-    init()
-  }, [session])
+  }, [tenant.clientId, tenant.isLoading])
 
   const fetchSales = async (clientId) => {
     setIsLoading(true)
     let query = supabase.from('orders').select('*')
     
-    // Si tenemos un clientId, lo usamos para filtrar (Multitenant)
-    const targetId = clientId || currentUserClient
+    // Use tenant context for multi-tenancy isolation
+    const targetId = clientId || tenant.clientId
     if (targetId) {
       query = query.eq('client_id', targetId)
     }
@@ -96,7 +81,7 @@ export default function Sales() {
     if (e) e.preventDefault()
     setIsSaving(true)
     
-    const targetClientId = currentUserClient
+    const targetClientId = tenant.clientId
     if (!targetClientId) {
        alert('Error: No client configuration found for your account.')
        setIsSaving(false)
@@ -118,7 +103,7 @@ export default function Sales() {
     if (!error) {
        setShowModal(false)
        setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp' })
-       fetchSales(targetClientId)
+       fetchSales(tenant.clientId)
     } else {
        alert('Error saving sale: ' + error.message)
     }

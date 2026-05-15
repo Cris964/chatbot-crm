@@ -7,6 +7,7 @@ import {
   Zap, Compass, Plus, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -50,6 +51,7 @@ function ChangeView({ center, zoom }) {
 
 export default function Dispatches() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [shipments, setShipments] = useState([])
   const [activeShipmentId, setActiveShipmentId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -58,20 +60,18 @@ export default function Dispatches() {
   const [showNewDispatch, setShowNewDispatch] = useState(false)
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (tenant.clientId && !tenant.isLoading) {
        fetchShipments()
     }
-  }, [session])
+  }, [tenant.clientId, tenant.isLoading])
 
   const fetchShipments = async () => {
     setIsLoading(true)
-    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
-    const clientIds = clients?.map(c => c.id) || []
-
+    // Use tenant context for multi-tenancy isolation
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .in('client_id', clientIds)
+      .eq('client_id', tenant.clientId)
       .neq('status', 'cancelado')
       .order('updated_at', { ascending: false })
 
@@ -89,7 +89,7 @@ export default function Dispatches() {
           status: d.status || 'pendiente',
           progress: d.status === 'entregado' ? 100 : (d.status === 'despachado' ? 65 : 20),
           eta: d.status === 'entregado' ? 'Entregado' : '2-3 días',
-          driver: 'Logística Naturel',
+          driver: tenant.clientName || 'Logística',
           vehicle: 'Envío Terrestre',
           timeline: [
             { status: 'Pedido Recibido', date: new Date(d.created_at).toLocaleDateString(), completed: true, icon: Package },

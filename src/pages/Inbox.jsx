@@ -5,12 +5,14 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight,
-  Mic, Square, Trash2
+  Mic, Square, Trash2, UserPlus
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 
 export default function Inbox() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
   const [selectedConv, setSelectedConv] = useState(null)
   const [messages, setMessages] = useState([])
@@ -20,6 +22,7 @@ export default function Inbox() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [teamMembers, setTeamMembers] = useState([])
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -34,9 +37,10 @@ export default function Inbox() {
   }, [messages, selectedConv])
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (!tenant.clientId || tenant.isLoading) return
 
     fetchConversations()
+    fetchTeamMembers()
 
     // Realtime listener for new conversations or updates
     const convSub = supabase
@@ -53,11 +57,10 @@ export default function Inbox() {
     return () => {
       supabase.removeChannel(convSub)
     }
-  }, [session?.user?.id])
+  }, [tenant.clientId, tenant.isLoading])
 
   useEffect(() => {
     if (selectedConv) {
-      // Initialize messages from the conversation object
       setMessages((selectedConv.rawMessages || []).map((m, i) => ({
         id: i,
         sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
@@ -65,7 +68,6 @@ export default function Inbox() {
         time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
       })))
 
-      // Realtime listener for updates to this specific conversation
       const convUpdateSub = supabase
         .channel(`public:conversations:${selectedConv.id}`)
         .on('postgres_changes', { 
@@ -75,6 +77,7 @@ export default function Inbox() {
           filter: `id=eq.${selectedConv.id}` 
         }, (payload) => {
           const updatedConv = payload.new
+          setSelectedConv(prev => ({ ...prev, ...updatedConv }))
           if (updatedConv.messages) {
             setMessages(updatedConv.messages.map((m, i) => ({
               id: i,
@@ -93,26 +96,18 @@ export default function Inbox() {
   }, [selectedConv])
 
   const fetchConversations = async () => {
-    if (!session?.user?.id) return
+    if (!tenant.clientId) return
     setIsLoading(true)
     
     try {
-      // Get clients linked to this user for multitenancy
-      const { data: userClients } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('user_id', session.user.id)
-      
-      const clientIds = userClients?.map(c => c.id) || []
-      
       const { data, error } = await supabase
         .from('conversations')
         .select('*, clients(*)')
-        .in('client_id', clientIds)
+        .eq('client_id', tenant.clientId)
         .order('updated_at', { ascending: false })
       
       if (!error && data) {
-        const mapped = data.map((conv, i) => {
+        const mapped = data.map((conv) => {
           const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
 
           return {
@@ -130,7 +125,8 @@ export default function Inbox() {
             phone: conv.user_phone,
             client: conv.clients,
             rawMessages: conv.messages || [],
-            needs_human: conv.needs_human
+            needs_human: conv.needs_human,
+            assigned_to: conv.assigned_to
           }
         })
         setConversationsList(mapped)
@@ -145,59 +141,24 @@ export default function Inbox() {
     }
   }
 
-  // Realtime updater for the entire inbox list
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    
-    const listUpdateSub = supabase
-      .channel('public:conversations_list')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
-        console.log('Realtime tick: Fetching new conversation data...');
-        fetchConversations();
-      })
-      .subscribe();
+  const fetchTeamMembers = async () => {
+    const { data } = await supabase
+      .from('team_members')
+      .select('user_id, full_name')
+      .eq('client_id', tenant.clientId)
+    if (data) setTeamMembers(data)
+  }
 
-    return () => {
-      supabase.removeChannel(listUpdateSub);
-    }
-  }, [session]);
-
-  const [filterChannel, setFilterChannel] = useState('All')
-  const filteredConversations = conversationsList.filter(c => 
-    filterChannel === 'All' || c.channel?.toLowerCase() === filterChannel.toLowerCase()
-  )
-
-  const [activeInfoTab, setActiveInfoTab] = useState('Contact')
-  const fileInputRef = useRef(null)
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file || !selectedConv) return
-
-    // Simulate upload/sending logic
-    const fileType = file.type.startsWith('image/') ? 'image' : (file.type.startsWith('audio/') ? 'audio' : 'file')
-    const fileName = `${Date.now()}_${file.name}`
-    
-    // In a real app: await supabase.storage.from('media').upload(fileName, file)
-    // For now, we simulate the message addition
-    const fakeUrl = URL.createObjectURL(file)
-    
-    const messageObj = {
-      role: 'agent',
-      content: fakeUrl,
-      type: fileType,
-      timestamp: new Date().toISOString()
-    }
-
+  const assignAdvisor = async (conversationId, userId) => {
     const { error } = await supabase
       .from('conversations')
-      .update({ 
-        messages: [...selectedConv.rawMessages, messageObj],
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', selectedConv.id)
-
-    if (!error) fetchConversations()
+      .update({ assigned_to: userId })
+      .eq('id', conversationId)
+    
+    if (!error) {
+      fetchConversations()
+      setSelectedConv(prev => ({ ...prev, assigned_to: userId }))
+    }
   }
 
   const handleSendMessage = async (e) => {
@@ -215,13 +176,12 @@ export default function Inbox() {
       .update({ 
         messages: [...selectedConv.rawMessages, messageObj],
         updated_at: new Date().toISOString(),
-        needs_human: false // Assume agent handling solves need for human intervention temporarily
+        needs_human: false
       })
       .eq('id', selectedConv.id)
 
     if (!error) {
        setNewMessage('')
-       // Add to outbox if needed by your backend system
        await supabase.from('outbox').insert([{
          client_id: selectedConv.client?.id,
          phone: selectedConv.phone,
@@ -327,20 +287,8 @@ export default function Inbox() {
     }
   }
 
-  const toggleBot = async () => {
-    if (!selectedConv) return
-    const newState = !botActive
-    setBotActive(newState)
-    
-    await supabase
-      .from('conversations')
-      .update({ needs_human: !newState })
-      .eq('id', selectedConv.id)
-  }
-
   return (
     <div className="inbox-layout" style={{ background: 'transparent', height: 'calc(100vh - var(--header-height))' }}>
-      {/* List */}
       <div className="inbox-sidebar" style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)' }}>
         <div className="inbox-sidebar-header" style={{ padding: '24px' }}>
            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 16 }}>CRM Inbox</h2>
@@ -350,36 +298,13 @@ export default function Inbox() {
            </div>
         </div>
         
-        <div style={{ display: 'flex', gap: 12, padding: '0 24px 16px', borderBottom: '1px solid var(--glass-border)', overflowX: 'auto' }} className="no-scrollbar">
-           {['All', 'WhatsApp', 'Instagram', 'Facebook', 'TikTok'].map(t => (
-             <button 
-                key={t} 
-                className={`tab-btn-mini ${filterChannel === t ? 'active' : ''}`}
-                onClick={() => setFilterChannel(t)}
-                style={{ 
-                    fontSize: '0.75rem', 
-                    fontWeight: 700, 
-                    color: filterChannel === t ? 'var(--primary-400)' : 'var(--text-tertiary)',
-                    padding: '4px 12px',
-                    borderRadius: 20,
-                    whiteSpace: 'nowrap',
-                    background: filterChannel === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
-                }}
-             >
-                {t}
-             </button>
-           ))}
-        </div>
-
         <div className="conversation-list" style={{ padding: 12 }}>
           {isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
                <div className="spinner" style={{ margin: '0 auto 12px' }} />
                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Loading conversations...</p>
             </div>
-          ) : filteredConversations.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No conversations for this channel.</div>
-          ) : filteredConversations.map(c => (
+          ) : conversationsList.map(c => (
             <div 
               key={c.id} 
               className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
@@ -388,7 +313,11 @@ export default function Inbox() {
             >
                <div className="avatar lg" style={{ background: c.bg, position: 'relative' }}>
                   {c.avatar}
-                  <div style={{ position: 'absolute', bottom: -2, right: -2, background: '#25d366', width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--bg-secondary)' }} />
+                  {c.assigned_to && (
+                     <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--bg-secondary)', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                        {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
+                     </div>
+                  )}
                </div>
                <div className="conv-content" style={{ marginLeft: 16 }}>
                   <div className="flex justify-between items-center">
@@ -396,10 +325,6 @@ export default function Inbox() {
                      <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{c.time}</span>
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{c.preview}</p>
-                  <div className="flex gap-2 mt-2">
-                      {c.tags.map(t => <span key={t} className="badge emerald" style={{ fontSize: 10, padding: '1px 6px' }}>{t}</span>)}
-                      {c.channel && <span className="badge amber" style={{ fontSize: 10, padding: '1px 6px' }}>{c.channel}</span>}
-                   </div>
                 </div>
              </div>
           ))}

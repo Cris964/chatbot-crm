@@ -1,64 +1,117 @@
 import { useState, useRef, useEffect } from 'react'
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquare, Users, UserCircle, Kanban,
-  DollarSign, Truck, Zap, BarChart3, Settings, Search,
-  Bell, Menu, ChevronLeft, Sparkles, LogOut, HelpCircle, User,
-  X, Clock, MessageCircle, Shield, ChevronRight, Command, Calendar
+  DollarSign, Truck, Zap, Settings, Search,
+  Bell, Menu, Sparkles, LogOut, Calendar,
+  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 import NexusLogo from './NexusLogo'
 
-const navItems = [
-  { label: 'GENERAL', items: [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
-    { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
-    { to: '/calendario', icon: Calendar, label: 'Calendario' },
-  ]},
-  { label: 'NEGOCIO', items: [
-    { to: '/leads', icon: Users, label: 'Leads' },
-    { to: '/ventas', icon: DollarSign, label: 'Ventas' },
-    { to: '/marketing', icon: Zap, label: 'Marketing' },
-    { to: '/despachos', icon: Truck, label: 'Logística' },
-  ]},
-  { label: 'SISTEMA', items: [
-    { to: '/configuracion', icon: Settings, label: 'Ajustes' },
-  ]},
-]
+const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com']
 
 export default function Layout({ session }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const tenant = useTenant()
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [showNotifications, setShowNotifications] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   
-  const profileRef = useRef(null)
+  useEffect(() => {
+    if (tenant.clientId) {
+      fetchNotifications()
+      
+      const channel = supabase
+        .channel('realtime:notifications')
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: `client_id=eq.${tenant.clientId}` 
+        }, payload => {
+          setNotifications(prev => [payload.new, ...prev])
+        })
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [tenant.clientId])
+
+  const fetchNotifications = async () => {
+    const { data } = await supabase
+      .from('notifications')
+      .select('*, conversations(user_name)')
+      .eq('client_id', tenant.clientId)
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+    
+    if (data) setNotifications(data)
+  }
+
+  const markAsRead = async (id) => {
+    await supabase.from('notifications').update({ read: true }).eq('id', id)
+    setNotifications(prev => prev.filter(n => n.id !== id))
+  }
 
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
-
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [showAIModal, setShowAIModal] = useState(false)
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login')
   }
 
+  const navItems = [
+    { label: 'GENERAL', items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
+      { to: '/productos', icon: Package, label: 'Productos' },
+      { to: '/remarketing', icon: Megaphone, label: 'Re-marketing' },
+      { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
+    ]},
+    { label: 'OPERACIONES', items: [
+      { to: '/leads', icon: Users, label: 'Leads' },
+      { to: '/ventas', icon: CreditCard, label: 'Ventas' },
+      { to: '/despachos', icon: Truck, label: 'Logística' },
+      { to: '/calendario', icon: Calendar, label: 'Calendario' },
+    ]},
+    { label: 'SISTEMA', items: [
+      ...(tenant.isAdmin ? [{ to: '/usuarios', icon: Users, label: 'Usuarios' }] : []),
+      { to: '/configuracion', icon: Settings, label: 'Ajustes' },
+      ...(tenant.isSuperAdmin ? [{ to: '/super-admin', icon: ShieldCheck, label: 'Super Admin' }] : []),
+    ]},
+  ]
+
+  const roleLabels = {
+    admin: 'Administrador',
+    vendedor: 'Vendedor',
+    soporte: 'Soporte',
+    marketing: 'Marketing',
+  }
+
+  const displayRole = roleLabels[tenant.role] || tenant.role || 'Usuario'
+
   return (
     <div className="app-layout">
-      {/* Sidebar */}
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="nexus-logo-wrapper">
-             <NexusLogo size={collapsed ? 36 : 40} />
-             {!collapsed && (
+             <NexusLogo size={isSidebarCollapsed ? 36 : 40} />
+             {!isSidebarCollapsed && (
                <div className="logo-text">
                  <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.03em' }}>NexusCRM</h1>
-                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em' }}>https://nexuscrmia.vercel.app/</span>
+                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                   {tenant.clientName || 'Cargando...'}
+                 </span>
                </div>
              )}
           </div>
@@ -67,7 +120,7 @@ export default function Layout({ session }) {
         <nav className="sidebar-nav" style={{ marginTop: 12 }}>
           {navItems.map((section) => (
             <div key={section.label}>
-              {!collapsed && <div className="nav-section-label" style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', paddingLeft: 24, marginBottom: 8 }}>{section.label}</div>}
+              {!isSidebarCollapsed && <div className="nav-section-label" style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', paddingLeft: 24, marginBottom: 8 }}>{section.label}</div>}
               {section.items.map((item) => (
                 <NavLink
                   key={item.to}
@@ -75,8 +128,7 @@ export default function Layout({ session }) {
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
                   <item.icon size={20} />
-                  {!collapsed && <span className="nav-label">{item.label}</span>}
-                  {item.badge && !collapsed && <span className="nav-badge" style={{ background: '#6366f1', color: 'white', fontSize: 10, padding: '2px 6px' }}>{item.badge}</span>}
+                  {!isSidebarCollapsed && <span className="nav-label">{item.label}</span>}
                 </NavLink>
               ))}
             </div>
@@ -86,60 +138,21 @@ export default function Layout({ session }) {
         <div className="sidebar-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: 16 }}>
           <div className="sidebar-user" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ background: showProfileMenu ? 'rgba(255,255,255,0.05)' : 'transparent', borderRadius: 12, padding: 8 }}>
             <div className="avatar md" style={{ background: 'linear-gradient(135deg, #6366f1, #10b981)', fontSize: 12 }}>
-              {session?.user?.email?.substring(0, 2).toUpperCase()}
+              {tenant.membership?.full_name?.substring(0, 2).toUpperCase() || session?.user?.email?.substring(0, 2).toUpperCase()}
             </div>
-            {!collapsed && (
+            {!isSidebarCollapsed && (
               <div className="user-info">
-                <div className="user-name" style={{ fontSize: '0.85rem' }}>{session?.user?.email?.split('@')[0]}</div>
-                <div className="user-role" style={{ fontSize: '0.7rem' }}>Administrador</div>
+                <div className="user-name" style={{ fontSize: '0.85rem' }}>{tenant.membership?.full_name || session?.user?.email?.split('@')[0]}</div>
+                <div className="user-role" style={{ fontSize: '0.7rem' }}>{displayRole}</div>
               </div>
             )}
           </div>
-
-          {/* Profile Dropdown */}
-          {showProfileMenu && (
-            <div style={{
-              position: 'absolute', bottom: 'calc(100% + 8px)', left: 16, right: 16,
-              background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)',
-              borderRadius: 'var(--radius-lg)', padding: '8px', zIndex: 50,
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
-              animation: 'scaleIn 0.2s ease-out'
-            }}>
-              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-default)', marginBottom: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{session?.user?.email}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Plan Enterprise</div>
-              </div>
-              <button 
-                className="btn btn-ghost" 
-                style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--text-secondary)' }}
-                onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
-              >
-                <UserCircle size={16} /> Ver Perfil
-              </button>
-              <button 
-                className="btn btn-ghost" 
-                style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--text-secondary)' }}
-                onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
-              >
-                <Settings size={16} /> Ajustes
-              </button>
-              <div style={{ height: 1, background: 'var(--border-default)', margin: '8px 0' }} />
-              <button 
-                className="btn btn-ghost" 
-                style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--accent-rose)' }}
-                onClick={handleLogout}
-              >
-                <LogOut size={16} /> Cerrar Sesión
-              </button>
-            </div>
-          )}
         </div>
       </aside>
 
-      {/* Main */}
       <div className="main-content">
         <header className="top-header">
-          <button className="header-toggle" onClick={() => setCollapsed(!collapsed)}>
+          <button className="header-toggle" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
             <Menu size={20} />
           </button>
 
@@ -153,10 +166,64 @@ export default function Layout({ session }) {
           </div>
 
           <div className="header-actions">
-            <button className="header-action-btn" onClick={() => setShowNotifications(!showNotifications)}>
-              <Bell size={20} />
-              <span className="notification-dot"></span>
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button className="header-action-btn" onClick={() => setShowNotifications(!showNotifications)}>
+                <Bell size={20} />
+                {notifications.length > 0 && <span className="notification-dot"></span>}
+              </button>
+
+              {showNotifications && (
+                <div className="card" style={{ 
+                  position: 'absolute', top: '100%', right: 0, width: 320, 
+                  zIndex: 1000, marginTop: 12, padding: 0, overflow: 'hidden',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                }}>
+                  <div className="card-header" style={{ padding: '12px 16px', borderBottom: '1px solid var(--glass-border)' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Notificaciones</h4>
+                  </div>
+                  <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                        No hay alertas pendientes
+                      </div>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id} style={{ 
+                          padding: '12px 16px', borderBottom: '1px solid var(--border-default)',
+                          background: n.type === 'escalation' ? 'rgba(244, 63, 94, 0.05)' : 'transparent'
+                        }}>
+                          <div className="flex items-start gap-3">
+                            <AlertCircle size={16} style={{ color: 'var(--accent-rose)', marginTop: 2 }} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Asistencia Humana</div>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0' }}>
+                                <strong>{n.conversations?.user_name || 'Cliente'}</strong> necesita ayuda con un asesor.
+                              </p>
+                              <div className="flex justify-between items-center" style={{ marginTop: 8 }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                                  {new Date(n.created_at).toLocaleTimeString()}
+                                </span>
+                                <button 
+                                  className="btn btn-ghost btn-sm" 
+                                  style={{ padding: '2px 8px', fontSize: '0.7rem' }}
+                                  onClick={() => {
+                                    markAsRead(n.id)
+                                    window.location.href = `/inbox?id=${n.conversation_id}`
+                                  }}
+                                >
+                                  Ver Chat
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button className="header-action-btn" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)' }} onClick={() => setShowAIModal(true)}>
               <Sparkles size={20} />
             </button>
@@ -165,25 +232,7 @@ export default function Layout({ session }) {
               <LogOut size={20} />
             </button>
 
-            {/* Notifications Panel */}
-            {showNotifications && (
-              <div className="card animate-slideUp" style={{ position: 'absolute', top: 70, right: 120, width: 320, zIndex: 1000, padding: 0 }}>
-                <div className="card-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>
-                  <h3 style={{ fontSize: '0.9rem', fontWeight: 800 }}>Notificaciones</h3>
-                </div>
-                <div style={{ maxHeight: 300, overflowY: 'auto', padding: '8px' }}>
-                  {[1, 2].map(i => (
-                    <div key={i} style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.03)', borderRadius: 12 }} className="table-row-hover">
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Nuevo Lead: WhatsApp</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2 }}>Hace 5 minutos</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ padding: 12, textAlign: 'center', borderTop: '1px solid var(--glass-border)' }}>
-                  <button className="btn btn-ghost btn-sm" style={{ width: '100%' }}>Ver todas</button>
-                </div>
-              </div>
-            )}
+
 
             {/* AI Assistant Modal */}
             {showAIModal && (
@@ -212,7 +261,7 @@ export default function Layout({ session }) {
           </div>
         </header>
 
-        <Outlet context={{ session }} />
+        <Outlet context={{ session, tenant }} />
       </div>
     </div>
   )

@@ -8,6 +8,7 @@ import {
   AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 
 const mainChartData = [
   { name: 'Jan', value: 32000, value2: 28000 },
@@ -44,72 +45,54 @@ const pipelineData = [
 
 export default function Dashboard() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     revenue: 0,
     salesCount: 0,
     dealsActive: 0,
     newLeads: 0,
-    revenueChange: '+0%',
-    leadsChange: '+0%'
+    conversion: '0%'
   })
   const [chartData, setChartData] = useState([])
   const [recentDealsList, setRecentDealsList] = useState([])
   const [pipelineState, setPipelineState] = useState([])
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (tenant.clientId && !tenant.isLoading) {
        fetchDashboardData()
     }
-  }, [session])
+  }, [tenant.clientId, tenant.isLoading])
 
   const fetchDashboardData = async () => {
     setIsLoading(true)
     try {
-      // 1. Get client IDs for multitenancy
-      // Try to find clients owned by the user, or fallback to any client if user has permissions
-      let { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
-      
-      if (!clients || clients.length === 0) {
-        const { data: allClients } = await supabase.from('clients').select('id')
-        clients = allClients
-      }
-      
-      const clientIds = clients?.map(c => c.id) || []
-
-      // 2. Fetch Orders for Revenue and Sales Count
+      // 1. Fetch Orders
       const { data: orders } = await supabase
         .from('orders')
         .select('*')
-        .in('client_id', clientIds)
+        .eq('client_id', tenant.clientId)
         .neq('status', 'cancelado')
 
-      // 3. Fetch Leads for Active Deals and Recent Deals
+      // 2. Fetch Leads
       const { data: leads } = await supabase
         .from('leads')
         .select('*')
-        .in('client_id', clientIds)
+        .eq('client_id', tenant.clientId)
         .order('created_at', { ascending: false })
-
-      // 4. Fetch Conversations for message volume
-      const { data: convs } = await supabase
-        .from('conversations')
-        .select('id, channel')
-        .in('client_id', clientIds)
 
       if (orders) {
         const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
-        
-        // Group orders by month for chart
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        const isNaturelAdmin = session.user.email === 'admin@chekadmin.com' || session.user.email === 'naturel@admin.com';
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
         const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
         
         orders.forEach(o => {
-          const monthIdx = new Date(o.created_at).getMonth()
-          grouped[monthIdx].value += (Number(o.amount) || 0)
-          // Mocking value2 as a percentage of value for visual depth, or use last year if available
-          grouped[monthIdx].value2 = grouped[monthIdx].value * 0.8 
+          const date = new Date(o.created_at)
+          const monthIdx = date.getMonth()
+          if (date.getFullYear() === 2026) {
+            grouped[monthIdx].value += (Number(o.amount) || 0)
+            grouped[monthIdx].value2 = grouped[monthIdx].value * 0.7 
+          }
         })
 
         setStats(prev => ({ 
@@ -122,15 +105,17 @@ export default function Dashboard() {
 
       if (leads) {
         const active = leads.filter(l => !['Gano', 'Perdio'].includes(l.stage)).length
-        const recent = leads.slice(0, 5).map(l => ({
+        const won = leads.filter(l => l.stage === 'Gano').length
+        const convRate = leads.length > 0 ? `${((won / leads.length) * 100).toFixed(1)}%` : '0%'
+
+        const recent = leads.slice(0, 4).map(l => ({
           lead: l.name,
           stage: l.stage || 'Nuevo',
-          value: `$${(Math.random() * 5 + 1).toFixed(2)}k`, // Randomized mock value as leads don't usually have a fixed 'amount' column in this schema yet
+          value: l.amount ? `$${(l.amount/1000).toFixed(1)}k` : `$${(Math.random() * 3 + 1).toFixed(1)}k`,
           date: new Date(l.created_at).toLocaleDateString(),
           color: l.stage === 'Gano' ? '#10b981' : (l.stage === 'Perdio' ? '#f43f5e' : '#6366f1')
         }))
         
-        // Pipeline bar chart data
         const stages = ['Nuevo', 'Contactado', 'Propuesta', 'Negociación']
         const pData = stages.map(s => ({
           name: s,
@@ -141,7 +126,8 @@ export default function Dashboard() {
         setStats(prev => ({ 
           ...prev, 
           dealsActive: active,
-          newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length
+          newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
+          conversion: convRate
         }))
         setRecentDealsList(recent)
         setPipelineState(pData)
@@ -155,20 +141,30 @@ export default function Dashboard() {
 
   return (
     <div className="page-content" style={{ padding: '32px' }}>
-      <div className="page-header animate-slideUp">
-        <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Dashboard</h1>
-        <p className="page-subtitle" style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Welcome back! Here's what's happening with your account.</p>
+      <div className="flex justify-between items-end mb-8 animate-slideUp">
+        <div>
+          <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(to right, white, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Resumen General
+          </h1>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.95rem' }}>Visualización de métricas clave para {tenant.clientName}</p>
+        </div>
+        <div className="flex gap-3">
+          <button className="btn btn-secondary"><Activity size={16} /> Reportes</button>
+          <button className="btn btn-primary"><TrendingUp size={16} /> Analizar con IA</button>
+        </div>
       </div>
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
-        {/* LTV/Revenue Card */}
-        <div className="stat-card">
-          <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Revenue</span>
-             <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>+12.5%</span>
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.1s' }}>
+          <div className="flex justify-between items-start mb-4">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><DollarSign size={18} /></div>
+             <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800 }}>+15%</span>
           </div>
-          <div className="stat-card-value">${stats.revenue >= 1000 ? `${(stats.revenue / 1000).toFixed(1)}k` : stats.revenue.toLocaleString()}</div>
-          <div style={{ height: 40, marginTop: 12 }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Ventas Totales</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>
+            ${stats.revenue >= 1000000 ? `${(stats.revenue / 1000000).toFixed(1)}M` : `${(stats.revenue / 1000).toFixed(1)}k`}
+          </div>
+          <div style={{ height: 40 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
                 <Area type="monotone" dataKey="pv" stroke="#10b981" fill="rgba(16, 185, 129, 0.1)" strokeWidth={2} dot={false} />
@@ -177,14 +173,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Total Sales Card */}
-        <div className="stat-card">
-          <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Orders</span>
-             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 700 }}>{stats.salesCount}</span>
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.2s' }}>
+          <div className="flex justify-between items-start mb-4">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}><Activity size={18} /></div>
+             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats.salesCount} ord.</span>
           </div>
-          <div className="stat-card-value">{stats.salesCount}</div>
-          <div style={{ height: 40, marginTop: 12 }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Tasa de Conversión</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.conversion}</div>
+          <div style={{ height: 40 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
                 <Area type="monotone" dataKey="pv" stroke="#6366f1" fill="rgba(99, 102, 241, 0.1)" strokeWidth={2} dot={false} />
@@ -193,113 +189,91 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Active Deals Card */}
-        <div className="stat-card">
-          <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Leads en Proceso</span>
-             <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.3s' }}>
+          <div className="flex justify-between items-start mb-4">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Target size={18} /></div>
           </div>
-          <div className="stat-card-value">{stats.dealsActive}</div>
-          <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, marginTop: 4 }}>Engagement activo</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Leads en Proceso</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.dealsActive}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Seguimiento activo</div>
         </div>
 
-        {/* New Leads Card */}
-        <div className="stat-card">
-          <div className="card-header" style={{ marginBottom: 0 }}>
-             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Leads (30d)</span>
-             <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.4s' }}>
+          <div className="flex justify-between items-start mb-4">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899' }}><Zap size={18} /></div>
           </div>
-          <div className="stat-card-value">{stats.newLeads}</div>
-          <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600, marginTop: 4 }}>Tendencia mensual</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Nuevos Leads (30d)</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.newLeads}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Crecimiento constante</div>
         </div>
       </div>
 
-      {/* Main Chart */}
-      <div className="card" style={{ marginBottom: '32px', padding: '32px' }}>
-        <div className="card-header" style={{ marginBottom: '32px' }}>
-           <div>
-              <h3 className="card-title" style={{ fontSize: '1.25rem', fontWeight: 800 }}>Ventas por Mes</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Rendimiento de facturación real acumulado</p>
-           </div>
-           <button className="btn btn-secondary btn-sm" style={{ padding: '8px 16px' }}>2026 <ChevronDown size={14} /></button>
-        </div>
-        <div style={{ height: 350 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData.length > 0 ? chartData : mainChartData}>
-              <defs>
-                <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorVal2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `$${v/1000}k`} />
-              <Tooltip 
-                contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}
-                itemStyle={{ fontSize: '0.85rem' }}
-              />
-              <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
-              <Area type="monotone" dataKey="value2" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorVal2)" dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' }}>
-        {/* Recent Deals */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Recent Deals</h3>
-            <MoreHorizontal size={16} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '32px' }}>
+        <div className="card animate-slideUp" style={{ animationDelay: '0.5s', padding: '32px' }}>
+          <div className="flex justify-between items-center mb-8">
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>
+            <div className="flex gap-2">
+              <div className="flex items-center gap-2" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></div> Ventas 2026
+              </div>
+            </div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--glass-border)' }}>
-                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>LEAD</th>
-                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>STAGE</th>
-                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>VALUE</th>
-                <th style={{ padding: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>CLOSE DATE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentDealsList.map((deal, i) => (
-                <tr key={i} style={{ borderBottom: i === recentDealsList.length - 1 ? 'none' : '1px solid var(--glass-border)' }}>
-                  <td style={{ padding: '16px 12px', fontWeight: 600, fontSize: '0.9rem' }}>{deal.lead}</td>
-                  <td style={{ padding: '16px 12px' }}>
-                    <span className="badge" style={{ background: `${deal.color}15`, color: deal.color }}>{deal.stage}</span>
-                  </td>
-                  <td style={{ padding: '16px 12px', fontWeight: 700 }}>{deal.value}</td>
-                  <td style={{ padding: '16px 12px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>{deal.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pipeline Status */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Pipeline Status</h3>
-            <MoreHorizontal size={16} />
-          </div>
-          <div style={{ height: 220, marginTop: 24 }}>
+          <div style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={pipelineState.length > 0 ? pipelineState : pipelineData} layout="vertical">
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} width={80} />
-                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                  {(pipelineState.length > 0 ? pipelineState : pipelineData).map((entry, index) => (
-                    <cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `$${v/1000}k`} />
+                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
+                <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
+              </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <div className="card animate-slideUp" style={{ animationDelay: '0.6s' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Últimos Negocios</h3>
+            <div className="flex flex-col gap-4">
+              {recentDealsList.map((deal, i) => (
+                <div key={i} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/[0.03] transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="avatar sm" style={{ background: `${deal.color}20`, color: deal.color }}>{deal.lead.substring(0,1)}</div>
+                    <div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{deal.lead}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.stage}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{deal.value}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card animate-slideUp" style={{ animationDelay: '0.7s' }}>
+             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Estado del Pipeline</h3>
+             <div style={{ height: 180 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pipelineState} layout="vertical">
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} width={80} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={16}>
+                      {pipelineState.map((entry, index) => (
+                        <cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
           </div>
         </div>
       </div>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 import {
   Building, Users, Shield, Link2, Bell, Palette, Globe,
   Mail, Save, Plus, MoreHorizontal, Trash2, Edit, Crown,
-  MessageSquare, Key, Database, Zap, CheckCircle2
+  MessageSquare, Key, Database, Zap, CheckCircle2, UserPlus, X
 } from 'lucide-react'
 
 const settingsNav = [
@@ -14,15 +15,6 @@ const settingsNav = [
   { id: 'integrations', icon: Link2, label: 'Integraciones' },
   { id: 'notifications', icon: Bell, label: 'Notificaciones' },
   { id: 'api', icon: Key, label: 'API & Webhooks' },
-]
-
-const teamMembers = [
-  { name: 'Admin', email: 'admin@naturel.com', role: 'Administrador', status: 'Activo', avatar: 'AD', bg: 'linear-gradient(135deg, #10b981, #06b6d4)' },
-  { name: 'Ana Rodríguez', email: 'ana@naturel.com', role: 'Vendedor', status: 'Activo', avatar: 'AR', bg: 'linear-gradient(135deg, #ec4899, #f43f5e)' },
-  { name: 'Miguel Torres', email: 'miguel@naturel.com', role: 'Vendedor', status: 'Activo', avatar: 'MT', bg: 'linear-gradient(135deg, #6366f1, #8b5cf6)' },
-  { name: 'Laura Méndez', email: 'laura@naturel.com', role: 'Soporte', status: 'Activo', avatar: 'LM', bg: 'linear-gradient(135deg, #06b6d4, #10b981)' },
-  { name: 'Diego Salazar', email: 'diego@naturel.com', role: 'Vendedor', status: 'Activo', avatar: 'DS', bg: 'linear-gradient(135deg, #f59e0b, #ef4444)' },
-  { name: 'Patricia Morales', email: 'patricia@naturel.com', role: 'Marketing', status: 'Invitado', avatar: 'PM', bg: 'linear-gradient(135deg, #8b5cf6, #ec4899)' },
 ]
 
 const integrations = [
@@ -38,54 +30,65 @@ const integrations = [
   { name: 'Calendly', desc: 'Agendamiento de citas', icon: '📅', connected: false, color: '#006bff' },
 ]
 
-const roles = [
-  { name: 'Administrador', desc: 'Acceso total al sistema', members: 1, permissions: ['Todo'], color: '#f43f5e' },
-  { name: 'Supervisor', desc: 'Gestión de equipo y reportes', members: 0, permissions: ['Dashboard', 'Leads', 'Pipeline', 'Reportes', 'Equipo'], color: '#8b5cf6' },
-  { name: 'Vendedor', desc: 'Gestión de leads y ventas', members: 3, permissions: ['Dashboard', 'Inbox', 'Leads', 'Pipeline', 'Ventas'], color: '#6366f1' },
-  { name: 'Soporte', desc: 'Atención al cliente', members: 1, permissions: ['Inbox', 'Clientes'], color: '#06b6d4' },
-  { name: 'Marketing', desc: 'Campañas y análisis', members: 1, permissions: ['Dashboard', 'Leads', 'Reportes', 'Automatizaciones'], color: '#10b981' },
+const roleDefinitions = [
+  { name: 'admin', label: 'Administrador', desc: 'Acceso total al sistema', color: '#f43f5e', permissions: ['Todo'] },
+  { name: 'vendedor', label: 'Vendedor', desc: 'Gestión de leads y ventas', color: '#6366f1', permissions: ['Dashboard', 'Inbox', 'Leads', 'Pipeline', 'Ventas'] },
+  { name: 'soporte', label: 'Soporte', desc: 'Atención al cliente', color: '#06b6d4', permissions: ['Inbox', 'Clientes'] },
+  { name: 'marketing', label: 'Marketing', desc: 'Campañas y análisis', color: '#10b981', permissions: ['Dashboard', 'Leads', 'Reportes', 'Automatizaciones'] },
+]
+
+const avatarGradients = [
+  'linear-gradient(135deg, #10b981, #06b6d4)',
+  'linear-gradient(135deg, #ec4899, #f43f5e)',
+  'linear-gradient(135deg, #6366f1, #8b5cf6)',
+  'linear-gradient(135deg, #06b6d4, #10b981)',
+  'linear-gradient(135deg, #f59e0b, #ef4444)',
+  'linear-gradient(135deg, #8b5cf6, #ec4899)',
 ]
 
 export default function Settings() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [activeSection, setActiveSection] = useState('workspace')
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Team Members State (real data from DB)
+  const [teamMembers, setTeamMembers] = useState([])
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteForm, setInviteForm] = useState({ full_name: '', email: '', password: '', role: 'vendedor' })
+  const [isInviting, setIsInviting] = useState(false)
+
   // Workspace Form State
   const [workspaceData, setWorkspaceData] = useState({
-    companyName: 'Naturel',
+    companyName: '',
     whatsapp_token: '',
-    prompt: 'Eres un asistente experto en ventas para Naturel...',
-    email: 'email@dominio.com',
+    prompt: '',
+    email: '',
     timezone: 'America/Bogota (UTC-5)'
   })
   const [noWorkspace, setNoWorkspace] = useState(false)
 
   useEffect(() => {
-    if (session?.user) {
+    if (tenant.clientId && !tenant.isLoading) {
       fetchSettings()
+      fetchTeamMembers()
+    } else if (!tenant.isLoading && !tenant.clientId) {
+      setNoWorkspace(true)
+      setIsLoading(false)
     }
-  }, [session])
+  }, [tenant.clientId, tenant.isLoading])
 
   const fetchSettings = async () => {
     setIsLoading(true)
-    // Get the client record associated with this user
-    let { data: clients, error } = await supabase
+    const { data: client, error } = await supabase
       .from('clients')
       .select('*')
-      .eq('user_id', session.user.id)
-      .limit(1)
+      .eq('id', tenant.clientId)
+      .single()
 
-    if (!clients || clients.length === 0) {
-      // Fallback: fetch the first available client if user has permissions
-      const { data: allClients } = await supabase.from('clients').select('*').limit(1)
-      clients = allClients
-    }
-
-    if (clients && clients.length > 0) {
-      const client = clients[0]
+    if (client) {
       setWorkspaceData({
         id: client.id,
         companyName: client.name || 'Mi Empresa',
@@ -101,35 +104,46 @@ export default function Settings() {
     setIsLoading(false)
   }
 
+  const fetchTeamMembers = async () => {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('client_id', tenant.clientId)
+      .order('created_at', { ascending: true })
+
+    if (!error && data) {
+      setTeamMembers(data)
+    }
+  }
+
   const handleInitializeWorkspace = async () => {
     setIsSaving(true)
-    // Si el usuario es el administrador principal, aseguramos su conexión con Naturel
-    // De lo contrario, creamos una empresa nueva y genérica para el nuevo cliente SaaS
-    const isNaturelAdmin = ['admin@chekadmin.com', 'admin@naturel.com', 'naturel@admin.com', 'naturel'].includes(session.user.email?.toLowerCase());
-    const payload = isNaturelAdmin 
-      ? { 
-          id: '98b9fafd-90ad-4ed9-9616-b8ed992b0e7d',
-          name: 'Naturel',
-          user_id: session.user.id,
-          phone_number_id: 'Naturel_Default',
-          whatsapp_token: '',
-          prompt: 'Eres un asistente experto en ventas para Naturel...'
-        }
-      : {
-          name: 'Nueva Empresa',
-          user_id: session.user.id,
-          phone_number_id: 'PENDIENTE',
-          whatsapp_token: '',
-          prompt: 'Eres un asistente de IA...'
-        };
+    const payload = {
+      name: 'Nueva Empresa',
+      user_id: session.user.id,
+      phone_number_id: 'PENDIENTE',
+      whatsapp_token: '',
+      prompt: 'Eres un asistente de IA...'
+    }
 
-    const { error } = await supabase
+    const { data: newClient, error } = await supabase
       .from('clients')
-      .insert([payload]) // Changed to insert to safely create new tenants or restore Naturel
+      .insert([payload])
+      .select('id')
+      .single()
     
-    if (!error) {
-       setShowSuccess(true)
-       fetchSettings()
+    if (!error && newClient) {
+      // Create team_member entry for the creator as admin
+      await supabase.from('team_members').insert({
+        user_id: session.user.id,
+        client_id: newClient.id,
+        role: 'admin',
+        full_name: session.user.email?.split('@')[0] || 'Admin',
+        email: session.user.email,
+        status: 'activo'
+      })
+      setShowSuccess(true)
+      tenant.reload()
     } else {
        console.error("Error initializing workspace:", error)
        alert("Error al inicializar: " + error.message)
@@ -150,10 +164,10 @@ export default function Settings() {
         .from('clients')
         .update({ 
           name: workspaceData.companyName,
-          slug: workspaceData.slug,
+          whatsapp_token: workspaceData.whatsapp_token,
+          prompt: workspaceData.prompt,
           email: workspaceData.email,
           updated_at: new Date().toISOString()
-          // We can add more fields if the schema supports it, otherwise metadata
         })
         .eq('id', workspaceData.id)
 
@@ -168,6 +182,53 @@ export default function Settings() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleInviteUser = async (e) => {
+    e.preventDefault()
+    setIsInviting(true)
+
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteForm.email,
+          password: inviteForm.password,
+          full_name: inviteForm.full_name,
+          role: inviteForm.role,
+          client_id: tenant.clientId,
+          admin_user_id: session.user.id,
+        })
+      })
+
+      const result = await res.json()
+      if (res.ok) {
+        setShowInviteModal(false)
+        setInviteForm({ full_name: '', email: '', password: '', role: 'vendedor' })
+        fetchTeamMembers()
+      } else {
+        alert('Error: ' + (result.error || 'No se pudo crear el usuario'))
+      }
+    } catch (err) {
+      alert('Error de conexión: ' + err.message)
+    }
+    setIsInviting(false)
+  }
+
+  const handleRemoveMember = async (memberId, memberUserId) => {
+    if (memberUserId === session.user.id) {
+      alert('No puedes eliminarte a ti mismo')
+      return
+    }
+    if (!confirm('¿Seguro que deseas eliminar este miembro?')) return
+
+    const { error } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('id', memberId)
+
+    if (!error) fetchTeamMembers()
   }
 
   return (
@@ -221,7 +282,7 @@ export default function Settings() {
                       <input className="form-input" name="whatsapp_token" value={workspaceData.whatsapp_token} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Prompt del Bot (AI)</label>
+                      <label className="form-label">Prompt del Agente IA</label>
                       <textarea className="form-input" name="prompt" value={workspaceData.prompt} onChange={handleWorkspaceChange} rows={4} />
                     </div>
                     <div className="form-group">
@@ -231,15 +292,6 @@ export default function Settings() {
                     <div className="form-group">
                       <label className="form-label">Zona horaria</label>
                       <input className="form-input" name="timezone" value={workspaceData.timezone} onChange={handleWorkspaceChange} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Plan actual</label>
-                      <div className="flex items-center gap-3">
-                        <span className="badge purple" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>
-                          <Crown size={14} /> Enterprise
-                        </span>
-                        <span style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>Renovación: Dic 31, 2026</span>
-                      </div>
                     </div>
                     
                     <div className="flex items-center gap-4 mt-4">
@@ -276,7 +328,11 @@ export default function Settings() {
                     <h3>Miembros del Equipo</h3>
                     <p>Administra los usuarios que tienen acceso a tu workspace</p>
                   </div>
-                  <button className="btn btn-primary"><Plus size={16} /> Invitar Miembro</button>
+                  {tenant.isAdmin && (
+                    <button className="btn btn-primary" onClick={() => setShowInviteModal(true)}>
+                      <UserPlus size={16} /> Agregar Miembro
+                    </button>
+                  )}
                 </div>
 
                 <table className="data-table">
@@ -289,27 +345,44 @@ export default function Settings() {
                     </tr>
                   </thead>
                   <tbody>
-                    {teamMembers.map((member, i) => (
-                      <tr key={i}>
-                        <td>
-                          <div className="flex items-center gap-3">
-                            <div className="avatar md" style={{ background: member.bg }}>{member.avatar}</div>
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{member.name}</div>
-                              <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>{member.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td><span className="badge purple">{member.role}</span></td>
-                        <td><span className={`badge ${member.status === 'Activo' ? 'emerald' : 'amber'}`}>{member.status}</span></td>
-                        <td>
-                          <div className="flex gap-2">
-                            <button className="btn btn-ghost btn-sm"><Edit size={14} /></button>
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-rose)' }}><Trash2 size={14} /></button>
-                          </div>
+                    {teamMembers.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
+                          No hay miembros registrados. Agrega el primero.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      teamMembers.map((member, i) => (
+                        <tr key={member.id}>
+                          <td>
+                            <div className="flex items-center gap-3">
+                              <div className="avatar md" style={{ background: avatarGradients[i % avatarGradients.length] }}>
+                                {member.full_name?.substring(0, 2).toUpperCase() || 'U'}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{member.full_name || 'Usuario'}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>{member.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`badge ${member.role === 'admin' ? 'rose' : 'purple'}`}>
+                              {member.role === 'admin' ? 'Administrador' : member.role === 'vendedor' ? 'Vendedor' : member.role === 'soporte' ? 'Soporte' : member.role}
+                            </span>
+                          </td>
+                          <td><span className={`badge ${member.status === 'activo' ? 'emerald' : 'amber'}`}>{member.status}</span></td>
+                          <td>
+                            {tenant.isAdmin && member.user_id !== session.user.id && (
+                              <div className="flex gap-2">
+                                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-rose)' }} onClick={() => handleRemoveMember(member.id, member.user_id)}>
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -324,28 +397,29 @@ export default function Settings() {
                     <h3>Roles y Permisos</h3>
                     <p>Define los permisos de acceso para cada tipo de usuario</p>
                   </div>
-                  <button className="btn btn-primary"><Plus size={16} /> Nuevo Rol</button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {roles.map((role, i) => (
-                    <div key={i} className="card">
-                      <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-                        <div className="flex items-center gap-3">
-                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: role.color }} />
-                          <h4 style={{ fontWeight: 700 }}>{role.name}</h4>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>{role.members} miembros</span>
+                  {roleDefinitions.map((role, i) => {
+                    const memberCount = teamMembers.filter(m => m.role === role.name).length
+                    return (
+                      <div key={i} className="card">
+                        <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+                          <div className="flex items-center gap-3">
+                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: role.color }} />
+                            <h4 style={{ fontWeight: 700 }}>{role.label}</h4>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>{memberCount} miembros</span>
+                          </div>
                         </div>
-                        <button className="btn btn-ghost btn-sm"><Edit size={14} /></button>
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', marginBottom: 10 }}>{role.desc}</p>
+                        <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                          {role.permissions.map((perm, j) => (
+                            <span key={j} className="badge neutral">{perm}</span>
+                          ))}
+                        </div>
                       </div>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', marginBottom: 10 }}>{role.desc}</p>
-                      <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
-                        {role.permissions.map((perm, j) => (
-                          <span key={j} className="badge neutral">{perm}</span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             </>
@@ -443,6 +517,49 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* Invite Member Modal */}
+      {showInviteModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(8px)' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 480, padding: 0, overflow: 'hidden' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Agregar Miembro al Equipo</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowInviteModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleInviteUser} style={{ padding: 24 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Nombre Completo</label>
+                  <input type="text" required className="form-input" placeholder="Juan Pérez" value={inviteForm.full_name} onChange={e => setInviteForm({...inviteForm, full_name: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Email</label>
+                  <input type="email" required className="form-input" placeholder="juan@empresa.com" value={inviteForm.email} onChange={e => setInviteForm({...inviteForm, email: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Contraseña Temporal</label>
+                  <input type="text" required className="form-input" placeholder="Min. 6 caracteres" value={inviteForm.password} onChange={e => setInviteForm({...inviteForm, password: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Rol</label>
+                  <select className="form-input" value={inviteForm.role} onChange={e => setInviteForm({...inviteForm, role: e.target.value})}>
+                    <option value="admin">Administrador</option>
+                    <option value="vendedor">Vendedor</option>
+                    <option value="soporte">Soporte</option>
+                    <option value="marketing">Marketing</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3" style={{ marginTop: 24 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowInviteModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={isInviting}>
+                  {isInviting ? 'Creando...' : 'Crear Usuario'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

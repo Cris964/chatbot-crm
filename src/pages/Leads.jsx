@@ -6,6 +6,7 @@ import {
   ChevronDown, CheckSquare, Square, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 
 function getSourceBadge(source) {
   const map = { 'WhatsApp': 'emerald', 'Instagram': 'pink', 'Facebook': 'cyan', 'Formulario': 'purple', 'Email': 'amber' }
@@ -41,6 +42,7 @@ function ScoreBadge({ score, onScoreChange }) {
 
 export default function Leads() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('Todos')
   const [leads, setLeads] = useState([])
@@ -61,22 +63,19 @@ export default function Leads() {
   })
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (tenant.clientId && !tenant.isLoading) {
       fetchLeads()
     }
-  }, [session?.user?.id])
+  }, [tenant.clientId, tenant.isLoading])
 
   const fetchLeads = async () => {
     setIsLoading(true)
     
-    // 1. Get client IDs for multitenancy
-    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
-    const clientIds = clients?.map(c => c.id) || []
-
+    // Use tenant context for multi-tenancy isolation
     const { data, error } = await supabase
       .from('leads')
       .select('*')
-      .in('client_id', clientIds)
+      .eq('client_id', tenant.clientId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -95,6 +94,7 @@ export default function Leads() {
     const leadToInsert = {
       ...newLead,
       user_id: session.user.id,
+      client_id: tenant.clientId,
       score: Math.floor(Math.random() * 40) + 30, 
       created_at: new Date().toISOString()
     }

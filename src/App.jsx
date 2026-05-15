@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { TenantProvider } from './lib/useTenant'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Inbox from './pages/Inbox'
@@ -9,6 +10,7 @@ import Pipeline from './pages/Pipeline'
 import Clients from './pages/Clients'
 import Sales from './pages/Sales'
 import Dispatches from './pages/Dispatches'
+import Remarketing from './pages/Remarketing'
 import Automations from './pages/Automations'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
@@ -16,6 +18,8 @@ import UsersPage from './pages/Users'
 import Login from './pages/Login'
 import Calendar from './pages/Calendar'
 import Marketing from './pages/Marketing'
+import Products from './pages/Products'
+import SuperAdmin from './pages/SuperAdmin'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -58,7 +62,13 @@ function App() {
         } 
       />
       
-      <Route path="/" element={<ProtectedRoute><Layout session={session} /></ProtectedRoute>}>
+      <Route path="/" element={
+        <ProtectedRoute>
+          <TenantProvider session={session}>
+            <Layout session={session} />
+          </TenantProvider>
+        </ProtectedRoute>
+      }>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="inbox" element={<Inbox />} />
@@ -73,8 +83,12 @@ function App() {
         <Route path="ventas" element={<Sales />} />
         <Route path="sales" element={<Navigate to="/ventas" replace />} />
         
+        <Route path="remarketing" element={<Remarketing />} />
+
         <Route path="despachos" element={<Dispatches />} />
         <Route path="dispatches" element={<Navigate to="/despachos" replace />} />
+        
+        <Route path="productos" element={<Products />} />
         
         {/* System Routes */}
         <Route path="automatizaciones" element={<Automations />} />
@@ -90,6 +104,8 @@ function App() {
         
         <Route path="configuracion" element={<Settings />} />
         <Route path="settings" element={<Navigate to="/configuracion" replace />} />
+
+        <Route path="super-admin" element={<SuperAdmin />} />
 
         {/* Catch-all for internal routes */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -70,10 +70,10 @@ export default async function handler(req, res) {
         console.error('[LOCK EXCEPTION]', e);
       }
 
-      // 1. Identificar cliente
+      // 1. Identificar cliente por phone_number_id (multi-tenant)
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, user_id, active, prompt, model, whatsapp_token')
+        .select('id, user_id, active, prompt, model, whatsapp_token, name, phone_number_id')
         .eq('phone_number_id', phoneNumberId)
         .limit(1);
 
@@ -129,7 +129,7 @@ export default async function handler(req, res) {
         conversationId = insertedChat?.id;
       }
 
-      // 3. AI Dispatch (SARA)
+      // 3. AI Dispatch — DYNAMIC per-company (no more hardcoded Naturel products)
       if (clients?.[0]?.active !== false && conversationId) {
         const clientSetup = clients[0];
         const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -144,30 +144,44 @@ export default async function handler(req, res) {
 
         if (openRouterKey && clientSetup.prompt) {
             try {
-                const inventoryContext = `
-PRODUCTOS DISPONIBLES EN NATUREL:
-- KOLOSAL: Limpieza profunda de colon, mejora digestión y estreñimiento.
-- MR. FIBRA (Té Verde o Ciruela): Fibra natural de linaza y psyllium para tránsito intestinal.
-- BERENLIN: Antioxidante potente, ayuda a la salud de la piel y control de peso.
-- CIR/LAN: Mejora la circulación y depuración de la sangre.
-- BRIL-PROS: Salud de la próstata y sistema urinario.
-- OXTMAX: Regenerador de cartílagos y salud articular.
-- 7 TOROS: Energizante natural y vigorizante.
+                // ========== DYNAMIC INVENTORY LOADING ==========
+                // Read products from the products table for THIS specific company
+                const { data: companyProducts } = await supabase
+                  .from('products')
+                  .select('name, description, price, category, promo_text')
+                  .eq('client_id', clientId)
+                  .eq('active', true);
 
-📢 PROMOCIÓN ACTIVA Y POLÍTICA DE ENVÍOS:
-- Por la compra de un MR. FIBRA VERDE, el cliente se lleva GRATIS una "CASIGUA". ¡Menciona y ofrece esta promoción!
-- El domicilio/envío en CALI es totalmente GRATIS.
-- Los domicilios/envíos FUERA DE CALI tienen un costo adicional. Informa esto de manera transparente.
+                let inventoryContext = '';
+                
+                if (companyProducts && companyProducts.length > 0) {
+                  const productLines = companyProducts.map(p => {
+                    let line = `- ${p.name}: ${p.description || 'Sin descripción'}`;
+                    if (p.price && p.price > 0) line += `. Precio: $${p.price}`;
+                    if (p.promo_text) line += `. 🔥 PROMO: ${p.promo_text}`;
+                    return line;
+                  }).join('\n');
 
-REGLAS: Solo recomienda estos productos reales. Aplica la promoción activa. Responde de forma amable, profesional y persuasiva para cerrar la venta.
-`;
+                  const promos = companyProducts.filter(p => p.promo_text);
+                  const promoSection = promos.length > 0 
+                    ? `\n\n📢 PROMOCIONES ACTIVAS:\n${promos.map(p => `- ${p.promo_text}`).join('\n')}`
+                    : '';
+
+                  inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
+SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
+SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.\n`;
+                } else {
+                  inventoryContext = '\n[No hay productos configurados en el catálogo. Responde de forma general y amable. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN]]\n';
+                }
+                // ========== END DYNAMIC INVENTORY ==========
+
                 const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${openRouterKey}`,
                         'Content-Type': 'application/json',
                         'HTTP-Referer': 'https://chatbot-crm-xi.vercel.app/',
-                        'X-Title': 'NexusCRM Sara'
+                        'X-Title': `NexusCRM - ${clientSetup.name || 'AI Agent'}`
                     },
                     body: JSON.stringify({
                         model: 'openai/gpt-4o-mini',
@@ -187,12 +201,45 @@ REGLAS: Solo recomienda estos productos reales. Aplica la promoción activa. Res
                     const botReplyText = aiData.choices?.[0]?.message?.content;
                     
                     if (botReplyText) {
+                        // Analizar Tags
+                        const needsHuman = botReplyText.includes('[NEEDS_HUMAN]');
+                        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED: (.*?)\]/);
+                        
+                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/, '').trim();
+
                         // Guardar en CRM
                         const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
                         await supabase.from('conversations').update({
-                            messages: [...(latest?.messages || []), { role: 'agent', content: botReplyText, timestamp: new Date().toISOString() }],
-                            updated_at: new Date().toISOString()
+                            messages: [...(latest?.messages || []), { role: 'agent', content: cleanReply, timestamp: new Date().toISOString() }],
+                            updated_at: new Date().toISOString(),
+                            needs_human: needsHuman
                         }).eq('id', conversationId);
+
+                        // Crear Notificación si necesita humano
+                        if (needsHuman) {
+                          await supabase.from('notifications').insert([{
+                            client_id: clientId,
+                            conversation_id: conversationId,
+                            message: `Intervención requerida para ${senderName}`,
+                            type: 'escalation'
+                          }]);
+                        }
+
+                        // Descontar Stock si hay venta
+                        if (saleMatch && saleMatch[1]) {
+                          const productName = saleMatch[1].trim();
+                          const { data: prod } = await supabase
+                            .from('products')
+                            .select('id, stock')
+                            .eq('client_id', clientId)
+                            .ilike('name', `%${productName}%`)
+                            .limit(1)
+                            .single();
+                          
+                          if (prod && prod.stock > 0) {
+                            await supabase.from('products').update({ stock: prod.stock - 1 }).eq('id', prod.id);
+                          }
+                        }
 
                         // Enviar a WhatsApp
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
@@ -209,7 +256,7 @@ REGLAS: Solo recomienda estos productos reales. Aplica la promoción activa. Res
                                 messaging_product: 'whatsapp',
                                 to: senderPhone,
                                 type: 'text',
-                                text: { preview_url: false, body: botReplyText }
+                                text: { preview_url: false, body: cleanReply }
                               })
                             });
                         }
