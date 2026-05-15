@@ -193,6 +193,21 @@ export default function Products() {
           </div>
           {tenant.isAdmin && (
             <div className="flex gap-2">
+              <button className="btn btn-ghost" onClick={() => {
+                const ws = XLSX.utils.json_to_sheet([{
+                  Nombre: 'Ejemplo Porcelanato',
+                  Descripcion: 'Porcelanato 60x60 para alto trafico',
+                  Precio: 55000,
+                  Categoria: 'Porcelanato',
+                  Stock: 100,
+                  StockMinimo: 10
+                }]);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+                XLSX.writeFile(wb, 'Plantilla_Inventario_Trazzos.xlsx');
+              }}>
+                <Download size={18} /> Plantilla
+              </button>
               <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                 <Upload size={18} /> Importar Excel
                 <input type="file" hidden accept=".xlsx, .xls, .csv" onChange={handleFileUpload} />
