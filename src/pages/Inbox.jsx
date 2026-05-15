@@ -23,6 +23,8 @@ export default function Inbox() {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [teamMembers, setTeamMembers] = useState([])
+  const [activeInfoTab, setActiveInfoTab] = useState('Contact')
+  const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -30,6 +32,24 @@ export default function Inbox() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  const simulateChat = async () => {
+    const testMsg = prompt("Escribe un mensaje para probar la IA de Trazzos:")
+    if (!testMsg) return
+    
+    // Create a temporary conversation for testing
+    const { data: conv } = await supabase.from('conversations').insert([{
+      client_id: tenant.clientId,
+      user_phone: 'TEST_USER',
+      user_name: 'Usuario de Prueba',
+      messages: [{ role: 'user', content: testMsg, timestamp: new Date().toISOString() }]
+    }]).select().single()
+    
+    if (conv) {
+      alert("Mensaje enviado. En unos segundos Cami responderá. Refresca el Inbox.")
+      fetchConversations()
+    }
   }
 
   useEffect(() => {
@@ -42,23 +62,7 @@ export default function Inbox() {
     fetchConversations()
     fetchTeamMembers()
 
-    const simulateChat = async () => {
-      const testMsg = prompt("Escribe un mensaje para probar la IA de Trazzos:")
-      if (!testMsg) return
-      
-      // Create a temporary conversation for testing
-      const { data: conv } = await supabase.from('conversations').insert([{
-        client_id: tenant.clientId,
-        user_phone: 'TEST_USER',
-        user_name: 'Usuario de Prueba',
-        messages: [{ role: 'user', content: testMsg, timestamp: new Date().toISOString() }]
-      }]).select().single()
-      
-      if (conv) {
-        alert("Mensaje enviado. En unos segundos Cami responderá. Refresca el Inbox.")
-        fetchConversations()
-      }
-    }
+
 
     // Realtime listener for new conversations or updates
     const convSub = supabase
