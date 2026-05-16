@@ -91,17 +91,30 @@ export function TenantProvider({ session, children }) {
         return
       }
 
-      // No company assigned
-      setTenantState({
-        clientId: null,
-        clientName: null,
-        role: null,
-        membership: null,
-        isAdmin: false,
-        isSuperAdmin,
-        isLoading: false,
-        error: 'NO_COMPANY',
-      })
+      // No company assigned - If super admin, give them a default context
+      if (isSuperAdmin) {
+        setTenantState({
+          clientId: '00000000-0000-0000-0000-000000000000', // Default Global ID
+          clientName: 'Nexus Global Admin',
+          role: 'admin',
+          membership: null,
+          isAdmin: true,
+          isSuperAdmin,
+          isLoading: false,
+          error: null,
+        })
+      } else {
+        setTenantState({
+          clientId: null,
+          clientName: null,
+          role: null,
+          membership: null,
+          isAdmin: false,
+          isSuperAdmin,
+          isLoading: false,
+          error: 'NO_COMPANY',
+        })
+      }
 
     } catch (err) {
       console.error('[Tenant] Error loading tenant:', err)

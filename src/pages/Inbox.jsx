@@ -40,21 +40,49 @@ export default function Inbox() {
   const handleSimulateChat = async (e) => {
     if (e) e.preventDefault()
     if (!simMessage.trim()) return
+    
+    // Fallback if tenant is still loading or not assigned
+    const effectiveClientId = tenant.clientId || '00000000-0000-0000-0000-000000000000'
+    
     setIsSimulating(true)
-    
-    // Create a temporary conversation for testing
-    const { data: conv } = await supabase.from('conversations').insert([{
-      client_id: tenant.clientId,
-      user_phone: 'TEST_USER_' + Date.now(),
-      user_name: 'Cliente de Prueba',
-      messages: [{ role: 'user', content: simMessage, timestamp: new Date().toISOString() }]
-    }]).select().single()
-    
-    if (conv) {
-      setSimMessage('')
-      setShowSimModal(false)
+    try {
+      const { data: conv, error } = await supabase.from('conversations').insert([{
+        client_id: effectiveClientId,
+        user_phone: 'SIM_' + Math.floor(Math.random() * 10000),
+        user_name: 'Cliente de Prueba',
+        messages: [{ role: 'user', content: simMessage, timestamp: new Date().toISOString() }],
+        needs_human: false
+      }]).select().single()
+      
+      if (conv) {
+        setSimMessage('')
+        setShowSimModal(false)
+        await fetchConversations()
+        
+        // Find and select the new conversation immediately
+        const newConv = {
+          id: conv.id,
+          name: conv.user_name,
+          preview: simMessage,
+          time: 'Ahora',
+          channel: 'whatsapp',
+          unread: false,
+          avatar: 'CP',
+          bg: '#6366f1',
+          tags: [],
+          phone: conv.user_phone,
+          rawMessages: conv.messages || [],
+          needs_human: false
+        }
+        setSelectedConv(newConv)
+      } else if (error) {
+        console.error("Simulation error:", error)
+        alert("No se pudo crear la simulación. Asegúrate de estar conectado.")
+      }
+    } catch (err) {
+      console.error("Simulation exception:", err)
+    } finally {
       setIsSimulating(false)
-      fetchConversations()
     }
   }
 
