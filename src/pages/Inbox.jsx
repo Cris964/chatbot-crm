@@ -356,8 +356,20 @@ export default function Inbox() {
     }
   }
   return (
-    <div className="inbox-layout" style={{ background: 'transparent', height: 'calc(100vh - var(--header-height))' }}>
-      <div className="inbox-sidebar" style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)' }}>
+    <div className="inbox-layout" style={{ 
+      background: 'transparent', 
+      height: 'calc(100vh - 64px)', 
+      marginTop: '0',
+      display: 'flex',
+      overflow: 'hidden'
+    }}>
+      <div className="inbox-sidebar" style={{ 
+        background: 'rgba(255,255,255,0.02)', 
+        backdropFilter: 'blur(20px)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}>
         <div className="inbox-sidebar-header" style={{ padding: '24px' }}>
            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 16 }}>CRM Inbox</h2>
            <div className="search-bar">
@@ -379,7 +391,7 @@ export default function Inbox() {
            </button>
         </div>
         
-        <div className="conversation-list" style={{ padding: 12 }}>
+        <div className="conversation-list" style={{ padding: 12, flex: 1, overflowY: 'auto' }}>
           {isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
                <div className="spinner" style={{ margin: '0 auto 12px' }} />
@@ -413,7 +425,14 @@ export default function Inbox() {
       </div>
 
       {/* Chat Area */}
-      <div className="chat-area" style={{ background: 'rgba(255,255,255,0.01)', borderRight: '1px solid var(--glass-border)' }}>
+      <div className="chat-area" style={{ 
+        background: 'rgba(255,255,255,0.01)', 
+        borderRight: '1px solid var(--glass-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden'
+      }}>
         {selectedConv && (
           <>
             <div className="chat-header" style={{ padding: '20px 32px' }}>
@@ -543,7 +562,11 @@ export default function Inbox() {
       </div>
 
        {/* Profile Column */}
-       <div className="contact-panel" style={{ background: 'transparent' }}>
+       <div className="contact-panel" style={{ 
+         background: 'transparent',
+         height: '100%',
+         overflowY: 'auto'
+       }}>
           <div style={{ padding: '32px' }}>
              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 24 }}>Information Panel</h3>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
