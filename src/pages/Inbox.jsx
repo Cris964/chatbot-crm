@@ -82,6 +82,18 @@ export default function Inbox() {
         setSelectedConv(newConv)
         // Reload tenant to stop "Cargando..."
         if (tenant.reload) tenant.reload()
+
+        // TRIGGER THE AI!
+        try {
+          fetch('/api/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: conv.id, clientId: effectiveClientId })
+          }).catch(e => console.error("Error calling /api/simulate:", e));
+        } catch(e) {
+           console.error("Fetch simulate error:", e);
+        }
+
       } else if (error) {
         console.error("Simulation error details:", error)
         alert("Error de base de datos: " + error.message)
