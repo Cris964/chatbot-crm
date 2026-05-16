@@ -48,7 +48,7 @@ export default function Inbox() {
       // If no clientId or if it's the generic Global Admin ID, use the known Trazzos ID directly
       // This bypasses RLS restrictions that block reading the clients table
       if (!effectiveClientId || effectiveClientId === '00000000-0000-0000-0000-000000000000') {
-        effectiveClientId = '98b9fafd-90ad-4ed9-9616-b8ed992b0e7d' // Trazzos Official ID
+        effectiveClientId = 'c90f532b-0b32-4614-9c21-bbf664213468' // Trazzos Official ID
       }
       
       const { data: conv, error } = await supabase.from('conversations').insert([{
