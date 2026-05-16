@@ -45,16 +45,36 @@ export default function Inbox() {
     try {
       let effectiveClientId = tenant.clientId
       
-      // If no clientId, find the first available client in the DB to avoid FK errors
+      // If no clientId, find the first available client in the DB
       if (!effectiveClientId) {
         const { data: firstClient } = await supabase.from('clients').select('id').limit(1).maybeSingle()
         effectiveClientId = firstClient?.id
       }
 
+      // EMERGENCY: If still no client, create one called 'Trazzos Espacios'
       if (!effectiveClientId) {
-        alert("No se encontró ninguna empresa configurada en el sistema. Crea una empresa primero.")
-        setIsSimulating(false)
-        return
+        const { data: newClient, error: createError } = await supabase.from('clients').insert([{
+          name: 'Trazzos Espacios (Demo)',
+          active: true,
+          model: 'openai/gpt-4o-mini'
+        }]).select().single()
+        
+        if (newClient) {
+          effectiveClientId = newClient.id
+          // Also add a membership for the current user to this new client
+          await supabase.from('team_members').insert([{
+             user_id: session.user.id,
+             client_id: newClient.id,
+             role: 'admin',
+             full_name: 'Admin',
+             status: 'activo'
+          }])
+        } else {
+          console.error("Critical: Could not even create a demo client", createError)
+          alert("Error crítico: No se pueden crear empresas. Revisa los permisos de Supabase.")
+          setIsSimulating(false)
+          return
+        }
       }
       
       const { data: conv, error } = await supabase.from('conversations').insert([{
@@ -86,6 +106,8 @@ export default function Inbox() {
           needs_human: false
         }
         setSelectedConv(newConv)
+        // Reload tenant to stop "Cargando..."
+        if (tenant.reload) tenant.reload()
       } else if (error) {
         console.error("Simulation error details:", error)
         alert("Error de base de datos: " + error.message)
