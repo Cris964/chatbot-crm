@@ -314,7 +314,47 @@ export default function Inbox() {
       setIsLoading(false)
     }
   }
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !selectedConv) return
+    setIsLoading(true)
+    try {
+      const fileName = `${Date.now()}_${file.name}`
+      const { data, error } = await supabase.storage
+        .from('media')
+        .upload(fileName, file)
+      
+      if (error) throw error
 
+      const { data: publicUrlData } = supabase.storage
+        .from('media')
+        .getPublicUrl(fileName)
+
+      const fileUrl = publicUrlData.publicUrl
+      
+      const messageObj = {
+        role: 'agent',
+        content: fileUrl,
+        type: file.type.startsWith('image/') ? 'image' : 'file',
+        timestamp: new Date().toISOString()
+      }
+
+      const { error: dbError } = await supabase
+        .from('conversations')
+        .update({ 
+          messages: [...selectedConv.rawMessages, messageObj],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedConv.id)
+
+      if (!dbError) fetchConversations()
+    } catch (err) {
+      console.error("Upload error:", err)
+      alert("Error al subir archivo: " + err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
   return (
     <div className="inbox-layout" style={{ background: 'transparent', height: 'calc(100vh - var(--header-height))' }}>
       <div className="inbox-sidebar" style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)' }}>
