@@ -117,7 +117,7 @@ export default function Layout({ session }) {
           </div>
         </div>
 
-        <nav className="sidebar-nav" style={{ marginTop: 12 }}>
+        <nav className="sidebar-nav">
           {navItems.map((section) => (
             <div key={section.label}>
               {!isSidebarCollapsed && <div className="nav-section-label" style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', paddingLeft: 24, marginBottom: 8 }}>{section.label}</div>}
