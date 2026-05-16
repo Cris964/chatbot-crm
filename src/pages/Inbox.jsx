@@ -45,8 +45,8 @@ export default function Inbox() {
     try {
       let effectiveClientId = tenant.clientId
       
-      // If no clientId, find the first available client in the DB
-      if (!effectiveClientId) {
+      // If no clientId or if it's the generic Global Admin ID, find the first available client in the DB
+      if (!effectiveClientId || effectiveClientId === '00000000-0000-0000-0000-000000000000') {
         const { data: firstClient } = await supabase.from('clients').select('id').limit(1).maybeSingle()
         effectiveClientId = firstClient?.id
       }
