@@ -354,259 +354,322 @@ export default function Inbox() {
   }
 
   return (
-    <div className="inbox-layout" style={{ 
-      display: 'grid',
-      gridTemplateColumns: '300px 1fr 340px',
-      height: 'calc(100vh - 64px)',
-      background: 'transparent',
-      overflow: 'hidden'
-    }}>
-      {/* Sidebar */}
-      <div className="inbox-sidebar" style={{ 
-        background: 'rgba(255,255,255,0.02)', 
-        backdropFilter: 'blur(20px)',
-        borderRight: '1px solid var(--glass-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%'
-      }}>
-        <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
-           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 12 }}>Inbox</h2>
-           <div className="search-bar" style={{ padding: '8px 12px' }}>
-             <Search size={16} />
-             <input type="text" placeholder="Buscar..." style={{ fontSize: '0.85rem' }} />
-           </div>
-           <button 
-             className="btn btn-primary btn-sm" 
-             style={{ 
-               width: '100%', 
-               marginTop: 12, 
-               background: 'linear-gradient(135deg, var(--primary-600), var(--primary-400))',
-               boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.4)',
-               fontWeight: 700
-             }}
-             onClick={() => setShowSimModal(true)}
-           >
-             <Sparkles size={14} /> Probar Agente IA
-           </button>
-        </div>
+    <div className="inbox-container">
+      <style>{`
+        .inbox-layout {
+          display: grid;
+          grid-template-columns: 320px 1fr 340px;
+          height: calc(100vh - 64px);
+          overflow: hidden;
+          background: transparent;
+        }
+
+        .inbox-sidebar {
+          background: rgba(255, 255, 255, 0.02);
+          backdrop-filter: blur(20px);
+          border-right: 1px solid var(--glass-border);
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+        }
+
+        .chat-area {
+          background: rgba(255, 255, 255, 0.01);
+          border-right: 1px solid var(--glass-border);
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          min-width: 0;
+          overflow: hidden;
+        }
+
+        .contact-panel {
+          background: rgba(255, 255, 255, 0.01);
+          height: 100%;
+          overflow-y: auto;
+          padding: 20px;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1280px) {
+          .inbox-layout {
+            grid-template-columns: 280px 1fr 300px;
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .inbox-layout {
+            grid-template-columns: 300px 1fr;
+          }
+          .contact-panel {
+            display: none; /* Hide info panel on tablets */
+          }
+        }
+
+        @media (max-width: 768px) {
+          .inbox-layout {
+            grid-template-columns: 1fr; /* Stack everything */
+          }
+          .inbox-sidebar {
+            display: ${selectedConv ? 'none' : 'flex'};
+            width: 100%;
+          }
+          .chat-area {
+            display: ${selectedConv ? 'flex' : 'none'};
+            width: 100%;
+          }
+        }
+
+        .conversation-item {
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+        .conversation-item:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .conversation-item.active {
+          background: rgba(99, 102, 241, 0.15);
+          border-left: 3px solid var(--primary-500);
+        }
         
-        <div className="conversation-list" style={{ padding: '0 12px 12px', flex: 1, overflowY: 'auto' }}>
-          {isLoading ? (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
-               <div className="spinner" style={{ margin: '0 auto 12px' }} />
-               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
-            </div>
-          ) : conversationsList.map(c => (
-            <div 
-              key={c.id} 
-              className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
-              onClick={() => setSelectedConv(c)}
-              style={{ padding: '12px', borderRadius: 12, marginBottom: 4 }}
-            >
-               <div className="avatar sm" style={{ background: c.bg, position: 'relative' }}>
-                  {c.avatar}
-                  {c.assigned_to && (
-                     <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                        {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
-                     </div>
-                  )}
-               </div>
-               <div className="conv-content" style={{ marginLeft: 12 }}>
-                  <div className="flex justify-between items-center">
-                     <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{c.name}</span>
-                     <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{c.time}</span>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{c.preview}</p>
-                </div>
+        .chat-msg-bubble {
+          max-width: 80%;
+          padding: 12px 16px;
+          margin-bottom: 4px;
+          line-height: 1.5;
+          font-size: 0.9rem;
+        }
+        
+        .msg-client {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--glass-border);
+          border-radius: 4px 16px 16px 16px;
+          align-self: flex-start;
+        }
+        
+        .msg-agent {
+          background: var(--primary-600);
+          border-radius: 16px 4px 16px 16px;
+          align-self: flex-end;
+          box-shadow: 0 4px 12px -4px rgba(99, 102, 241, 0.4);
+        }
+      `}</style>
+
+      <div className="inbox-layout">
+        {/* Sidebar */}
+        <div className="inbox-sidebar">
+          <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
+             <div className="flex justify-between items-center mb-4">
+               <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
+               {selectedConv && (
+                 <button 
+                   className="btn btn-ghost btn-sm md:hidden" 
+                   onClick={() => setSelectedConv(null)}
+                   style={{ display: window.innerWidth < 768 ? 'block' : 'none' }}
+                 >
+                   Volver
+                 </button>
+               )}
              </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat Area */}
-      <div className="chat-area" style={{ 
-        background: 'rgba(255,255,255,0.01)', 
-        borderRight: '1px solid var(--glass-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        minWidth: 0,
-        overflow: 'hidden'
-      }}>
-        {selectedConv ? (
-          <>
-            <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-               <div className="avatar md" style={{ background: selectedConv.bg, width: 40, height: 40 }}>{selectedConv.avatar}</div>
-               <div style={{ marginLeft: 12 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {selectedConv.name} <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)' }} />
+             <div className="search-bar" style={{ padding: '8px 12px' }}>
+               <Search size={16} />
+               <input type="text" placeholder="Buscar..." style={{ fontSize: '0.85rem' }} />
+             </div>
+             <button 
+               className="btn btn-primary btn-sm" 
+               style={{ 
+                 width: '100%', 
+                 marginTop: 12, 
+                 background: 'linear-gradient(135deg, var(--primary-600), var(--primary-400))',
+                 fontWeight: 700
+               }}
+               onClick={() => setShowSimModal(true)}
+             >
+               <Sparkles size={14} /> Probar Agente IA
+             </button>
+          </div>
+          
+          <div className="conversation-list" style={{ padding: '0 12px 12px', flex: 1, overflowY: 'auto' }}>
+            {isLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                 <div className="spinner" style={{ margin: '0 auto 12px' }} />
+                 <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
+              </div>
+            ) : conversationsList.map(c => (
+              <div 
+                key={c.id} 
+                className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
+                onClick={() => setSelectedConv(c)}
+                style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
+              >
+                 <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0 }}>
+                    {c.avatar}
+                    {c.assigned_to && (
+                       <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                          {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
+                       </div>
+                    )}
+                 </div>
+                 <div className="conv-content" style={{ marginLeft: 12, minWidth: 0, flex: 1 }}>
+                    <div className="flex justify-between items-center">
+                       <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                       <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>{c.time}</span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview}</p>
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>WhatsApp | Cliente</p>
                </div>
-                <div className="ml-auto flex items-center gap-4">
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
-                      <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: botActive ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
-                        AI {botActive ? 'On' : 'Off'}
-                      </span>
-                      <div 
-                        className={`toggle-switch small ${botActive ? 'active' : ''}`} 
-                        onClick={() => setBotActive(!botActive)}
-                      />
-                   </div>
-                   <div className="flex gap-2">
-                      <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
-                      <a href={`mailto:${selectedConv?.client?.email}`} className="btn btn-secondary btn-sm"><Mail size={14} /></a>
-                   </div>
-                </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="chat-messages" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                {messages.map(m => (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'client' ? 'flex-start' : 'flex-end', marginBottom: 20 }}>
-                     <div style={{ 
-                       maxWidth: '80%', 
-                       padding: '12px 16px', 
-                       borderRadius: m.sender === 'client' ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-                       background: m.sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-600)',
-                       border: m.sender === 'client' ? '1px solid var(--glass-border)' : 'none',
-                       boxShadow: m.sender === 'agent' ? '0 4px 12px -4px rgba(99, 102, 241, 0.4)' : 'none'
-                     }}>
+        {/* Chat Area */}
+        <div className="chat-area">
+          {selectedConv ? (
+            <>
+              <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center' }}>
+                 <button 
+                   className="mr-3 p-2 hover:bg-white/5 rounded-full md:hidden"
+                   onClick={() => setSelectedConv(null)}
+                 >
+                   <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} />
+                 </button>
+                 <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0 }}>{selectedConv.avatar}</div>
+                 <div style={{ marginLeft: 12, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv.name}</span>
+                      <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
+                    </div>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>WhatsApp | Cliente</p>
+                 </div>
+                  <div className="ml-auto flex items-center gap-3">
+                     <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
+                        <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>AI</span>
+                        <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={() => setBotActive(!botActive)} />
+                     </div>
+                     <div className="flex gap-1">
+                        <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
+                     </div>
+                  </div>
+              </div>
+
+              <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {messages.map(m => (
+                    <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
                         {m.type === 'image' ? (
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'audio' ? (
                           <audio controls src={m.text} style={{ width: '100%', height: 32, filter: m.sender === 'agent' ? 'invert(1)' : 'none' }} />
                         ) : (
-                          <p style={{ fontSize: '0.9rem', color: '#fff', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{m.text}</p>
+                          <p style={{ margin: 0 }}>{m.text}</p>
                         )}
-                        <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: 4, textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
                           {m.time}
                         </div>
+                    </div>
+                  ))}
+                 <div ref={messagesEndRef} />
+              </div>
+
+              <div className="chat-input-area" style={{ padding: '12px 20px', background: 'rgba(0,0,0,0.2)' }}>
+                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '4px 12px', display: 'flex', alignItems: 'center' }}>
+                     {isRecording ? (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
+                           <div className="pulse-red" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+                           <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>Grabando... {formatTime(recordingTime)}</span>
+                        </div>
+                     ) : (
+                        <input 
+                          type="text" placeholder="Escribe un mensaje..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '0.9rem' }} 
+                          value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                        />
+                     )}
+                     <div className="flex gap-1">
+                        {!isRecording ? (
+                          <>
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
+                            <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
+                            <button type="submit" className="btn btn-primary btn-sm" disabled={!newMessage.trim()}><Send size={16} /></button>
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={startRecording}><Mic size={18} /></button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => stopRecording(true)}><Trash2 size={18} /></button>
+                            <button type="button" className="btn btn-primary btn-sm" onClick={() => stopRecording(false)} style={{ background: '#ef4444' }}>Enviar</button>
+                          </>
+                        )}
+                     </div>
+                  </form>
+              </div>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', flexDirection: 'column', gap: 16 }}>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: 24, borderRadius: '50%' }}><MessageSquare size={48} opacity={0.2} /></div>
+              <p>Selecciona un chat para comenzar</p>
+            </div>
+          )}
+        </div>
+
+        {/* Info Panel */}
+        <div className="contact-panel">
+           <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Panel</h3>
+           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+             {['Contact', 'Deal Info', 'Timeline'].map(t => (
+               <div 
+                 key={t} 
+                 onClick={() => setActiveInfoTab(t)}
+                 style={{ 
+                     padding: '10px 14px', 
+                     borderRadius: 10, 
+                     background: activeInfoTab === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                     color: activeInfoTab === t ? 'var(--primary-400)' : 'var(--text-secondary)',
+                     fontWeight: 600,
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'space-between',
+                     cursor: 'pointer',
+                     fontSize: '0.85rem'
+                 }}
+               >
+                  {t}
+                  {activeInfoTab === t && <ChevronRight size={12} />}
+               </div>
+             ))}
+           </div>
+
+           <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+              {activeInfoTab === 'Contact' && (
+                <div className="animate-slideUp">
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Contacto</h4>
+                  <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                     <div className="flex items-center gap-3">
+                        <Phone size={14} className="text-primary-400" />
+                        <span style={{ fontSize: '0.85rem' }}>{selectedConv?.phone || 'N/A'}</span>
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <Mail size={14} className="text-primary-400" />
+                        <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv?.client?.email || 'N/A'}</span>
                      </div>
                   </div>
-                ))}
-               <div ref={messagesEndRef} />
-            </div>
-
-            <div className="chat-input-area" style={{ padding: '16px 24px', background: 'rgba(0,0,0,0.2)' }}>
-               {showAI && !selectedConv?.needs_human && (
-                 <div className="ai-suggestion-panel" style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                       <Sparkles size={14} color="var(--primary-400)" />
-                       <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>¿Usar respuesta sugerida?</span>
-                    </div>
-                    <div className="flex gap-2">
-                       <button className="btn btn-primary btn-sm" onClick={() => { setNewMessage("Hola, claro que sí. Cuéntame, ¿en qué producto estás interesado?"); setShowAI(false); }} style={{ fontSize: '0.75rem' }}>Aplicar</button>
-                       <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)} style={{ fontSize: '0.75rem' }}><Close size={14} /></button>
-                    </div>
-                 </div>
-               )}
-                <form onSubmit={handleSendMessage} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
-                   {isRecording ? (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
-                         <div className="pulse-red" style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
-                         <span style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 600 }}>{formatTime(recordingTime)}</span>
-                      </div>
-                   ) : (
-                      <input 
-                        type="text" placeholder="Escribe aquí..." style={{ flex: 1, padding: '10px', background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '0.9rem' }} 
-                        value={newMessage} onChange={e => setNewMessage(e.target.value)}
-                      />
-                   )}
-                   <div className="flex gap-1">
-                      {!isRecording ? (
-                        <>
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
-                          <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
-                          {newMessage.trim() ? (
-                            <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 16px' }}>Enviar</button>
-                          ) : (
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={startRecording}><Mic size={18} /></button>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => stopRecording(true)}><Trash2 size={18} /></button>
-                          <button type="button" className="btn btn-primary btn-sm" onClick={() => stopRecording(false)} style={{ background: '#ef4444' }}>Enviar</button>
-                        </>
-                      )}
-                   </div>
-                </form>
-            </div>
-          </>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
-            Selecciona un chat para comenzar
-          </div>
-        )}
-      </div>
-
-      {/* Info Panel */}
-      <div className="contact-panel" style={{ 
-        background: 'rgba(255,255,255,0.01)',
-        height: '100%',
-        overflowY: 'auto',
-        padding: '20px'
-      }}>
-         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Panel</h3>
-         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
-           {['Contact', 'Deal Info', 'Timeline'].map(t => (
-             <div 
-               key={t} 
-               onClick={() => setActiveInfoTab(t)}
-               style={{ 
-                   padding: '10px 14px', 
-                   borderRadius: 10, 
-                   background: activeInfoTab === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                   color: activeInfoTab === t ? 'var(--primary-400)' : 'var(--text-secondary)',
-                   fontWeight: 600,
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'space-between',
-                   cursor: 'pointer',
-                   fontSize: '0.85rem'
-               }}
-             >
-                {t}
-                {activeInfoTab === t && <ChevronRight size={12} />}
-             </div>
-           ))}
-         </div>
-
-         <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
-            {activeInfoTab === 'Contact' && (
-              <div className="animate-slideUp">
-                <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Contacto</h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Info sincronizada desde Supabase.</p>
-                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                   <div className="flex items-center gap-3">
-                      <Phone size={14} className="text-primary-400" />
-                      <span style={{ fontSize: '0.85rem' }}>{selectedConv?.phone || 'N/A'}</span>
-                   </div>
-                   <div className="flex items-center gap-3">
-                      <Mail size={14} className="text-primary-400" />
-                      <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv?.client?.email || 'N/A'}</span>
+                </div>
+              )}
+              {activeInfoTab === 'Deal Info' && (
+                <div className="animate-slideUp">
+                   <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Ventas</h4>
+                   <div style={{ padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 8 }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)' }}>ESTIMADO</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$250k</div>
                    </div>
                 </div>
-              </div>
-            )}
-            {activeInfoTab === 'Deal Info' && (
-              <div className="animate-slideUp">
-                 <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Ventas</h4>
-                 <div style={{ padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 8 }}>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)' }}>ESTIMADO</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$250k</div>
-                 </div>
-              </div>
-            )}
-            {activeInfoTab === 'Timeline' && (
-              <div className="animate-slideUp">
-                 <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Historial</h4>
-                 <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>• Conversación hoy</div>
-              </div>
-            )}
-         </div>
+              )}
+              {activeInfoTab === 'Timeline' && (
+                <div className="animate-slideUp">
+                   <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Historial</h4>
+                   <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>• Conversación hoy</div>
+                </div>
+              )}
+           </div>
+        </div>
       </div>
 
       {/* Simulation Modal */}
