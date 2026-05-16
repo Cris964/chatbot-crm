@@ -246,7 +246,7 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            await fetch(`https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`, {
+                            await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
@@ -256,8 +256,17 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                                 messaging_product: 'whatsapp',
                                 to: senderPhone,
                                 type: 'text',
-                                text: { preview_url: false, body: cleanReply }
+                                text: { body: cleanReply }
                               })
+                            }).then(async r => {
+                                if (!r.ok) {
+                                    const errData = await r.json();
+                                    console.error('[WHATSAPP SEND ERROR]', errData);
+                                    const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
+                                    await supabase.from('conversations').update({
+                                        messages: [...(latest?.messages || []), { role: 'agent', content: `[ERROR META]: ${errData.error?.message || 'Error desconocido'}`, timestamp: new Date().toISOString() }]
+                                    }).eq('id', conversationId);
+                                }
                             });
                         }
                     }
@@ -266,7 +275,8 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                     await logErrorToCRM(`Error IA: ${err}`);
                 }
             } catch (aiErr) {
-                await logErrorToCRM(`Error Crítico: ${aiErr.message}`);
+                console.error('[AI DISPATCH ERROR]', aiErr);
+                await logErrorToCRM(`Error de IA: ${aiErr.message}`);
             }
         }
       }
