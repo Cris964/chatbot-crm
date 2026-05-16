@@ -41,11 +41,22 @@ export default function Inbox() {
     if (e) e.preventDefault()
     if (!simMessage.trim()) return
     
-    // Fallback if tenant is still loading or not assigned
-    const effectiveClientId = tenant.clientId || '00000000-0000-0000-0000-000000000000'
-    
     setIsSimulating(true)
     try {
+      let effectiveClientId = tenant.clientId
+      
+      // If no clientId, find the first available client in the DB to avoid FK errors
+      if (!effectiveClientId) {
+        const { data: firstClient } = await supabase.from('clients').select('id').limit(1).maybeSingle()
+        effectiveClientId = firstClient?.id
+      }
+
+      if (!effectiveClientId) {
+        alert("No se encontró ninguna empresa configurada en el sistema. Crea una empresa primero.")
+        setIsSimulating(false)
+        return
+      }
+      
       const { data: conv, error } = await supabase.from('conversations').insert([{
         client_id: effectiveClientId,
         user_phone: 'SIM_' + Math.floor(Math.random() * 10000),
@@ -59,7 +70,7 @@ export default function Inbox() {
         setShowSimModal(false)
         await fetchConversations()
         
-        // Find and select the new conversation immediately
+        // Map and select immediately
         const newConv = {
           id: conv.id,
           name: conv.user_name,
@@ -76,8 +87,8 @@ export default function Inbox() {
         }
         setSelectedConv(newConv)
       } else if (error) {
-        console.error("Simulation error:", error)
-        alert("No se pudo crear la simulación. Asegúrate de estar conectado.")
+        console.error("Simulation error details:", error)
+        alert("Error de base de datos: " + error.message)
       }
     } catch (err) {
       console.error("Simulation exception:", err)
