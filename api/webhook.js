@@ -186,7 +186,7 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                     body: JSON.stringify({
                         model: 'openai/gpt-4o-mini',
                         messages: [
-                            { role: 'system', content: `${clientSetup.prompt}\n\n${inventoryContext}` },
+                            { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n\n${inventoryContext}` },
                             ...finalMessages.slice(-10).map(m => ({
                                 role: m.role === 'agent' ? 'assistant' : 'user',
                                 content: m.content
