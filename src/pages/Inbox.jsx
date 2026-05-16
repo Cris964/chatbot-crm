@@ -348,33 +348,33 @@ export default function Inbox() {
         .eq('id', selectedConv.id)
 
       if (!dbError) fetchConversations()
-    } catch (err) {
-      console.error("Upload error:", err)
-      alert("Error al subir archivo: " + err.message)
     } finally {
       setIsLoading(false)
     }
   }
+
   return (
     <div className="inbox-layout" style={{ 
-      background: 'transparent', 
-      height: 'calc(100vh - 64px)', 
-      marginTop: '0',
-      display: 'flex',
+      display: 'grid',
+      gridTemplateColumns: '300px 1fr 340px',
+      height: 'calc(100vh - 64px)',
+      background: 'transparent',
       overflow: 'hidden'
     }}>
+      {/* Sidebar */}
       <div className="inbox-sidebar" style={{ 
         background: 'rgba(255,255,255,0.02)', 
         backdropFilter: 'blur(20px)',
+        borderRight: '1px solid var(--glass-border)',
         display: 'flex',
         flexDirection: 'column',
         height: '100%'
       }}>
-        <div className="inbox-sidebar-header" style={{ padding: '24px' }}>
-           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 16 }}>CRM Inbox</h2>
-           <div className="search-bar">
-             <Search size={18} />
-             <input type="text" placeholder="Buscar chats..." />
+        <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
+           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 12 }}>Inbox</h2>
+           <div className="search-bar" style={{ padding: '8px 12px' }}>
+             <Search size={16} />
+             <input type="text" placeholder="Buscar..." style={{ fontSize: '0.85rem' }} />
            </div>
            <button 
              className="btn btn-primary btn-sm" 
@@ -391,33 +391,33 @@ export default function Inbox() {
            </button>
         </div>
         
-        <div className="conversation-list" style={{ padding: 12, flex: 1, overflowY: 'auto' }}>
+        <div className="conversation-list" style={{ padding: '0 12px 12px', flex: 1, overflowY: 'auto' }}>
           {isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
                <div className="spinner" style={{ margin: '0 auto 12px' }} />
-               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Loading conversations...</p>
+               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
             </div>
           ) : conversationsList.map(c => (
             <div 
               key={c.id} 
               className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
               onClick={() => setSelectedConv(c)}
-              style={{ padding: '16px', borderRadius: 16, marginBottom: 4 }}
+              style={{ padding: '12px', borderRadius: 12, marginBottom: 4 }}
             >
-               <div className="avatar lg" style={{ background: c.bg, position: 'relative' }}>
+               <div className="avatar sm" style={{ background: c.bg, position: 'relative' }}>
                   {c.avatar}
                   {c.assigned_to && (
-                     <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--bg-secondary)', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                     <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                         {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
                      </div>
                   )}
                </div>
-               <div className="conv-content" style={{ marginLeft: 16 }}>
+               <div className="conv-content" style={{ marginLeft: 12 }}>
                   <div className="flex justify-between items-center">
-                     <span style={{ fontWeight: 700 }}>{c.name}</span>
-                     <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{c.time}</span>
+                     <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{c.name}</span>
+                     <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{c.time}</span>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{c.preview}</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{c.preview}</p>
                 </div>
              </div>
           ))}
@@ -431,59 +431,57 @@ export default function Inbox() {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        minWidth: 0,
         overflow: 'hidden'
       }}>
-        {selectedConv && (
+        {selectedConv ? (
           <>
-            <div className="chat-header" style={{ padding: '20px 32px' }}>
-               <div className="avatar md" style={{ background: selectedConv.bg }}>{selectedConv.avatar}</div>
-               <div style={{ marginLeft: 16 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {selectedConv.name} <CheckCircle2 size={16} style={{ color: 'var(--accent-emerald)' }} />
+            <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+               <div className="avatar md" style={{ background: selectedConv.bg, width: 40, height: 40 }}>{selectedConv.avatar}</div>
+               <div style={{ marginLeft: 12 }}>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {selectedConv.name} <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)' }} />
                   </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Sales Lead | Open | <span style={{ color: 'var(--accent-emerald)' }}>Verified WA</span></p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>WhatsApp | Cliente</p>
                </div>
-                <div className="ml-auto flex items-center gap-6">
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
-                      <div className="flex items-center gap-2">
-                         <Bot size={16} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
-                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: botActive ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
-                            {botActive ? 'Chatbot Activo' : 'Modo Manual'}
-                         </span>
-                      </div>
+                <div className="ml-auto flex items-center gap-4">
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
+                      <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: botActive ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                        AI {botActive ? 'On' : 'Off'}
+                      </span>
                       <div 
-                        className={`toggle-switch ${botActive ? 'active' : ''}`} 
+                        className={`toggle-switch small ${botActive ? 'active' : ''}`} 
                         onClick={() => setBotActive(!botActive)}
                       />
                    </div>
-                   <div style={{ width: 1, height: 24, background: 'var(--glass-border)' }} />
-                    <div className="flex gap-2">
-                       <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={16} /> Call</a>
-                       <a href={`mailto:${selectedConv?.client?.email}`} className="btn btn-secondary btn-sm"><Mail size={16} /> Email</a>
-                    </div>
+                   <div className="flex gap-2">
+                      <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
+                      <a href={`mailto:${selectedConv?.client?.email}`} className="btn btn-secondary btn-sm"><Mail size={14} /></a>
+                   </div>
                 </div>
             </div>
 
-            <div className="chat-messages" style={{ padding: '32px', overflowY: 'auto', flex: 1 }}>
+            <div className="chat-messages" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
                 {messages.map(m => (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'client' ? 'flex-start' : 'flex-end', marginBottom: 24 }}>
+                  <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'client' ? 'flex-start' : 'flex-end', marginBottom: 20 }}>
                      <div style={{ 
-                       maxWidth: '70%', 
-                       padding: '16px 20px', 
-                       borderRadius: m.sender === 'client' ? '0 20px 20px 20px' : '20px 0 20px 20px',
+                       maxWidth: '80%', 
+                       padding: '12px 16px', 
+                       borderRadius: m.sender === 'client' ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
                        background: m.sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-600)',
                        border: m.sender === 'client' ? '1px solid var(--glass-border)' : 'none',
-                       boxShadow: m.sender === 'agent' ? '0 10px 20px -10px rgba(99, 102, 241, 0.4)' : 'none'
+                       boxShadow: m.sender === 'agent' ? '0 4px 12px -4px rgba(99, 102, 241, 0.4)' : 'none'
                      }}>
                         {m.type === 'image' ? (
-                          <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 12, marginBottom: 8 }} />
+                          <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'audio' ? (
-                          <audio controls src={m.text} style={{ width: '100%', height: 40, filter: m.sender === 'agent' ? 'invert(1)' : 'none' }} />
+                          <audio controls src={m.text} style={{ width: '100%', height: 32, filter: m.sender === 'agent' ? 'invert(1)' : 'none' }} />
                         ) : (
-                          <p style={{ fontSize: '0.95rem', color: '#fff', whiteSpace: 'pre-line' }}>{m.text}</p>
+                          <p style={{ fontSize: '0.9rem', color: '#fff', whiteSpace: 'pre-line', lineHeight: 1.5 }}>{m.text}</p>
                         )}
-                        <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'right' }}>
-                          {m.sender === 'client' ? 'Client' : 'Agent'} ({m.time})
+                        <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: 4, textAlign: 'right' }}>
+                          {m.time}
                         </div>
                      </div>
                   </div>
@@ -491,197 +489,162 @@ export default function Inbox() {
                <div ref={messagesEndRef} />
             </div>
 
-            <div className="chat-input-area" style={{ padding: '24px 32px', borderTop: 'none', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+            <div className="chat-input-area" style={{ padding: '16px 24px', background: 'rgba(0,0,0,0.2)' }}>
                {showAI && !selectedConv?.needs_human && (
-                 <div className="ai-suggestion-panel animate-slideUp" style={{ padding: '16px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: 16, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div className="ai-icon-wrapper" style={{ background: 'var(--primary-600)', padding: 8, borderRadius: 8 }}>
-                         <Sparkles size={16} color="white" />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: '0.7rem', color: 'var(--primary-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Sugerencia de IA</div>
-                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>¿Generar una respuesta sugerida basada en tu IA?</span>
-                      </div>
-                   </div>
-                   <div className="flex gap-2" style={{ flexShrink: 0 }}>
-                      <button className="btn btn-primary btn-sm" onClick={() => { setNewMessage("Hola, claro que sí. Cuéntame, ¿en qué producto estás interesado?"); setShowAI(false); }} style={{ background: 'var(--accent-emerald)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', padding: '6px 16px' }}>Aplicar</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)} style={{ padding: '6px 12px' }}>Omitir</button>
-                   </div>
+                 <div className="ai-suggestion-panel" style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                       <Sparkles size={14} color="var(--primary-400)" />
+                       <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>¿Usar respuesta sugerida?</span>
+                    </div>
+                    <div className="flex gap-2">
+                       <button className="btn btn-primary btn-sm" onClick={() => { setNewMessage("Hola, claro que sí. Cuéntame, ¿en qué producto estás interesado?"); setShowAI(false); }} style={{ fontSize: '0.75rem' }}>Aplicar</button>
+                       <button className="btn btn-ghost btn-sm" onClick={() => setShowAI(false)} style={{ fontSize: '0.75rem' }}><Close size={14} /></button>
+                    </div>
                  </div>
                )}
-                <form 
-                  onSubmit={handleSendMessage}
-                  style={{ 
-                    background: 'rgba(255,255,255,0.03)', 
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: '16px',
-                    padding: '8px 16px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
+                <form onSubmit={handleSendMessage} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
                    {isRecording ? (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, padding: '12px' }}>
-                         <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite' }} />
-                         <span style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444' }}>Grabando... {formatTime(recordingTime)}</span>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
+                         <div className="pulse-red" style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
+                         <span style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 600 }}>{formatTime(recordingTime)}</span>
                       </div>
                    ) : (
                       <input 
-                       type="text" placeholder="Escribe un mensaje..." style={{ flex: 1, padding: '12px', background: 'transparent', border: 'none', color: 'white', outline: 'none' }} 
-                       value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                        type="text" placeholder="Escribe aquí..." style={{ flex: 1, padding: '10px', background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '0.9rem' }} 
+                        value={newMessage} onChange={e => setNewMessage(e.target.value)}
                       />
                    )}
-
-                   <div className="flex gap-2">
-                     {!isRecording && (
-                       <>
-                         <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current.click()}><Paperclip size={20} /></button>
-                         <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
-                         <button type="button" className="btn btn-ghost"><Smile size={20} /></button>
-                         {newMessage.trim() ? (
-                           <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px' }}>Enviar</button>
-                         ) : (
-                           <button type="button" className="btn btn-ghost" onClick={startRecording}><Mic size={20} /></button>
-                         )}
-                       </>
-                     )}
-                     
-                     {isRecording && (
-                       <>
-                         <button type="button" className="btn btn-ghost" onClick={() => stopRecording(true)} style={{ color: 'var(--text-tertiary)' }}><Trash2 size={20} /></button>
-                         <button type="button" className="btn btn-primary" onClick={() => stopRecording(false)} style={{ background: '#ef4444', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Square size={14} fill="white" /> Enviar
-                         </button>
-                       </>
-                     )}
+                   <div className="flex gap-1">
+                      {!isRecording ? (
+                        <>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
+                          <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
+                          {newMessage.trim() ? (
+                            <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 16px' }}>Enviar</button>
+                          ) : (
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={startRecording}><Mic size={18} /></button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => stopRecording(true)}><Trash2 size={18} /></button>
+                          <button type="button" className="btn btn-primary btn-sm" onClick={() => stopRecording(false)} style={{ background: '#ef4444' }}>Enviar</button>
+                        </>
+                      )}
                    </div>
                 </form>
             </div>
           </>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+            Selecciona un chat para comenzar
+          </div>
         )}
       </div>
 
-       {/* Profile Column */}
-       <div className="contact-panel" style={{ 
-         background: 'transparent',
-         height: '100%',
-         overflowY: 'auto'
-       }}>
-          <div style={{ padding: '32px' }}>
-             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 24 }}>Information Panel</h3>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {['Contact', 'Deal Info', 'Company', 'Timeline'].map(t => (
-                  <div 
-                    key={t} 
-                    onClick={() => setActiveInfoTab(t)}
-                    style={{ 
-                        padding: '12px 16px', 
-                        borderRadius: 12, 
-                        background: activeInfoTab === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                        color: activeInfoTab === t ? 'var(--primary-400)' : 'var(--text-secondary)',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer'
-                    }}
-                  >
-                     {t}
-                     {activeInfoTab === t && <ChevronRight size={14} />}
-                  </div>
-                ))}
-              </div>
+      {/* Info Panel */}
+      <div className="contact-panel" style={{ 
+        background: 'rgba(255,255,255,0.01)',
+        height: '100%',
+        overflowY: 'auto',
+        padding: '20px'
+      }}>
+         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Panel</h3>
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+           {['Contact', 'Deal Info', 'Timeline'].map(t => (
+             <div 
+               key={t} 
+               onClick={() => setActiveInfoTab(t)}
+               style={{ 
+                   padding: '10px 14px', 
+                   borderRadius: 10, 
+                   background: activeInfoTab === t ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                   color: activeInfoTab === t ? 'var(--primary-400)' : 'var(--text-secondary)',
+                   fontWeight: 600,
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'space-between',
+                   cursor: 'pointer',
+                   fontSize: '0.85rem'
+               }}
+             >
+                {t}
+                {activeInfoTab === t && <ChevronRight size={12} />}
+             </div>
+           ))}
+         </div>
 
-              <div style={{ marginTop: 24, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid var(--glass-border)' }}>
-                {activeInfoTab === 'Contact' && (
-                  <div className="animate-slideUp">
-                    <h4 style={{ fontSize: '0.85rem', fontWeight: 800, marginBottom: 12 }}>Detalles de Contacto</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Información básica del cliente sincronizada desde Supabase.</p>
-                  </div>
-                )}
-                {activeInfoTab === 'Deal Info' && (
-                  <div className="animate-slideUp">
-                     <h4 style={{ fontSize: '0.85rem', fontWeight: 800, marginBottom: 12 }}>Información del Trato</h4>
-                     <div style={{ padding: '10px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 8 }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>VALOR ESTIMADO</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$250,000</div>
-                     </div>
-                  </div>
-                )}
-                {activeInfoTab === 'Timeline' && (
-                  <div className="animate-slideUp">
-                     <h4 style={{ fontSize: '0.85rem', fontWeight: 800, marginBottom: 12 }}>Historial</h4>
-                     <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>• Conversación iniciada hoy</div>
-                  </div>
-                )}
-              </div>
-
-             <div style={{ marginTop: 40 }}>
-                <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Quick Info</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+         <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+            {activeInfoTab === 'Contact' && (
+              <div className="animate-slideUp">
+                <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Contacto</h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Info sincronizada desde Supabase.</p>
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                    <div className="flex items-center gap-3">
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Phone size={16} /></div>
-                      <div>
-                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Phone</div>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.phone || 'N/A'}</div>
-                      </div>
+                      <Phone size={14} className="text-primary-400" />
+                      <span style={{ fontSize: '0.85rem' }}>{selectedConv?.phone || 'N/A'}</span>
                    </div>
                    <div className="flex items-center gap-3">
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Mail size={16} /></div>
-                      <div>
-                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Email</div>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.client?.email || 'N/A'}</div>
-                      </div>
-                   </div>
-                   <div className="flex items-center gap-3">
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}><Tag size={16} /></div>
-                      <div>
-               <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Channel</div>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedConv?.channel || 'whatsapp'}</div>
-                      </div>
+                      <Mail size={14} className="text-primary-400" />
+                      <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv?.client?.email || 'N/A'}</span>
                    </div>
                 </div>
-               </div>
-          </div>
-       </div>
-
-       {/* Simulation Modal */}
-       {showSimModal && (
-         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
-            <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 460, padding: 0, overflow: 'hidden' }}>
-               <div className="card-header" style={{ padding: '24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.05), transparent)' }}>
-                  <div className="flex items-center gap-3">
-                    <div style={{ background: 'var(--primary-600)', padding: 8, borderRadius: 10 }}><Bot size={20} color="white" /></div>
-                    <h3 style={{ fontWeight: 800 }}>Prueba a tu Agente IA</h3>
-                  </div>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setShowSimModal(false)}><Close size={20} /></button>
-               </div>
-               <div style={{ padding: '24px' }}>
-                  <p style={{ fontSize: '0.88rem', color: 'var(--text-tertiary)', marginBottom: 20 }}>
-                    Envía un mensaje como si fueras un cliente. Cami responderá usando su conocimiento de Trazzos y reglas de agendamiento.
-                  </p>
-                  <form onSubmit={handleSimulateChat}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary-400)', marginBottom: 8, letterSpacing: '0.05em' }}>Tu Mensaje</label>
-                    <textarea 
-                      className="form-input" 
-                      rows={4} 
-                      placeholder="Ej: Hola, quiero remodelar mi cocina, ¿qué opciones tienen?"
-                      value={simMessage}
-                      onChange={e => setSimMessage(e.target.value)}
-                      required
-                      autoFocus
-                    />
-                    <div className="flex justify-end gap-3" style={{ marginTop: 24 }}>
-                       <button type="button" className="btn btn-secondary" onClick={() => setShowSimModal(false)}>Cancelar</button>
-                       <button type="submit" className="btn btn-primary" disabled={isSimulating}>
-                          {isSimulating ? 'Iniciando...' : 'Enviar Mensaje'}
-                       </button>
-                    </div>
-                  </form>
-               </div>
-            </div>
+              </div>
+            )}
+            {activeInfoTab === 'Deal Info' && (
+              <div className="animate-slideUp">
+                 <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Ventas</h4>
+                 <div style={{ padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 8 }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)' }}>ESTIMADO</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$250k</div>
+                 </div>
+              </div>
+            )}
+            {activeInfoTab === 'Timeline' && (
+              <div className="animate-slideUp">
+                 <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Historial</h4>
+                 <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>• Conversación hoy</div>
+              </div>
+            )}
          </div>
-       )}
+      </div>
+
+      {/* Simulation Modal */}
+      {showSimModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+           <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 420, padding: 0, overflow: 'hidden' }}>
+              <div className="card-header" style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <div className="flex items-center gap-3">
+                   <Bot size={20} className="text-primary-400" />
+                   <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>Probar Agente IA</h3>
+                 </div>
+                 <button className="btn btn-ghost btn-sm" onClick={() => setShowSimModal(false)}><Close size={20} /></button>
+              </div>
+              <div style={{ padding: '20px' }}>
+                 <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
+                   Simula un mensaje de cliente para ver cómo responde Cami.
+                 </p>
+                 <form onSubmit={handleSimulateChat}>
+                   <textarea 
+                     className="form-input" 
+                     rows={3} 
+                     placeholder="Escribe tu mensaje aquí..."
+                     value={simMessage}
+                     onChange={e => setSimMessage(e.target.value)}
+                     required
+                     autoFocus
+                   />
+                   <div className="flex justify-end gap-2" style={{ marginTop: 20 }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowSimModal(false)}>Cancelar</button>
+                      <button type="submit" className="btn btn-primary" disabled={isSimulating}>
+                         {isSimulating ? '...' : 'Enviar'}
+                      </button>
+                   </div>
+                 </form>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   )
 }
