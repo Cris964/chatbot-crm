@@ -48,6 +48,11 @@ export default async function handler(req, res) {
 
       const senderPhone = messageObj.from;
       const senderName = contactObj?.profile?.name || 'Cliente';
+      
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
       let textResponse = messageObj.text?.body;
       
       // Manejo Multimedia (Audio / Imagen / Video)
@@ -65,10 +70,6 @@ export default async function handler(req, res) {
       const messageId = messageObj.id;
 
       console.log(`[WHATSAPP WEBHOOK] Nuevo mensaje de ${senderName} (${senderPhone}) ID: ${messageId}: ${textResponse}`);
-
-      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const supabase = createClient(supabaseUrl, supabaseKey);
 
       // --- ESCUDO ATÓMICO ---
       try {

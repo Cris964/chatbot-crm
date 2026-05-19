@@ -31,9 +31,17 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
     const mimeType = metaData.mime_type;
 
     // 2. Download Media Blob
-    const downloadResponse = await fetch(mediaUrl, {
-      headers: { 'Authorization': `Bearer ${whatsappToken}` }
+    let downloadResponse = await fetch(mediaUrl, {
+      headers: { 'Authorization': `Bearer ${whatsappToken}` },
+      redirect: 'manual'
     });
+
+    if (downloadResponse.status >= 300 && downloadResponse.status < 400) {
+      const redirectUrl = downloadResponse.headers.get('location');
+      downloadResponse = await fetch(redirectUrl, {
+        headers: { 'Authorization': `Bearer ${whatsappToken}` }
+      });
+    }
 
     if (!downloadResponse.ok) {
       console.error('[MEDIA] Failed to download media binary', await downloadResponse.text());
