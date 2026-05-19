@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { processMediaMessage } from './mediaHelper.js';
 
 export default async function handler(req, res) {
   // CORS Definitions
@@ -47,7 +48,20 @@ export default async function handler(req, res) {
 
       const senderPhone = messageObj.from;
       const senderName = contactObj?.profile?.name || 'Cliente';
-      const textResponse = messageObj.text?.body || '[Multimedia/No Text]';
+      let textResponse = messageObj.text?.body;
+      
+      // Manejo Multimedia (Audio / Imagen / Video)
+      if (!textResponse && messageObj.type !== 'text') {
+        const tempClient = await supabase.from('clients').select('whatsapp_token').eq('phone_number_id', phoneNumberId).single();
+        const whatsappToken = tempClient?.data?.whatsapp_token;
+        if (whatsappToken) {
+           textResponse = await processMediaMessage(messageObj, whatsappToken, process.env.OPENAI_API_KEY);
+        } else {
+           textResponse = '[Multimedia: No se pudo obtener token para descargar]';
+        }
+      } else if (!textResponse) {
+        textResponse = '[Multimedia/No Text]';
+      }
       const messageId = messageObj.id;
 
       console.log(`[WHATSAPP WEBHOOK] Nuevo mensaje de ${senderName} (${senderPhone}) ID: ${messageId}: ${textResponse}`);
@@ -175,7 +189,23 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                 }
                 // ========== END DYNAMIC INVENTORY ==========
 
-                const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                // Support for Base64 Images injected by processMediaMessage
+                const aiMessages = [
+                    { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n\n${inventoryContext}` },
+                    ...finalMessages.slice(-10).map(m => {
+                        if (m.role === 'user' && m.content.includes('[IMAGEN_BASE64_URL]:')) {
+                            const [textPart, base64Url] = m.content.split('[IMAGEN_BASE64_URL]:');
+                            return {
+                                role: 'user',
+                                content: [
+                                    { type: 'text', text: "El cliente envió esta imagen." },
+                                    { type: 'image_url', image_url: { url: base64Url.trim() } }
+                                ]
+                            };
+                        }
+                        return { role: m.role === 'agent' ? 'assistant' : 'user', content: m.content };
+                    })
+                ];                const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${openRouterKey}`,
@@ -184,14 +214,8 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                         'X-Title': `NexusCRM - ${clientSetup.name || 'AI Agent'}`
                     },
                     body: JSON.stringify({
-                        model: 'openai/gpt-4o-mini',
-                        messages: [
-                            { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n\n${inventoryContext}` },
-                            ...finalMessages.slice(-10).map(m => ({
-                                role: m.role === 'agent' ? 'assistant' : 'user',
-                                content: m.content
-                            }))
-                        ],
+                        model: 'openai/gpt-4o',
+                        messages: aiMessages,
                         max_tokens: 400
                     })
                 });
