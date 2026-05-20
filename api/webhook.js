@@ -57,15 +57,19 @@ export default async function handler(req, res) {
       
       // Manejo Multimedia (Audio / Imagen / Video)
       if (!textResponse && messageObj.type !== 'text') {
-        const tempClient = await supabase.from('clients').select('whatsapp_token').eq('phone_number_id', phoneNumberId).single();
-        const whatsappToken = tempClient?.data?.whatsapp_token;
-        if (whatsappToken) {
-           textResponse = await processMediaMessage(messageObj, whatsappToken, process.env.OPENAI_API_KEY);
-        } else {
-           textResponse = '[Multimedia: No se pudo obtener token para descargar]';
+        try {
+            const tempClient = await supabase.from('clients').select('whatsapp_token').eq('phone_number_id', phoneNumberId).single();
+            const whatsappToken = tempClient?.data?.whatsapp_token;
+            if (whatsappToken) {
+               textResponse = await processMediaMessage(messageObj, whatsappToken, process.env.OPENAI_API_KEY);
+            } else {
+               textResponse = '[Multimedia: No se pudo obtener token para descargar]';
+            }
+        } catch (mediaError) {
+            textResponse = `[DEBUG MEDIA ERROR]: ${mediaError.message}`;
         }
       } else if (!textResponse) {
-        textResponse = '[Multimedia/No Text]';
+        textResponse = `[DEBUG FALLBACK PAYLOAD]: ${JSON.stringify(messageObj)}`;
       }
       const messageId = messageObj.id;
 
