@@ -1,8 +1,13 @@
 {
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "crons": [
     {
       "path": "/api/remarketing",
-      "schedule": "0 * * * *"
+      "schedule": "0 */5 * * *"
     }
   ],
   "rewrites": [
