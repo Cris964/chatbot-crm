@@ -1,5 +1,4 @@
-import fetch from 'node-fetch';
-import FormData from 'form-data';
+// mediaHelper.js — uses native Node 18+ fetch (no external dependencies)
 
 export async function processMediaMessage(messageObj, whatsappToken, openAiKey) {
   try {
@@ -12,87 +11,77 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
       mediaId = messageObj.image.id;
     } else if (type === 'video' && messageObj.video) {
       mediaId = messageObj.video.id;
+    } else if (type === 'voice' && messageObj.voice) {
+      mediaId = messageObj.voice.id;
     }
 
-    if (!mediaId) return '[Multimedia no soportado o sin ID]';
+    if (!mediaId) return `[Multimedia no soportado. Tipo: ${type}]`;
 
     // 1. Get Media URL from Meta Graph API
-    const metaResponse = await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, {
-      headers: { 'Authorization': `Bearer ${whatsappToken}` }
+    const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${whatsappToken}` }
     });
-    
-    if (!metaResponse.ok) {
-      console.error('[MEDIA] Failed to get media metadata', await metaResponse.text());
-      return '[Error al obtener el archivo multimedia]';
+
+    if (!metaRes.ok) {
+      const txt = await metaRes.text();
+      return `[Error al obtener media URL: ${metaRes.status} ${txt.slice(0, 200)}]`;
     }
 
-    const metaData = await metaResponse.json();
+    const metaData = await metaRes.json();
     const mediaUrl = metaData.url;
-    const mimeType = metaData.mime_type;
+    const mimeType = metaData.mime_type || 'application/octet-stream';
 
-    // 2. Download Media Blob
-    let downloadResponse = await fetch(mediaUrl, {
-      headers: { 'Authorization': `Bearer ${whatsappToken}` },
-      redirect: 'manual'
+    if (!mediaUrl) return `[Meta no devolvió URL para media ID ${mediaId}]`;
+
+    // 2. Download Media — follow redirect manually
+    let dlRes = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${whatsappToken}` },
+      redirect: 'follow'
     });
 
-    if (downloadResponse.status >= 300 && downloadResponse.status < 400) {
-      const redirectUrl = downloadResponse.headers.get('location');
-      downloadResponse = await fetch(redirectUrl, {
-        headers: { 'Authorization': `Bearer ${whatsappToken}` }
-      });
+    if (!dlRes.ok) {
+      return `[Error al descargar media: ${dlRes.status}]`;
     }
 
-    if (!downloadResponse.ok) {
-      console.error('[MEDIA] Failed to download media binary', await downloadResponse.text());
-      return '[Error al descargar el archivo multimedia]';
-    }
-
-    const arrayBuffer = await downloadResponse.arrayBuffer();
+    const arrayBuffer = await dlRes.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 3. Process based on Type
-    if (type === 'audio') {
-      if (!openAiKey) return '[Nota de Voz: No hay API Key de OpenAI para transcribir]';
-      
-      console.log('[MEDIA] Transcribiendo audio con Whisper...');
-      const formData = new FormData();
-      // Whisper needs a file extension, we map typical whatsapp audio to .ogg or .mp4
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'ogg';
-      formData.append('file', buffer, { filename: `audio.${ext}`, contentType: mimeType });
-      formData.append('model', 'whisper-1');
-      formData.append('language', 'es'); // Force Spanish
+    // 3. Process based on type
+    if (type === 'audio' || type === 'voice') {
+      if (!openAiKey) return '[Nota de Voz recibida. Sin API Key de OpenAI para transcribir.]';
 
-      const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      // Use native FormData (Node 18+)
+      const blob = new Blob([buffer], { type: mimeType });
+      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'ogg';
+      const formData = new FormData();
+      formData.append('file', blob, `audio.${ext}`);
+      formData.append('model', 'whisper-1');
+      formData.append('language', 'es');
+
+      const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAiKey}`,
-          ...formData.getHeaders()
-        },
+        headers: { Authorization: `Bearer ${openAiKey}` },
         body: formData
       });
 
-      if (!whisperResponse.ok) {
-        console.error('[MEDIA] Whisper Error', await whisperResponse.text());
-        return '[Nota de Voz: Error en la transcripción]';
+      if (!whisperRes.ok) {
+        const e = await whisperRes.text();
+        return `[Nota de Voz: Error Whisper ${whisperRes.status}: ${e.slice(0, 200)}]`;
       }
 
-      const whisperData = await whisperResponse.json();
+      const whisperData = await whisperRes.json();
       return `[Nota de Voz del Cliente]: "${whisperData.text}"`;
 
     } else if (type === 'image') {
-      console.log('[MEDIA] Procesando imagen a Base64...');
       const base64 = buffer.toString('base64');
-      const dataUri = `data:${mimeType};base64,${base64}`;
-      // In webhook, we will inject this as a special string that gets parsed into an image object
-      return `[IMAGEN_BASE64_URL]: ${dataUri}`;
+      return `[IMAGEN_BASE64_URL]: data:${mimeType};base64,${base64}`;
+
     } else if (type === 'video') {
-      return '[Video recibido: Dile al cliente que por ahora no puedes analizar videos, pero que te cuente en texto o nota de voz qué contiene.]';
+      return '[Video recibido: Pídele al cliente que describa en texto o nota de voz lo que contiene.]';
     }
 
-    return '[Archivo Multimedia]';
-  } catch (error) {
-    console.error('[MEDIA EXCEPTION]', error);
-    return '[Error interno al procesar el archivo multimedia]';
+    return `[Archivo Multimedia tipo ${type}]`;
+  } catch (err) {
+    return `[EXCEPCION MEDIA]: ${err.message}`;
   }
 }
