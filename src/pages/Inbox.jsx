@@ -5,7 +5,7 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight,
-  Mic, Square, Trash2, UserPlus
+  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -136,11 +136,11 @@ export default function Inbox() {
 
   useEffect(() => {
     if (selectedConv) {
-      setMessages((selectedConv.rawMessages || []).map((m, i) => ({
         id: i,
         sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
         text: m.content || m.text,
-        time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
+        type: m.type,
+        time: m.timestamp ? new Date(m.timestamp).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : (selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
       })))
 
       const convUpdateSub = supabase
@@ -158,7 +158,8 @@ export default function Inbox() {
               id: i,
               sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
               text: m.content || m.text,
-              time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
+              type: m.type,
+              time: m.timestamp ? new Date(m.timestamp).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : (updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
             })))
           }
         })
@@ -189,7 +190,7 @@ export default function Inbox() {
             id: conv.id,
             name: displayName,
             preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
-            time: conv.updated_at ? new Date(conv.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            time: conv.updated_at ? new Date(conv.updated_at).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
             channel: conv.channel ? conv.channel.toLowerCase() : 'whatsapp', 
             unread: false,
             avatar: displayName.substring(0, 2).toUpperCase(),
@@ -560,7 +561,10 @@ export default function Inbox() {
                  <div className="conv-content" style={{ marginLeft: 12, minWidth: 0, flex: 1 }}>
                     <div className="flex justify-between items-center">
                        <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-                       <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>{c.time}</span>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                         {c.channel === 'instagram' ? <Instagram size={12} /> : c.channel === 'facebook' ? <Facebook size={12} /> : <MessageCircle size={12} />}
+                         <span>{c.time}</span>
+                       </div>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview}</p>
                   </div>
@@ -586,7 +590,10 @@ export default function Inbox() {
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv.name}</span>
                       <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
                     </div>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>WhatsApp | Cliente</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4, textTransform: 'capitalize' }}>
+                      {selectedConv.channel === 'instagram' ? <Instagram size={10} /> : selectedConv.channel === 'facebook' ? <Facebook size={10} /> : <MessageCircle size={10} />}
+                      {selectedConv.channel} | Cliente
+                    </p>
                  </div>
                   <div className="ml-auto flex items-center gap-3">
                      <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
