@@ -136,6 +136,7 @@ export default function Inbox() {
 
   useEffect(() => {
     if (selectedConv) {
+      setMessages((selectedConv.rawMessages || []).map((m, i) => ({
         id: i,
         sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
         text: m.content || m.text,
