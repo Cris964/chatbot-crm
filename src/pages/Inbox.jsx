@@ -136,13 +136,20 @@ export default function Inbox() {
 
   useEffect(() => {
     if (selectedConv) {
-      setMessages((selectedConv.rawMessages || []).map((m, i) => ({
-        id: i,
-        sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-        text: m.content || m.text,
-        type: m.type,
-        time: m.timestamp ? new Date(m.timestamp).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : (selectedConv.updated_at ? new Date(selectedConv.updated_at).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
-      })))
+      setMessages((selectedConv.rawMessages || []).map((m, i) => {
+        let ts = m.timestamp || m.created_at || selectedConv.updated_at || Date.now();
+        let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
+        const mediaUrl = m.media_url || m.url || (m.text?.startsWith('http') ? m.text : null);
+        const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? 'audio' : 'text');
+        
+        return {
+          id: i,
+          sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
+          text: m.content || m.text || m.media_url || m.url || '',
+          type: m.type || m.message_type || inferredType,
+          time: dateObj.toLocaleString('es-CO', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+        };
+      }))
 
       const convUpdateSub = supabase
         .channel(`public:conversations:${selectedConv.id}`)
@@ -155,13 +162,20 @@ export default function Inbox() {
           const updatedConv = payload.new
           setSelectedConv(prev => ({ ...prev, ...updatedConv }))
           if (updatedConv.messages) {
-            setMessages(updatedConv.messages.map((m, i) => ({
-              id: i,
-              sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-              text: m.content || m.text,
-              type: m.type,
-              time: m.timestamp ? new Date(m.timestamp).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : (updatedConv.updated_at ? new Date(updatedConv.updated_at).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
-            })))
+            setMessages(updatedConv.messages.map((m, i) => {
+              let ts = m.timestamp || m.created_at || updatedConv.updated_at || Date.now();
+              let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
+              const mediaUrl = m.media_url || m.url || (m.text?.startsWith('http') ? m.text : null);
+              const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? 'audio' : 'text');
+
+              return {
+                id: i,
+                sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
+                text: m.content || m.text || m.media_url || m.url || '',
+                type: m.type || m.message_type || inferredType,
+                time: dateObj.toLocaleString('es-CO', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+              };
+            }))
           }
         })
         .subscribe()
@@ -191,8 +205,8 @@ export default function Inbox() {
             id: conv.id,
             name: displayName,
             preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
-            time: conv.updated_at ? new Date(conv.updated_at).toLocaleString([], { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
-            channel: conv.channel ? conv.channel.toLowerCase() : 'whatsapp', 
+            time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
+            channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
             unread: false,
             avatar: displayName.substring(0, 2).toUpperCase(),
             bg: '#6366f1',
@@ -611,12 +625,16 @@ export default function Inbox() {
               <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {messages.map(m => (
                     <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
-                        {m.type === 'image' ? (
+                        {m.type === 'image' || (m.text && m.text.match(/\.(jpeg|jpg|gif|png)/i)) ? (
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
-                        ) : m.type === 'audio' ? (
+                        ) : m.type === 'audio' || m.type === 'voice' || (m.text && m.text.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? (
                           <audio controls src={m.text} style={{ width: '100%', height: 32, filter: m.sender === 'agent' ? 'invert(1)' : 'none' }} />
+                        ) : m.type === 'video' ? (
+                          <video controls src={m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                        ) : m.type === 'document' ? (
+                          <a href={m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
                         ) : (
-                          <p style={{ margin: 0 }}>{m.text}</p>
+                          <p style={{ margin: 0, wordBreak: 'break-word' }}>{m.text}</p>
                         )}
                         <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
                           {m.time}
