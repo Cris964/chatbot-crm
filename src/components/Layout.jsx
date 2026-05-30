@@ -18,6 +18,7 @@ export default function Layout({ session }) {
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showAIModal, setShowAIModal] = useState(false)
   const location = useLocation()
@@ -64,6 +65,11 @@ export default function Layout({ session }) {
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -224,6 +230,9 @@ export default function Layout({ session }) {
               )}
             </div>
 
+            <button className="header-action-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <button className="header-action-btn" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)' }} onClick={() => setShowAIModal(true)}>
               <Sparkles size={20} />
             </button>
