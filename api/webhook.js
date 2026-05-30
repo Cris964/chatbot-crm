@@ -188,7 +188,12 @@ export default async function handler(req, res) {
 
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
-SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.\n`;
+SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
+ADEMÁS, EVALÚA LA INTENCIÓN DEL CLIENTE Y AÑADE ESTE TAG AL FINAL DE TU RESPUESTA:
+[LEAD_STATE: Etapa | Score]
+Donde Etapa es uno de: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Venta Perdida".
+Donde Score es un número del 1 al 100.
+`;
                 } else {
                   inventoryContext = '\n[No hay productos configurados en el catálogo. Responde de forma general y amable. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN]]\n';
                 }
@@ -233,16 +238,58 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
                         // Analizar Tags
                         const needsHuman = botReplyText.includes('[NEEDS_HUMAN]');
                         const saleMatch = botReplyText.match(/\[SALE_CONFIRMED: (.*?)\]/);
+                        const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
                         
-                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/, '').trim();
+                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/, '').replace(/\[LEAD_STATE:.*?\]/i, '').trim();
+
+                        // Actualizar Lead Pipeline
+                        let stage = 'Contactado';
+                        let score = 10;
+                        if (leadStateMatch) {
+                             stage = leadStateMatch[1].trim();
+                             score = parseInt(leadStateMatch[2]);
+                        }
+                        if (saleMatch) {
+                             stage = 'Venta Cerrada';
+                             score = 100;
+                        }
+
+                        try {
+                             const { data: existingLead } = await supabase.from('leads').select('id').eq('client_id', clientId).eq('phone', senderPhone).single();
+                             if (existingLead) {
+                                  await supabase.from('leads').update({ stage, score, name: senderName }).eq('id', existingLead.id);
+                             } else {
+                                  await supabase.from('leads').insert([{
+                                       client_id: clientId,
+                                       phone: senderPhone,
+                                       name: senderName,
+                                       stage,
+                                       score,
+                                       source: 'WhatsApp',
+                                       value: '$0'
+                                  }]);
+                             }
+                        } catch(e) { console.error('Lead error', e) }
+
+                        // Asignación a Ventas
+                        let assignedUserId = null;
+                        if (saleMatch) {
+                             const { data: vends } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('role', 'vendedor').eq('status', 'activo').limit(1);
+                             if (vends && vends.length > 0) assignedUserId = vends[0].user_id;
+                        }
 
                         // Guardar en CRM
                         const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
-                        await supabase.from('conversations').update({
+                        let updatePayload = {
                             messages: [...(latest?.messages || []), { role: 'agent', content: cleanReply, timestamp: new Date().toISOString() }],
                             updated_at: new Date().toISOString(),
                             needs_human: needsHuman
-                        }).eq('id', conversationId);
+                        };
+                        if (assignedUserId) {
+                             updatePayload.assigned_to = assignedUserId;
+                        }
+
+                        await supabase.from('conversations').update(updatePayload).eq('id', conversationId);
 
                         // Crear Notificación si necesita humano
                         if (needsHuman) {

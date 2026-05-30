@@ -142,12 +142,24 @@ export default function Inbox() {
         const mediaUrl = m.media_url || m.url || (m.text?.startsWith('http') ? m.text : null);
         const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? 'audio' : 'text');
         
+        let finalContent = m.content || m.text || m.media_url || m.url || '';
+        let finalType = m.type || m.message_type || inferredType;
+        if (finalContent.includes('[IMAGEN_BASE64_URL]:')) {
+            finalType = 'image';
+            finalContent = finalContent.replace('[IMAGEN_BASE64_URL]:', '').trim();
+        } else if (finalContent.includes('[Multimedia:')) {
+            finalContent = '🖼️ [Multimedia no disponible]';
+        }
+
+        const dateStr = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
         return {
           id: i,
           sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-          text: m.content || m.text || m.media_url || m.url || '',
-          type: m.type || m.message_type || inferredType,
-          time: dateObj.toLocaleString('es-CO', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+          text: finalContent,
+          type: finalType,
+          time: `${dateStr} ${timeStr}`
         };
       }))
 
@@ -208,7 +220,7 @@ export default function Inbox() {
             time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
             channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
             unread: false,
-            avatar: displayName.substring(0, 2).toUpperCase(),
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
             bg: '#6366f1',
             tags: conv.needs_human ? ['Atención Req.'] : [],
             intent: 'consulta',
@@ -565,8 +577,8 @@ export default function Inbox() {
                 onClick={() => setSelectedConv(c)}
                 style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
               >
-                 <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0 }}>
-                    {c.avatar}
+                 <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
+                    {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}
                     {c.assigned_to && (
                        <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                           {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
@@ -599,7 +611,9 @@ export default function Inbox() {
                  >
                    <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} />
                  </button>
-                 <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0 }}>{selectedConv.avatar}</div>
+                 <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0, overflow: 'hidden' }}>
+                    {selectedConv.avatar?.startsWith('http') ? <img src={selectedConv.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : selectedConv.avatar}
+                 </div>
                  <div style={{ marginLeft: 12, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv.name}</span>
