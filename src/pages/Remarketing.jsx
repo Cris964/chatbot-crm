@@ -102,7 +102,7 @@ export default function Remarketing() {
         <div className="flex items-center gap-3">
           <Clock size={20} style={{ color: 'var(--accent-amber)' }} />
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Estos clientes no han realizado compras en los últimos <strong style={{ color: 'white' }}>6 meses</strong>. 
+            Estos clientes no han realizado compras en los últimos <strong style={{ color: "var(--text-primary)" }}>6 meses</strong>. 
             Selecciona a quiénes deseas que <strong style={{ color: 'var(--primary-400)' }}>Cami</strong> contacte hoy.
           </p>
         </div>

@@ -171,7 +171,7 @@ export default function Leads() {
         </div>
       </div>
 
-      <div className="filters-bar" style={{ background: 'rgba(255,255,255,0.02)', padding: '16px 24px', borderRadius: 16, marginBottom: 24, border: '1px solid var(--glass-border)' }}>
+      <div className="filters-bar" style={{ background: 'rgba(var(--overlay-rgb), 0.02)', padding: '16px 24px', borderRadius: 16, marginBottom: 24, border: '1px solid var(--glass-border)' }}>
         <div className="header-search" style={{ flex: 1, maxWidth: 400 }}>
           <Search size={18} />
           <input 
@@ -216,7 +216,7 @@ export default function Leads() {
                leads
                  .filter(l => l.name?.toLowerCase().includes(searchQuery.toLowerCase()))
                  .map((l, i) => (
-                   <tr key={l.id} className="table-row-hover" style={{ borderBottom: i === leads.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
+                   <tr key={l.id} className="table-row-hover" style={{ borderBottom: i === leads.length - 1 ? 'none' : '1px solid rgba(var(--overlay-rgb), 0.03)' }}>
                      <td style={{ padding: '24px' }}>
                         <div className="flex items-center gap-4">
                            <div className="avatar md" style={{ background: 'linear-gradient(135deg, #6366f1, #a5b4fc)' }}>{l.name?.substring(0,2).toUpperCase()}</div>
@@ -233,9 +233,9 @@ export default function Leads() {
                             value={l.stage} 
                             onChange={(e) => handleUpdateLead(l.id, { stage: e.target.value })}
                             style={{ 
-                                background: 'rgba(255,255,255,0.05)', 
+                                background: 'rgba(var(--overlay-rgb), 0.05)', 
                                 border: '1px solid var(--glass-border)',
-                                color: 'white',
+                                color: "var(--text-primary)",
                                 borderRadius: 8,
                                 fontSize: '0.75rem',
                                 padding: '4px 8px',

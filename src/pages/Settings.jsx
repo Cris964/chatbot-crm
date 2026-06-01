@@ -302,7 +302,7 @@ export default function Settings() {
                         disabled={isSaving}
                       >
                         {isSaving ? (
-                          <div className="spinner" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                          <div className="spinner" style={{ width: 16, height: 16, border: '2px solid rgba(var(--overlay-rgb), 0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                         ) : (
                           <Save size={16} />
                         )}

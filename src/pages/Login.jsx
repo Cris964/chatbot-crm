@@ -126,7 +126,7 @@ export default function Login({ onLogin }) {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(var(--overlay-rgb), 0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             ) : (
               <>Ingresar al panel <ArrowRight size={16} /></>
             )}

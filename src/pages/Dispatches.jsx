@@ -176,7 +176,7 @@ export default function Dispatches() {
               <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <MapPin size={12} /> {s.destination}
               </div>
-              <div style={{ marginTop: 12, height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
+              <div style={{ marginTop: 12, height: 4, background: 'rgba(var(--overlay-rgb), 0.05)', borderRadius: 2 }}>
                  <div style={{ width: `${s.progress}%`, height: '100%', background: s.progress === 100 ? 'var(--accent-emerald)' : 'var(--primary-500)', borderRadius: 2 }} />
               </div>
             </div>
@@ -190,7 +190,7 @@ export default function Dispatches() {
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Destino Final</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>{activeShipment?.city || 'Seleccionar...'}</div>
              </div>
-             <div style={{ background: activeShipment?.status === 'entregado' ? 'var(--accent-emerald)' : '#6366f1', color: 'white', borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(15px)' }}>
+             <div style={{ background: activeShipment?.status === 'entregado' ? 'var(--accent-emerald)' : '#6366f1', color: "var(--text-primary)", borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(15px)' }}>
                 {activeShipment?.status === 'entregado' ? <ShieldCheck size={18} /> : <Compass className="animate-spin-slow" size={18} />}
                 <span style={{ fontWeight: 700 }}>{activeShipment?.status === 'entregado' ? 'Entregado' : 'En Camino'}</span>
              </div>
@@ -263,13 +263,13 @@ export default function Dispatches() {
              {activeShipment?.timeline ? activeShipment.timeline.map((step, i) => (
                <div key={i} style={{ display: 'flex', gap: 20, position: 'relative', marginBottom: 28 }}>
                   {i !== activeShipment.timeline.length - 1 && (
-                    <div style={{ position: 'absolute', left: 20, top: 40, bottom: -28, width: 2, background: step.completed ? 'var(--primary-600)' : 'rgba(255,255,255,0.05)' }} />
+                    <div style={{ position: 'absolute', left: 20, top: 40, bottom: -28, width: 2, background: step.completed ? 'var(--primary-600)' : 'rgba(var(--overlay-rgb), 0.05)' }} />
                   )}
                   <div style={{ 
                     width: 40, 
                     height: 40, 
                     borderRadius: 12, 
-                    background: step.completed ? 'var(--primary-600)' : 'rgba(255,255,255,0.03)',
+                    background: step.completed ? 'var(--primary-600)' : 'rgba(var(--overlay-rgb), 0.03)',
                     border: step.completed ? 'none' : '1px solid var(--glass-border)',
                     color: step.completed ? 'white' : 'var(--text-tertiary)',
                     display: 'flex',

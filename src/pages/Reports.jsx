@@ -21,7 +21,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
       <div style={{
         background: 'rgba(22, 22, 31, 0.95)',
-        border: '1px solid rgba(255,255,255,0.1)',
+        border: '1px solid rgba(var(--overlay-rgb), 0.1)',
         borderRadius: '10px',
         padding: '12px 16px',
         backdropFilter: 'blur(12px)'
@@ -98,7 +98,7 @@ export default function Reports() {
                 <button
                   key={p}
                   className={`btn btn-sm ${period === p ? '' : 'btn-ghost'}`}
-                  style={period === p ? { background: 'var(--primary-600)', color: 'white' } : {}}
+                  style={period === p ? { background: 'var(--primary-600)', color: "var(--text-primary)" } : {}}
                   onClick={() => setPeriod(p)}
                 >
                   {p === 'week' ? 'Semana' : p === 'month' ? 'Mes' : p === 'quarter' ? 'Trimestre' : 'Año'}
@@ -154,7 +154,7 @@ export default function Reports() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={currentConversionData} barSize={40}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--overlay-rgb), 0.04)" />
               <XAxis dataKey="stage" stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
@@ -173,7 +173,7 @@ export default function Reports() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={currentSalesData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--overlay-rgb), 0.04)" />
               <XAxis dataKey="month" stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} tickFormatter={v => `$${v/1000}k`} />
               <Tooltip content={<CustomTooltip />} />
@@ -198,7 +198,7 @@ export default function Reports() {
                   <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--overlay-rgb), 0.04)" />
               <XAxis dataKey="day" stroke="#6b6b80" tick={{ fontSize: 11 }} />
               <YAxis stroke="#6b6b80" tick={{ fontSize: 11 }} tickFormatter={v => `${v} min`} />
               <Tooltip content={<CustomTooltip />} />

@@ -43,7 +43,7 @@ const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
-      background: sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-700)',
+      background: sender === 'client' ? 'rgba(var(--overlay-rgb), 0.05)' : 'var(--primary-700)',
       padding: '8px 12px',
       borderRadius: '24px',
       marginBottom: '8px',
@@ -66,16 +66,16 @@ const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
       
       <button 
         onClick={togglePlay}
-        style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', cursor: 'pointer', color: 'white' }}
+        style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', cursor: 'pointer', color: "var(--text-primary)" }}
       >
         {isPlaying ? <Square size={16} fill="white" /> : <div style={{ width: 0, height: 0, borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderLeft: '12px solid white', marginLeft: 4 }} />}
       </button>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-         <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, position: 'relative', overflow: 'hidden' }}>
+         <div style={{ width: '100%', height: 4, background: 'rgba(var(--overlay-rgb), 0.2)', borderRadius: 2, position: 'relative', overflow: 'hidden' }}>
             <div style={{ width: `${progress}%`, height: '100%', background: sender === 'client' ? '#10b981' : 'white', borderRadius: 2 }} />
          </div>
-         <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)' }}>
+         <div style={{ fontSize: '0.65rem', color: 'rgba(var(--overlay-rgb), 0.6)' }}>
             {durationText}
          </div>
       </div>
@@ -373,9 +373,13 @@ export default function Inbox() {
     e.preventDefault()
     if (!newMessage.trim() || !selectedConv) return
     
+    const isSim = selectedConv.phone.startsWith('SIM_')
+    const messageRole = isSim ? 'user' : 'agent'
+    const textMsg = newMessage
+
     const messageObj = {
-      role: 'agent',
-      content: newMessage,
+      role: messageRole,
+      content: textMsg,
       timestamp: new Date().toISOString()
     }
 
@@ -391,28 +395,41 @@ export default function Inbox() {
     if (!error) {
        setNewMessage('')
        
-       // Add to outbox history
-       await supabase.from('outbox').insert([{
-         client_id: tenant.clientId,
-         phone: selectedConv.phone,
-         message: newMessage,
-         user_id: session.user.id
-       }])
+       if (isSim) {
+         try {
+           await fetch('/api/simulate', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               conversationId: selectedConv.id,
+               clientId: tenant.clientId || 'c90f532b-0b32-4614-9c21-bbf664213468'
+             })
+           });
+         } catch (e) { console.error('Sim Error', e); }
+       } else {
+         // Add to outbox history
+         await supabase.from('outbox').insert([{
+           client_id: tenant.clientId,
+           phone: selectedConv.phone,
+           message: textMsg,
+           user_id: session.user.id
+         }])
 
-       // Call Vercel API to actually send the WhatsApp message
-       try {
-         await fetch('/api/send', {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({
-             client_id: tenant.clientId,
-             phone: selectedConv.phone,
-             message: newMessage,
-             type: 'text'
-           })
-         });
-       } catch (apiErr) {
-         console.error('Error sending message via API:', apiErr);
+         // Call Vercel API to actually send the WhatsApp message
+         try {
+           await fetch('/api/send', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               client_id: tenant.clientId,
+               phone: selectedConv.phone,
+               message: textMsg,
+               type: 'text'
+             })
+           });
+         } catch (apiErr) {
+           console.error('Error sending message via API:', apiErr);
+         }
        }
     }
   }
@@ -597,7 +614,7 @@ export default function Inbox() {
         }
 
         .inbox-sidebar {
-          background: rgba(255, 255, 255, 0.02);
+          background: rgba(var(--overlay-rgb), 0.02);
           backdrop-filter: blur(20px);
           border-right: 1px solid var(--glass-border);
           display: flex;
@@ -606,7 +623,7 @@ export default function Inbox() {
         }
 
         .chat-area {
-          background: rgba(255, 255, 255, 0.01);
+          background: rgba(var(--overlay-rgb), 0.01);
           border-right: 1px solid var(--glass-border);
           display: flex;
           flex-direction: column;
@@ -616,7 +633,7 @@ export default function Inbox() {
         }
 
         .contact-panel {
-          background: rgba(255, 255, 255, 0.01);
+          background: rgba(var(--overlay-rgb), 0.01);
           height: 100%;
           overflow-y: auto;
           padding: 20px;
@@ -657,7 +674,7 @@ export default function Inbox() {
           cursor: pointer;
         }
         .conversation-item:hover {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(var(--overlay-rgb), 0.05);
         }
         .conversation-item.active {
           background: rgba(99, 102, 241, 0.15);
@@ -673,7 +690,7 @@ export default function Inbox() {
         }
         
         .msg-client {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(var(--overlay-rgb), 0.05);
           border: 1px solid var(--glass-border);
           border-radius: 4px 16px 16px 16px;
           align-self: flex-start;
@@ -713,7 +730,7 @@ export default function Inbox() {
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       style={{ 
-                         background: activeTab === tab ? 'var(--primary-600)' : 'rgba(255,255,255,0.05)',
+                         background: activeTab === tab ? 'var(--primary-600)' : 'rgba(var(--overlay-rgb), 0.05)',
                          border: 'none', borderRadius: 12, padding: '4px 10px', fontSize: '0.7rem',
                          color: activeTab === tab ? 'white' : 'var(--text-secondary)', cursor: 'pointer',
                          textTransform: 'capitalize', whiteSpace: 'nowrap'
@@ -753,7 +770,7 @@ export default function Inbox() {
                  <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
                     {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}
                     {c.assigned_to && (
-                       <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                       <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: "var(--text-primary)" }}>
                           {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
                        </div>
                     )}
@@ -801,7 +818,7 @@ export default function Inbox() {
                     </p>
                  </div>
                   <div className="ml-auto flex items-center gap-3">
-                     <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
+                     <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
                         <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>AI</span>
                         <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={() => setBotActive(!botActive)} />
@@ -838,7 +855,7 @@ export default function Inbox() {
               </div>
 
               <div className="chat-input-area" style={{ padding: '12px 20px', background: 'rgba(0,0,0,0.2)' }}>
-                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '4px 12px', display: 'flex', alignItems: 'center' }}>
+                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(var(--overlay-rgb), 0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '4px 12px', display: 'flex', alignItems: 'center' }}>
                      {isRecording ? (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
                            <div className="pulse-red" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
@@ -846,7 +863,7 @@ export default function Inbox() {
                         </div>
                      ) : (
                         <input 
-                          type="text" placeholder="Escribe un mensaje..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '0.9rem' }} 
+                          type="text" placeholder="Escribe un mensaje..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem' }} 
                           value={newMessage} onChange={e => setNewMessage(e.target.value)}
                         />
                      )}
@@ -870,7 +887,7 @@ export default function Inbox() {
             </>
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', flexDirection: 'column', gap: 16 }}>
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: 24, borderRadius: '50%' }}><MessageSquare size={48} opacity={0.2} /></div>
+              <div style={{ background: 'rgba(var(--overlay-rgb), 0.03)', padding: 24, borderRadius: '50%' }}><MessageSquare size={48} opacity={0.2} /></div>
               <p>Selecciona un chat para comenzar</p>
             </div>
           )}
@@ -903,7 +920,7 @@ export default function Inbox() {
              ))}
            </div>
 
-           <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+           <div style={{ padding: 16, background: 'rgba(var(--overlay-rgb), 0.02)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
               {activeInfoTab === 'Contact' && (
                 <div className="animate-slideUp">
                   <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Contacto</h4>

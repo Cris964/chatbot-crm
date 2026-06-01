@@ -139,7 +139,7 @@ export default function SuperAdmin() {
             <div className="flex items-center gap-3" style={{ marginBottom: 8 }}>
               <div style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)', padding: '8px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ShieldCheck size={18} color="white" />
-                <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Super Admin</span>
+                <span style={{ color: "var(--text-primary)", fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Super Admin</span>
               </div>
             </div>
             <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>Panel de Empresas</h1>
@@ -198,15 +198,15 @@ export default function SuperAdmin() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary-400)' }}>{company.memberCount}</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Usuarios</div>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>{company.productCount}</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Productos</div>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
                   {company.prompt ? '✓' : '✗'}
                 </div>

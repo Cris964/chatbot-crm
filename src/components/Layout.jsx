@@ -169,12 +169,12 @@ export default function Layout({ session }) {
         <div className="sidebar-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: '16px 12px' }}>
           <NavLink to="/settings" className="sidebar-user" style={{ 
             display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit',
-            background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: '10px 12px',
-            border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s',
+            background: 'rgba(var(--overlay-rgb), 0.02)', borderRadius: 16, padding: '10px 12px',
+            border: '1px solid rgba(var(--overlay-rgb), 0.05)', transition: 'all 0.2s',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.08)'; e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb), 0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.02)'; e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb), 0.05)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
           >
             <div className="avatar md" style={{ background: 'linear-gradient(135deg, #6366f1, #10b981)', fontSize: 12, boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)', flexShrink: 0 }}>
               {tenant.membership?.full_name?.substring(0, 2).toUpperCase() || session?.user?.email?.substring(0, 2).toUpperCase()}
@@ -201,8 +201,8 @@ export default function Layout({ session }) {
             <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
             <input type="text" placeholder="Search for deals, tasks or clients... (⌘K)" />
             <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4 }}>
-               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'var(--text-tertiary)' }}>⌘</div>
-               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'var(--text-tertiary)' }}>K</div>
+               <div style={{ background: 'rgba(var(--overlay-rgb), 0.05)', border: '1px solid var(--glass-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'var(--text-tertiary)' }}>⌘</div>
+               <div style={{ background: 'rgba(var(--overlay-rgb), 0.05)', border: '1px solid var(--glass-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'var(--text-tertiary)' }}>K</div>
             </div>
           </div>
 

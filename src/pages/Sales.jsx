@@ -181,11 +181,11 @@ export default function Sales() {
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthlyData} barSize={32}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--overlay-rgb), 0.04)" />
             <XAxis dataKey="month" stroke="#6b6b80" tick={{ fontSize: 12 }} />
             <YAxis stroke="#6b6b80" tick={{ fontSize: 12 }} tickFormatter={v => `$${v/1000}k`} />
             <Tooltip
-              contentStyle={{ background: 'rgba(22,22,31,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
+              contentStyle={{ background: 'rgba(22,22,31,0.95)', border: '1px solid rgba(var(--overlay-rgb), 0.1)', borderRadius: 10 }}
               formatter={(v) => [`$${v.toLocaleString()}`, 'Ventas']}
             />
             <Bar dataKey="ventas" fill="#6366f1" radius={[6, 6, 0, 0]} />

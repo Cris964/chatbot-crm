@@ -84,9 +84,9 @@ export default function Marketing() {
             </div>
             <div style={{ padding: 12 }}>
                {campaigns.map(c => (
-                 <div key={c.id} style={{ padding: '20px', borderRadius: 16, borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="table-row-hover">
+                 <div key={c.id} style={{ padding: '20px', borderRadius: 16, borderBottom: '1px solid rgba(var(--overlay-rgb), 0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="table-row-hover">
                     <div className="flex items-center gap-4">
-                       <div className="avatar md" style={{ background: c.status === 'Running' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)', color: c.status === 'Running' ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }}>
+                       <div className="avatar md" style={{ background: c.status === 'Running' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(var(--overlay-rgb), 0.05)', color: c.status === 'Running' ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }}>
                           <Send size={18} />
                        </div>
                        <div>

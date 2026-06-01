@@ -78,7 +78,7 @@ export default function Calendar() {
               
               return (
                 <div key={i} style={{ 
-                    border: '1px solid rgba(255,255,255,0.03)', 
+                    border: '1px solid rgba(var(--overlay-rgb), 0.03)', 
                     minHeight: 100, 
                     padding: 12,
                     background: isToday ? 'rgba(99, 102, 241, 0.03)' : 'transparent',
@@ -90,7 +90,7 @@ export default function Calendar() {
                         {hasAppt && (
                           <div style={{ marginTop: 8, padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid var(--primary-600)', borderRadius: 6 }}>
                              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary-300)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Demo CRM</div>
-                             <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>10:00 AM</div>
+                             <div style={{ fontSize: '0.6rem', color: 'rgba(var(--overlay-rgb), 0.5)' }}>10:00 AM</div>
                           </div>
                         )}
                      </>
@@ -124,7 +124,7 @@ export default function Calendar() {
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 20 }}>Próximas Citas</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                  {appointments.map(a => (
-                   <div key={a.id} style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid var(--glass-border)' }}>
+                   <div key={a.id} style={{ padding: 16, background: 'rgba(var(--overlay-rgb), 0.02)', borderRadius: 16, border: '1px solid var(--glass-border)' }}>
                       <div className="flex justify-between items-start mb-2">
                          <span className={`badge ${a.status === 'Confirmed' ? 'emerald' : 'amber'}`} style={{ fontSize: '0.6rem' }}>{a.status}</span>
                          <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />

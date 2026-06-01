@@ -253,7 +253,7 @@ export default function Products() {
       }}>
         <Package size={18} style={{ color: 'var(--primary-400)', flexShrink: 0 }} />
         <span>
-          Los productos <strong style={{ color: 'white' }}>activos</strong> son inyectados automáticamente al prompt de tu agente IA.
+          Los productos <strong style={{ color: "var(--text-primary)" }}>activos</strong> son inyectados automáticamente al prompt de tu agente IA.
           Las <strong style={{ color: 'var(--accent-amber)' }}>promociones</strong> aparecen destacadas en las respuestas del bot.
         </span>
       </div>

@@ -209,7 +209,7 @@ export default function Pipeline() {
                         flex: 1, 
                         minHeight: 150, 
                         paddingBottom: 40,
-                        background: snapshot.isDraggingOver ? 'rgba(255,255,255,0.02)' : 'transparent',
+                        background: snapshot.isDraggingOver ? 'rgba(var(--overlay-rgb), 0.02)' : 'transparent',
                         borderRadius: 'var(--radius-md)',
                         transition: 'background 0.2s ease'
                       }}
