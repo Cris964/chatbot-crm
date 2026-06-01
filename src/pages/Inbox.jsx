@@ -10,6 +10,81 @@ import {
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 
+const VoiceNotePlayer = ({ src, sender, durationText = "0:00" }) => {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const audioRef = useRef(null)
+
+  const togglePlay = () => {
+    if (!audioRef.current) return
+    if (isPlaying) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play()
+    }
+    setIsPlaying(!isPlaying)
+  }
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const current = audioRef.current.currentTime
+      const total = audioRef.current.duration || 1
+      setProgress((current / total) * 100)
+    }
+  }
+
+  const handleEnded = () => {
+    setIsPlaying(false)
+    setProgress(0)
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      background: sender === 'client' ? 'rgba(255,255,255,0.05)' : 'var(--primary-700)',
+      padding: '8px 12px',
+      borderRadius: '24px',
+      marginBottom: '8px',
+      minWidth: '220px'
+    }}>
+      <div style={{ position: 'relative', width: 40, height: 40 }}>
+         <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#ccc', overflow: 'hidden' }}>
+            <User size={40} color="#666" style={{ marginTop: 8 }} />
+         </div>
+         <div style={{ position: 'absolute', bottom: -2, right: -2, background: sender === 'client' ? '#10b981' : '#3b82f6', borderRadius: '50%', padding: 2 }}>
+            <Mic size={10} color="white" />
+         </div>
+      </div>
+      
+      <button 
+        onClick={togglePlay}
+        style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', cursor: 'pointer', color: 'white' }}
+      >
+        {isPlaying ? <Square size={16} fill="white" /> : <div style={{ width: 0, height: 0, borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderLeft: '12px solid white', marginLeft: 4 }} />}
+      </button>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+         <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ width: `${progress}%`, height: '100%', background: sender === 'client' ? '#10b981' : 'white', borderRadius: 2 }} />
+         </div>
+         <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)' }}>
+            {durationText}
+         </div>
+      </div>
+      
+      <audio 
+        ref={audioRef} 
+        src={src} 
+        onTimeUpdate={handleTimeUpdate} 
+        onEnded={handleEnded} 
+        style={{ display: 'none' }}
+      />
+    </div>
+  )
+}
+
 export default function Inbox() {
   const { session } = useOutletContext()
   const tenant = useTenant()
@@ -718,8 +793,8 @@ export default function Inbox() {
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
                           <div>
-                            {m.media_url && <audio controls src={m.media_url} style={{ width: '100%', height: 32, filter: m.sender === 'agent' ? 'invert(1)' : 'none', marginBottom: 8 }} />}
-                            <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8 }}>{m.text.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
+                            {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" />}
+                            <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
                           </div>
                         ) : m.type === 'video' ? (
                           <video controls src={m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
