@@ -63,7 +63,14 @@ export default async function handler(req, res) {
             const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
             
             if (whatsappToken) {
-               textResponse = await processMediaMessage(messageObj, whatsappToken, openAiKey);
+               const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey);
+               if (typeof mediaResult === 'object' && mediaResult !== null) {
+                  textResponse = mediaResult.text;
+                  messageObj._mediaUrl = mediaResult.mediaUrl;
+                  messageObj._mediaType = mediaResult.mediaType;
+               } else {
+                  textResponse = mediaResult;
+               }
             } else {
                textResponse = '[Multimedia: No se pudo obtener token para descargar]';
             }
@@ -130,7 +137,9 @@ export default async function handler(req, res) {
         role: 'user',
         content: textResponse,
         timestamp: new Date().toISOString(),
-        meta_id: messageId
+        meta_id: messageId,
+        ...(messageObj._mediaUrl && { media_url: messageObj._mediaUrl }),
+        ...(messageObj._mediaType && { media_type: messageObj._mediaType })
       };
 
       let finalMessages = [];
@@ -248,17 +257,21 @@ Donde Score es un número del 1 al 100.
                 const aiMessages = [
                     { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n\n${inventoryContext}` },
                     ...finalMessages.slice(-10).map(m => {
-                        if (m.role === 'user' && m.content.includes('[IMAGEN_BASE64_URL]:')) {
-                            const [textPart, base64Url] = m.content.split('[IMAGEN_BASE64_URL]:');
+                        let cleanContent = m.content || "";
+                        if (m.role === 'user' && cleanContent) {
+                            cleanContent = cleanContent.replace(/^\[Nota de Voz del Cliente\]:\s*/, '');
+                        }
+                        if (m.role === 'user' && cleanContent.includes('[IMAGEN_BASE64_URL]:')) {
+                            const [textPart, base64Url] = cleanContent.split('[IMAGEN_BASE64_URL]:');
                             return {
                                 role: 'user',
                                 content: [
-                                    { type: 'text', text: "El cliente envió esta imagen." },
+                                    { type: 'text', text: textPart || "El cliente envió esta imagen." },
                                     { type: 'image_url', image_url: { url: base64Url.trim() } }
                                 ]
                             };
                         }
-                        return { role: m.role === 'agent' ? 'assistant' : 'user', content: m.content };
+                        return { role: m.role === 'agent' ? 'assistant' : 'user', content: cleanContent };
                     })
                 ];                const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',

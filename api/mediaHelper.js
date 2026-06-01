@@ -1,4 +1,8 @@
-// mediaHelper.js — uses native Node 18+ fetch (no external dependencies)
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function processMediaMessage(messageObj, whatsappToken, openAiKey) {
   try {
@@ -63,7 +67,7 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
 
       const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${openAiKey}` },
+        headers: { Authorization: `Bearer ${finalOpenAiKey}` },
         body: formData
       });
 
@@ -73,7 +77,29 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
       }
 
       const whisperData = await whisperRes.json();
-      return `[Nota de Voz del Cliente]: "${whisperData.text}"`;
+      const transcribedText = `"${whisperData.text}"`;
+
+      // Upload audio to Supabase
+      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+      let audioUrl = null;
+      try {
+        const { data: uploadData, error: uploadErr } = await supabase.storage.from('whatsapp_media').upload(fileName, buffer, {
+           contentType: mimeType,
+           upsert: true
+        });
+        if (!uploadErr && uploadData) {
+           const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+           audioUrl = publicUrlData.publicUrl;
+        }
+      } catch (err) {
+        console.error("Error uploading to supabase storage:", err);
+      }
+
+      return {
+          text: transcribedText,
+          mediaUrl: audioUrl,
+          mediaType: 'audio'
+      };
 
     } else if (type === 'image') {
       const base64 = buffer.toString('base64');

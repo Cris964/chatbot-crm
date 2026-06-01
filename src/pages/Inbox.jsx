@@ -162,7 +162,8 @@ export default function Inbox() {
           id: i,
           sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
           text: finalContent,
-          type: finalType,
+          type: m.media_type || finalType,
+          media_url: m.media_url,
           time: `${dateStr} ${timeStr}`
         };
       }))
@@ -202,7 +203,8 @@ export default function Inbox() {
                 id: i,
                 sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
                 text: finalContent,
-                type: finalType,
+                type: m.media_type || finalType,
+                media_url: m.media_url,
                 time: `${dateStr} ${timeStr}`
               };
             }))
@@ -714,8 +716,11 @@ export default function Inbox() {
                     <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
                         {m.type === 'image' || (m.text && m.text.match(/\.(jpeg|jpg|gif|png)/i)) ? (
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
-                        ) : m.type === 'audio' || m.type === 'voice' || (m.text && m.text.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? (
-                          <audio controls src={m.text} style={{ width: '100%', height: 32, filter: m.sender === 'agent' ? 'invert(1)' : 'none' }} />
+                        ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
+                          <div>
+                            {m.media_url && <audio controls src={m.media_url} style={{ width: '100%', height: 32, filter: m.sender === 'agent' ? 'invert(1)' : 'none', marginBottom: 8 }} />}
+                            <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8 }}>{m.text.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
+                          </div>
                         ) : m.type === 'video' ? (
                           <video controls src={m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'document' ? (
