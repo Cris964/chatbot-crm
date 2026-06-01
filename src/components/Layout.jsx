@@ -4,7 +4,7 @@ import {
   LayoutDashboard, MessageSquare, Users, UserCircle, Kanban,
   DollarSign, Truck, Zap, Settings, Search,
   Bell, Menu, Sparkles, LogOut, Calendar,
-  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard
+  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard, Sun, Moon
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
