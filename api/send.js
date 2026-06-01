@@ -31,8 +31,14 @@ export default async function handler(req, res) {
     }
 
     // Initialize Supabase admin client to fetch client credentials
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase credentials in environment variables.");
+      return res.status(500).json({ error: 'Server misconfiguration: missing Supabase credentials' });
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch the client's WhatsApp credentials from the database
