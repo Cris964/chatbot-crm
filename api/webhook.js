@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       // Manejo Multimedia (Audio / Imagen / Video)
       if (!textResponse && messageObj.type !== 'text') {
         try {
-            const tempClient = await supabase.from('clients').select('whatsapp_token, openai_key').eq('phone_number_id', phoneNumberId).single();
+            const tempClient = await supabase.from('clients').select('*').eq('phone_number_id', phoneNumberId).single();
             const whatsappToken = tempClient?.data?.whatsapp_token;
             const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
             
