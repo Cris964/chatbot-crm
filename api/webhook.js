@@ -295,10 +295,12 @@ Donde Score es un número del 1 al 100.
                     if (botReplyText) {
                         // Analizar Tags
                         const needsHuman = botReplyText.includes('[NEEDS_HUMAN]');
-                        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED: (.*?)\]/);
                         const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
+                        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
+                        const imageMatch = botReplyText.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+                        const imageUrl = imageMatch ? imageMatch[1].trim() : null;
                         
-                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA\]/i, '').trim();
+                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/i, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA\]/i, '').replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
 
                         // Actualizar Lead Pipeline
                         let stage = 'Contactado';
@@ -398,6 +400,19 @@ Donde Score es un número del 1 al 100.
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
+                            if (imageUrl) {
+                                await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+                                  method: 'POST',
+                                  headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    messaging_product: 'whatsapp',
+                                    to: senderPhone,
+                                    type: 'image',
+                                    image: { link: imageUrl }
+                                  })
+                                }).catch(e => console.error("Image send error", e));
+                            }
+
                             await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                               method: 'POST',
                               headers: {

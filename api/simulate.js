@@ -91,11 +91,16 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
 
     if (aiResponse.ok) {
       const aiData = await aiResponse.json();
-      const aiReply = aiData.choices[0]?.message?.content || 'No pude generar respuesta.';
+      let aiReply = aiData.choices[0]?.message?.content || 'No pude generar respuesta.';
+      
+      const imageMatch = aiReply.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+      const imageUrl = imageMatch ? imageMatch[1].trim() : null;
+      aiReply = aiReply.replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
       
       const newMessages = [...chat.messages, {
         role: 'agent',
         content: aiReply,
+        image_url: imageUrl,
         timestamp: new Date().toISOString()
       }];
 
