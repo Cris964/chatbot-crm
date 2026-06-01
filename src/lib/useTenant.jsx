@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 const TenantContext = createContext(null)
 
 // Super admin emails that can access the SuperAdmin panel
-const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com']
+const SUPER_ADMIN_EMAILS = ['admin@nexusia.com']
 
 
 

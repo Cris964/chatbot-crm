@@ -27,7 +27,7 @@ const integrations = [
   { name: 'Zapier', desc: 'Automatizaciones externas', icon: '⚡', connected: false, color: '#ff4a00' },
   { name: 'Google Analytics', desc: 'Tracking y analítica', icon: '📊', connected: true, color: '#f59e0b' },
   { name: 'Slack', desc: 'Notificaciones de equipo', icon: '💼', connected: false, color: '#4a154b' },
-  { name: 'Calendly', desc: 'Agendamiento de citas', icon: '📅', connected: false, color: '#006bff' },
+  { name: 'Google Calendar', desc: 'Agendamiento automático de citas por IA', icon: '📅', connected: false, color: '#4285F4', isOAuth: true },
 ]
 
 const roleDefinitions = [
@@ -57,7 +57,7 @@ export default function Settings() {
   // Team Members State (real data from DB)
   const [teamMembers, setTeamMembers] = useState([])
   const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteForm, setInviteForm] = useState({ full_name: '', email: '', password: '', role: 'vendedor' })
+  const [inviteForm, setInviteForm] = useState({ full_name: '', email: '', password: '', role: 'asesor', customRole: '', permissions: { view_inbox: true, view_crm: false, view_settings: false } })
   const [isInviting, setIsInviting] = useState(false)
 
   // Workspace Form State
@@ -196,7 +196,8 @@ export default function Settings() {
           email: inviteForm.email,
           password: inviteForm.password,
           full_name: inviteForm.full_name,
-          role: inviteForm.role,
+          role: inviteForm.role === 'otro' ? inviteForm.customRole : inviteForm.role,
+          permissions: inviteForm.permissions,
           client_id: tenant.clientId,
           admin_user_id: session.user.id,
         })
@@ -205,7 +206,7 @@ export default function Settings() {
       const result = await res.json()
       if (res.ok) {
         setShowInviteModal(false)
-        setInviteForm({ full_name: '', email: '', password: '', role: 'vendedor' })
+        setInviteForm({ full_name: '', email: '', password: '', role: 'asesor', customRole: '', permissions: { view_inbox: true, view_crm: false, view_settings: false } })
         fetchTeamMembers()
       } else {
         alert('Error: ' + (result.error || 'No se pudo crear el usuario'))
@@ -366,8 +367,8 @@ export default function Settings() {
                             </div>
                           </td>
                           <td>
-                            <span className={`badge ${member.role === 'admin' ? 'rose' : 'purple'}`}>
-                              {member.role === 'admin' ? 'Administrador' : member.role === 'vendedor' ? 'Vendedor' : member.role === 'soporte' ? 'Soporte' : member.role}
+                            <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)', textTransform: 'capitalize' }}>
+                              {member.role}
                             </span>
                           </td>
                           <td><span className={`badge ${member.status === 'activo' ? 'emerald' : 'amber'}`}>{member.status}</span></td>
@@ -441,9 +442,19 @@ export default function Settings() {
                         <h4>{int.name}</h4>
                         <p>{int.desc}</p>
                       </div>
-                      <span className={`badge ${int.connected ? 'emerald' : 'neutral'}`} style={{ fontSize: '0.68rem' }}>
-                        {int.connected ? 'Conectado' : 'Disponible'}
-                      </span>
+                      {int.isOAuth ? (
+                         <button 
+                            className="btn btn-secondary btn-sm" 
+                            style={{ fontSize: '0.7rem' }}
+                            onClick={() => alert("Para conectar Google Calendar de forma segura, necesitamos configurar tus credenciales (Client ID) de Google Cloud. Por favor contacta a soporte para habilitar esta integración avanzada.")}
+                         >
+                            Conectar cuenta
+                         </button>
+                      ) : (
+                         <span className={`badge ${int.connected ? 'emerald' : 'neutral'}`} style={{ fontSize: '0.68rem' }}>
+                           {int.connected ? 'Conectado' : 'Disponible'}
+                         </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -458,6 +469,16 @@ export default function Settings() {
                 <p>Configura cómo y cuándo recibir alertas del sistema</p>
 
                 {[
+                  { title: 'Notificaciones Push (Navegador/Celular)', desc: 'Recibe alertas nativas en tu dispositivo incluso si minimizas la pestaña', action: () => {
+                    if (!('Notification' in window)) {
+                       alert('Este navegador no soporta notificaciones de escritorio');
+                    } else {
+                       Notification.requestPermission().then(permission => {
+                          if (permission === 'granted') alert('¡Notificaciones habilitadas con éxito!');
+                          else alert('Permiso denegado por el usuario.');
+                       });
+                    }
+                  }},
                   { title: 'Nuevo lead capturado', desc: 'Recibe una alerta cuando un nuevo lead entre al sistema' },
                   { title: 'Conversación escalada', desc: 'Alerta cuando el chatbot escala una conversación a humano' },
                   { title: 'Intención de compra', desc: 'La IA detecta un cliente con potencial de compra' },
@@ -473,7 +494,11 @@ export default function Settings() {
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>{notif.desc}</div>
                     </div>
                     <div className="flex gap-3">
-                      <div className={`toggle-switch ${i < 4 ? 'active' : ''}`} />
+                      {notif.action ? (
+                         <button className="btn btn-secondary btn-sm" onClick={notif.action}>Habilitar en este dispositivo</button>
+                      ) : (
+                         <div className={`toggle-switch ${i < 5 ? 'active' : ''}`} />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -544,10 +569,34 @@ export default function Settings() {
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Rol</label>
                   <select className="form-input" value={inviteForm.role} onChange={e => setInviteForm({...inviteForm, role: e.target.value})}>
                     <option value="admin">Administrador</option>
-                    <option value="vendedor">Vendedor</option>
-                    <option value="soporte">Soporte</option>
-                    <option value="marketing">Marketing</option>
+                    <option value="asesor">Asesor</option>
+                    <option value="finalizador">Finalizador</option>
+                    <option value="agendamientos">Agendamientos</option>
+                    <option value="otro">Otro (Especificar)</option>
                   </select>
+                </div>
+                {inviteForm.role === 'otro' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Especificar Rol</label>
+                    <input type="text" required className="form-input" placeholder="Ej. Marketing" value={inviteForm.customRole} onChange={e => setInviteForm({...inviteForm, customRole: e.target.value})} />
+                  </div>
+                )}
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)' }}>Permisos (Próximamente efectivos)</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={inviteForm.permissions.view_inbox} onChange={e => setInviteForm({...inviteForm, permissions: {...inviteForm.permissions, view_inbox: e.target.checked}})} />
+                        Ver Inbox (Chats)
+                     </label>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={inviteForm.permissions.view_crm} onChange={e => setInviteForm({...inviteForm, permissions: {...inviteForm.permissions, view_crm: e.target.checked}})} />
+                        Ver CRM (Ventas)
+                     </label>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={inviteForm.permissions.view_settings} onChange={e => setInviteForm({...inviteForm, permissions: {...inviteForm.permissions, view_settings: e.target.checked}})} />
+                        Administrar Configuración
+                     </label>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3" style={{ marginTop: 24 }}>

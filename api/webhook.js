@@ -298,7 +298,7 @@ Donde Score es un número del 1 al 100.
                         const saleMatch = botReplyText.match(/\[SALE_CONFIRMED: (.*?)\]/);
                         const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
                         
-                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/, '').replace(/\[LEAD_STATE:.*?\]/i, '').trim();
+                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA\]/i, '').trim();
 
                         // Actualizar Lead Pipeline
                         let stage = 'Contactado';
@@ -358,10 +358,28 @@ Donde Score es un número del 1 al 100.
                             type: 'escalation'
                           }]);
                         }
+                        
+                        // Notificación de Cita
+                        if (botReplyText.match(/\[CITA_AGENDADA\]/i)) {
+                          await supabase.from('notifications').insert([{
+                            client_id: clientId,
+                            conversation_id: conversationId,
+                            message: `Nueva cita agendada con ${senderName}`,
+                            type: 'appointment'
+                          }]);
+                        }
 
-                        // Descontar Stock si hay venta
+                        // Descontar Stock si hay venta y Notificar
                         if (saleMatch && saleMatch[1]) {
                           const productName = saleMatch[1].trim();
+                          
+                          await supabase.from('notifications').insert([{
+                            client_id: clientId,
+                            conversation_id: conversationId,
+                            message: `Venta cerrada: ${productName} a ${senderName}`,
+                            type: 'sale'
+                          }]);
+
                           const { data: prod } = await supabase
                             .from('products')
                             .select('id, stock')

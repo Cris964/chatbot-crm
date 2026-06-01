@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, password, full_name, role, client_id, admin_user_id } = req.body;
+    const { email, password, full_name, role, permissions, client_id, admin_user_id } = req.body;
 
     // Validate required fields
     if (!email || !password || !full_name || !role || !client_id || !admin_user_id) {
@@ -25,11 +25,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
-    // Validate role
-    const validRoles = ['admin', 'vendedor', 'soporte', 'marketing'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: `Rol inválido. Opciones: ${validRoles.join(', ')}` });
-    }
+    // Removed hardcoded validRoles restriction to allow custom roles like 'Finalizador', 'Asesor', etc.
 
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -52,7 +48,7 @@ export default async function handler(req, res) {
       .single();
 
     // Allow super admins or company admins
-    const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com'];
+    const SUPER_ADMIN_EMAILS = ['admin@nexusia.com'];
     const { data: callerAuth } = await supabaseAdmin.auth.admin.getUserById(admin_user_id);
     const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(callerAuth?.user?.email?.toLowerCase());
     
@@ -85,7 +81,8 @@ export default async function handler(req, res) {
         role,
         full_name,
         email,
-        status: 'activo'
+        status: 'activo',
+        permissions: permissions || { view_inbox: true }
       });
 
     if (memberError) {

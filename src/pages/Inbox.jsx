@@ -95,6 +95,7 @@ export default function Inbox() {
   const { session } = useOutletContext()
   const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
+  const [activeTab, setActiveTab] = useState('all')
   const [selectedConv, setSelectedConv] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
@@ -323,7 +324,7 @@ export default function Inbox() {
             preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
             time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
             channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
-            unread: false,
+            unread: conv.messages && conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role === 'user',
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
             bg: '#6366f1',
             tags: conv.needs_human ? ['Atención Req.'] : [],
@@ -706,6 +707,22 @@ export default function Inbox() {
                <Search size={16} />
                <input type="text" placeholder="Buscar..." style={{ fontSize: '0.85rem' }} />
              </div>
+             <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
+                {['all', 'whatsapp', 'instagram', 'messenger'].map(tab => (
+                   <button 
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      style={{ 
+                         background: activeTab === tab ? 'var(--primary-600)' : 'rgba(255,255,255,0.05)',
+                         border: 'none', borderRadius: 12, padding: '4px 10px', fontSize: '0.7rem',
+                         color: activeTab === tab ? 'white' : 'var(--text-secondary)', cursor: 'pointer',
+                         textTransform: 'capitalize', whiteSpace: 'nowrap'
+                      }}
+                   >
+                      {tab === 'all' ? 'Todos' : tab}
+                   </button>
+                ))}
+             </div>
              <button 
                className="btn btn-primary btn-sm" 
                style={{ 
@@ -726,7 +743,7 @@ export default function Inbox() {
                  <div className="spinner" style={{ margin: '0 auto 12px' }} />
                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
               </div>
-            ) : conversationsList.map(c => (
+            ) : conversationsList.filter(c => activeTab === 'all' || c.channel === activeTab).map(c => (
               <div 
                 key={c.id} 
                 className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
@@ -743,8 +760,11 @@ export default function Inbox() {
                  </div>
                  <div className="conv-content" style={{ marginLeft: 12, minWidth: 0, flex: 1 }}>
                     <div className="flex justify-between items-center">
-                       <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                          {c.unread && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px rgba(59, 130, 246, 0.8)' }} />}
+                       </div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: c.unread ? '#3b82f6' : 'var(--text-tertiary)', fontWeight: c.unread ? 700 : 400, flexShrink: 0 }}>
                          {c.channel === 'instagram' ? <Instagram size={12} /> : c.channel === 'facebook' ? <Facebook size={12} /> : <MessageCircle size={12} />}
                          <span>{c.time}</span>
                        </div>

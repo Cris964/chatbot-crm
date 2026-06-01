@@ -37,6 +37,31 @@ export default function Layout({ session }) {
           filter: `client_id=eq.${tenant.clientId}` 
         }, payload => {
           setNotifications(prev => [payload.new, ...prev])
+          
+          // 1. Reproducir sonido (Beep) usando Web Audio API
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)()
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.type = 'sine'
+            osc.frequency.setValueAtTime(880, ctx.currentTime) // A5 note
+            gain.gain.setValueAtTime(0.2, ctx.currentTime)
+            osc.start()
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5)
+            osc.stop(ctx.currentTime + 0.5)
+          } catch(err){ console.log("Audio no soportado o bloqueado", err) }
+
+          // 2. Notificación Push del Navegador
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification('NexusCRM Alerta', {
+                body: payload.new.type === 'escalation' ? '¡Un cliente necesita asistencia humana urgente!' : 'Tienes una nueva notificación en el sistema.',
+                icon: '/vite.svg'
+              })
+            } catch(e) { console.log("Push no soportado", e) }
+          }
         })
         .subscribe()
 
@@ -141,18 +166,28 @@ export default function Layout({ session }) {
           ))}
         </nav>
 
-        <div className="sidebar-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: 16 }}>
-          <div className="sidebar-user" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ background: showProfileMenu ? 'rgba(255,255,255,0.05)' : 'transparent', borderRadius: 12, padding: 8 }}>
-            <div className="avatar md" style={{ background: 'linear-gradient(135deg, #6366f1, #10b981)', fontSize: 12 }}>
+        <div className="sidebar-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: '16px 12px' }}>
+          <NavLink to="/settings" className="sidebar-user" style={{ 
+            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit',
+            background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: '10px 12px',
+            border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
+          >
+            <div className="avatar md" style={{ background: 'linear-gradient(135deg, #6366f1, #10b981)', fontSize: 12, boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)', flexShrink: 0 }}>
               {tenant.membership?.full_name?.substring(0, 2).toUpperCase() || session?.user?.email?.substring(0, 2).toUpperCase()}
             </div>
             {!isSidebarCollapsed && (
-              <div className="user-info">
-                <div className="user-name" style={{ fontSize: '0.85rem' }}>{tenant.membership?.full_name || session?.user?.email?.split('@')[0]}</div>
-                <div className="user-role" style={{ fontSize: '0.7rem' }}>{displayRole}</div>
+              <div className="user-info" style={{ flex: 1, minWidth: 0 }}>
+                <div className="user-name" style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                   {tenant.membership?.full_name || session?.user?.email?.split('@')[0]}
+                </div>
+                <div className="user-role" style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>{displayRole}</div>
               </div>
             )}
-          </div>
+          </NavLink>
         </div>
       </aside>
 
