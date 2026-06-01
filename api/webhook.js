@@ -90,17 +90,28 @@ export default async function handler(req, res) {
       }
 
       // 1. Identificar cliente por phone_number_id (multi-tenant)
-      const { data: clients } = await supabase
+      console.log(`[DEBUG] phoneNumberId recibido: "${phoneNumberId}"`);
+      console.log(`[DEBUG] supabaseUrl: ${supabaseUrl ? 'SET' : 'MISSING'}`);
+      console.log(`[DEBUG] supabaseKey type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE' : 'ANON'}`);
+
+      const { data: clients, error: clientErr } = await supabase
         .from('clients')
         .select('id, user_id, active, prompt, model, whatsapp_token, name, phone_number_id')
         .eq('phone_number_id', phoneNumberId)
         .limit(1);
+
+      console.log(`[DEBUG] clients encontrados: ${clients?.length || 0}, error: ${clientErr?.message || 'none'}`);
 
       let clientId = null;
       let userId = null;
       if (clients && clients.length > 0) {
         clientId = clients[0].id;
         userId = clients[0].user_id;
+        console.log(`[DEBUG] clientId: ${clientId}`);
+      } else {
+        // Fallback: si no hay match por phone_number_id, listar todos los clientes para debug
+        const { data: allClients } = await supabase.from('clients').select('id, name, phone_number_id').limit(10);
+        console.log(`[DEBUG] Todos los clientes en DB: ${JSON.stringify(allClients)}`);
       }
 
       // 2. Gestionar Conversación
