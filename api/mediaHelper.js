@@ -48,7 +48,10 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
 
     // 3. Process based on type
     if (type === 'audio' || type === 'voice') {
-      if (!openAiKey) return '[Nota de Voz recibida. Sin API Key de OpenAI para transcribir.]';
+      const finalOpenAiKey = openAiKey || process.env.OPENAI_API_KEY;
+      if (!finalOpenAiKey) {
+        return `[DEBUG NO KEY: openAiKey=${!!openAiKey}, env=${typeof process.env.OPENAI_API_KEY}, len=${process.env.OPENAI_API_KEY?.length || 0}]`;
+      }
 
       // Use native FormData (Node 18+)
       const blob = new Blob([buffer], { type: mimeType });
