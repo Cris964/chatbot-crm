@@ -33,8 +33,28 @@ export default function Pipeline() {
   const [newDeal, setNewDeal] = useState({ name: '', company: '', value: '', stage: 'Nuevo' })
 
   useEffect(() => {
+    let subscription = null;
+
     if (tenant.clientId && !tenant.isLoading) {
        fetchLeads()
+
+       // Subscribe to real-time changes
+       subscription = supabase.channel('leads-changes')
+         .on(
+           'postgres_changes',
+           { event: '*', schema: 'public', table: 'leads', filter: `client_id=eq.${tenant.clientId}` },
+           (payload) => {
+             console.log('Real-time leads change received!', payload)
+             fetchLeads() // Re-fetch all leads to get correct state (simpler than manual array merge)
+           }
+         )
+         .subscribe()
+    }
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription)
+      }
     }
   }, [tenant.clientId, tenant.isLoading])
 

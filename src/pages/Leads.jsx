@@ -63,8 +63,28 @@ export default function Leads() {
   })
 
   useEffect(() => {
+    let subscription = null;
+
     if (tenant.clientId && !tenant.isLoading) {
       fetchLeads()
+
+      // Subscribe to real-time changes
+      subscription = supabase.channel('leads-page-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'leads', filter: `client_id=eq.${tenant.clientId}` },
+          (payload) => {
+            console.log('Real-time leads change received on Leads page!', payload)
+            fetchLeads()
+          }
+        )
+        .subscribe()
+    }
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription)
+      }
     }
   }, [tenant.clientId, tenant.isLoading])
 
