@@ -10,7 +10,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 
-const VoiceNotePlayer = ({ src, sender, durationText = "0:00" }) => {
+const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const audioRef = useRef(null)
@@ -49,9 +49,15 @@ const VoiceNotePlayer = ({ src, sender, durationText = "0:00" }) => {
       marginBottom: '8px',
       minWidth: '220px'
     }}>
-      <div style={{ position: 'relative', width: 40, height: 40 }}>
-         <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#ccc', overflow: 'hidden' }}>
-            <User size={40} color="#666" style={{ marginTop: 8 }} />
+      <div style={{ position: 'relative', width: 40, height: 40, flexShrink: 0 }}>
+         <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#ccc', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {avatar && avatar.startsWith('http') ? (
+               <img src={avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" />
+            ) : avatar ? (
+               <div style={{fontSize: '16px', fontWeight: 700, color: '#333'}}>{avatar}</div>
+            ) : (
+               <User size={40} color="#666" style={{ marginTop: 8 }} />
+            )}
          </div>
          <div style={{ position: 'absolute', bottom: -2, right: -2, background: sender === 'client' ? '#10b981' : '#3b82f6', borderRadius: '50%', padding: 2 }}>
             <Mic size={10} color="white" />
@@ -793,7 +799,7 @@ export default function Inbox() {
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
                           <div>
-                            {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" />}
+                            {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" avatar={m.sender === 'client' ? selectedConv?.avatar : null} />}
                             <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
                           </div>
                         ) : m.type === 'video' ? (
