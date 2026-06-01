@@ -148,7 +148,39 @@ export default async function handler(req, res) {
         conversationId = insertedChat?.id;
       }
 
-      // 3. AI Dispatch — DYNAMIC per-company (no more hardcoded Naturel products)
+      // 3. AUTO-CREATE LEAD — Siempre que llegue un mensaje, upsert al pipeline
+      if (clientId) {
+        try {
+          const { data: existingLead } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('client_id', clientId)
+            .eq('phone', senderPhone)
+            .maybeSingle();
+          
+          if (existingLead) {
+            // Actualizar nombre si cambió
+            await supabase.from('leads').update({ name: senderName }).eq('id', existingLead.id);
+          } else {
+            // Crear nuevo lead automáticamente
+            await supabase.from('leads').insert([{
+              client_id: clientId,
+              phone: senderPhone,
+              name: senderName,
+              stage: 'Nuevo',
+              score: 5,
+              source: 'WhatsApp',
+              value: '$0',
+              status: 'active'
+            }]);
+            console.log(`[LEAD CREADO] ${senderName} (${senderPhone}) → Nuevo`);
+          }
+        } catch(leadErr) {
+          console.error('[LEAD AUTO-CREATE ERROR]', leadErr);
+        }
+      }
+
+      // 4. AI Dispatch — DYNAMIC per-company (no more hardcoded Naturel products)
       if (clients?.[0]?.active !== false && conversationId) {
         const clientSetup = clients[0];
         const openRouterKey = process.env.OPENROUTER_API_KEY;
