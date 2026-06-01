@@ -58,10 +58,12 @@ export default async function handler(req, res) {
       // Manejo Multimedia (Audio / Imagen / Video)
       if (!textResponse && messageObj.type !== 'text') {
         try {
-            const tempClient = await supabase.from('clients').select('whatsapp_token').eq('phone_number_id', phoneNumberId).single();
+            const tempClient = await supabase.from('clients').select('whatsapp_token, openai_key').eq('phone_number_id', phoneNumberId).single();
             const whatsappToken = tempClient?.data?.whatsapp_token;
+            const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
+            
             if (whatsappToken) {
-               textResponse = await processMediaMessage(messageObj, whatsappToken, process.env.OPENAI_API_KEY);
+               textResponse = await processMediaMessage(messageObj, whatsappToken, openAiKey);
             } else {
                textResponse = '[Multimedia: No se pudo obtener token para descargar]';
             }
