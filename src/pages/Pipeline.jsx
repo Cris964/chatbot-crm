@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
+import { useTenant } from '../lib/useTenant'
 import {
   Plus, MoreHorizontal, DollarSign, Filter, Settings, Search, X
 } from 'lucide-react'
@@ -24,6 +25,7 @@ function getProbabilityColor(p) {
 
 export default function Pipeline() {
   const { session } = useOutletContext()
+  const tenant = useTenant()
   const [stages, setStages] = useState(initialStages)
   const [isLoading, setIsLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -31,22 +33,18 @@ export default function Pipeline() {
   const [newDeal, setNewDeal] = useState({ name: '', company: '', value: '', stage: 'Nuevo' })
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (tenant.clientId && !tenant.isLoading) {
        fetchLeads()
     }
-  }, [session])
+  }, [tenant.clientId, tenant.isLoading])
 
   const fetchLeads = async () => {
     setIsLoading(true)
-    
-    // 1. Get client IDs for multitenancy
-    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', session.user.id)
-    const clientIds = clients?.map(c => c.id) || []
 
     const { data: leads, error } = await supabase
       .from('leads')
       .select('*')
-      .in('client_id', clientIds)
+      .eq('client_id', tenant.clientId)
     
     if (!error && leads) {
       const newStages = initialStages.map(stage => ({
@@ -123,17 +121,14 @@ export default function Pipeline() {
     if (e) e.preventDefault()
     setIsSaving(true)
     
-    // Get client for multitenancy
-    const { data: client } = await supabase.from('clients').select('id').eq('user_id', session.user.id).single()
-    
-    if (!client) {
+    if (!tenant.clientId) {
         alert('No se encontró un cliente asociado a tu cuenta.')
         setIsSaving(false)
         return
     }
 
     const { error } = await supabase.from('leads').insert({
-      client_id: client.id,
+      client_id: tenant.clientId,
       name: newDeal.name,
       company: newDeal.company,
       value: newDeal.value.startsWith('$') ? newDeal.value : `$${newDeal.value}`,
