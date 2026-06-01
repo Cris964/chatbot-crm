@@ -306,12 +306,30 @@ export default function Inbox() {
 
     if (!error) {
        setNewMessage('')
+       
+       // Add to outbox history
        await supabase.from('outbox').insert([{
-         client_id: selectedConv.client?.id,
+         client_id: tenant.clientId,
          phone: selectedConv.phone,
          message: newMessage,
          user_id: session.user.id
        }])
+
+       // Call Vercel API to actually send the WhatsApp message
+       try {
+         await fetch('/api/send', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             client_id: tenant.clientId,
+             phone: selectedConv.phone,
+             message: newMessage,
+             type: 'text'
+           })
+         });
+       } catch (apiErr) {
+         console.error('Error sending message via API:', apiErr);
+       }
     }
   }
 
@@ -399,6 +417,22 @@ export default function Inbox() {
         .eq('id', selectedConv.id)
 
       if (!dbError) {
+        // Enviar a la API de WhatsApp
+        try {
+          await fetch('/api/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              client_id: tenant.clientId,
+              phone: selectedConv.phone,
+              message: audioUrl,
+              type: 'audio'
+            })
+          });
+        } catch (apiErr) {
+          console.error('Error sending audio via API:', apiErr);
+        }
+        
         fetchConversations()
       } else {
         throw dbError
@@ -443,7 +477,25 @@ export default function Inbox() {
         })
         .eq('id', selectedConv.id)
 
-      if (!dbError) fetchConversations()
+      if (!dbError) {
+        // Enviar a la API de WhatsApp
+        try {
+          await fetch('/api/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              client_id: tenant.clientId,
+              phone: selectedConv.phone,
+              message: fileUrl,
+              type: file.type.startsWith('image/') ? 'image' : 'document'
+            })
+          });
+        } catch (apiErr) {
+          console.error('Error sending file via API:', apiErr);
+        }
+        
+        fetchConversations()
+      }
     } finally {
       setIsLoading(false)
     }

@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 export default async function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -17,34 +19,68 @@ export default async function handler(req, res) {
   try {
     const payload = req.body;
     
-    // Supabase webhook wrapper validation
-    if (!payload || !payload.record) {
-      return res.status(400).json({ error: 'Invalid Supabase webhook payload' });
-    }
-
-    const record = payload.record;
+    // Support both direct API calls and legacy DB webhooks
+    const record = payload.record || payload;
     
-    // The recipient phone. The frontend added `phone` and `user_phone`
     const phone = record.phone || record.user_phone;
     const message = record.message;
+    const clientId = record.client_id;
 
-    if (!phone || !message) {
-      return res.status(400).json({ error: 'Missing phone or message in record' });
+    if (!phone || !message || !clientId) {
+      return res.status(400).json({ error: 'Missing phone, message, or client_id' });
     }
 
-    // Load WhatsApp credentials from Vercel Environment Variables
-    const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-    const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+    // Initialize Supabase admin client to fetch client credentials
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch the client's WhatsApp credentials from the database
+    const { data: clients, error: clientErr } = await supabase
+      .from('clients')
+      .select('whatsapp_token, phone_number_id')
+      .eq('id', clientId)
+      .limit(1);
+
+    if (clientErr || !clients || clients.length === 0) {
+      return res.status(404).json({ error: 'Client not found or db error' });
+    }
+
+    const client = clients[0];
+    const WHATSAPP_TOKEN = client.whatsapp_token || process.env.WHATSAPP_TOKEN;
+    const PHONE_NUMBER_ID = client.phone_number_id || process.env.PHONE_NUMBER_ID;
 
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
-      console.error('Missing WHATSAPP_TOKEN or PHONE_NUMBER_ID in Vercel environment');
-      return res.status(500).json({ error: 'Server misconfiguration: missing WhatsApp credentials' });
+      console.error(`Missing WHATSAPP_TOKEN or PHONE_NUMBER_ID for client ${clientId}`);
+      return res.status(500).json({ error: 'Client misconfiguration: missing WhatsApp credentials' });
     }
 
     // Format Meta Graph API request
-    const metaUrl = `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`;
+    const metaUrl = `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`;
     
-    console.log(`Sending message to ${phone} via Meta API...`);
+    console.log(`Sending message to ${phone} via Meta API for client ${clientId}...`);
+
+    let metaPayload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: phone,
+    };
+
+    const msgType = record.type || 'text';
+
+    if (msgType === 'image') {
+      metaPayload.type = 'image';
+      metaPayload.image = { link: message };
+    } else if (msgType === 'audio') {
+      metaPayload.type = 'audio';
+      metaPayload.audio = { link: message };
+    } else if (msgType === 'document' || msgType === 'file') {
+      metaPayload.type = 'document';
+      metaPayload.document = { link: message };
+    } else {
+      metaPayload.type = 'text';
+      metaPayload.text = { preview_url: false, body: message };
+    }
 
     const metaResponse = await fetch(metaUrl, {
       method: 'POST',
@@ -52,16 +88,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: phone,
-        type: 'text',
-        text: {
-          preview_url: false,
-          body: message
-        }
-      })
+      body: JSON.stringify(metaPayload)
     });
 
     const metaResult = await metaResponse.json();
@@ -76,7 +103,6 @@ export default async function handler(req, res) {
 
     console.log('Successfully sent message:', metaResult);
 
-    // Consider success, return 200 to acknowledge webhook
     return res.status(200).json({
       success: true,
       meta_message_id: metaResult.messages?.[0]?.id,
