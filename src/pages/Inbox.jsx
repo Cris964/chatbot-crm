@@ -119,18 +119,22 @@ export default function Inbox() {
 
     // Realtime listener for new conversations or updates
     const convSub = supabase
-      .channel('public:conversations')
+      .channel('inbox-conversations-list')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'conversations'
-      }, () => {
+        table: 'conversations',
+        filter: `client_id=eq.${tenant.clientId}`
+      }, (payload) => {
+        console.log('Realtime conversation list update', payload)
         fetchConversations()
       })
       .subscribe()
 
     return () => {
-      supabase.removeChannel(convSub)
+      if (convSub) {
+        supabase.removeChannel(convSub)
+      }
     }
   }, [tenant.clientId, tenant.isLoading])
 
@@ -164,36 +168,53 @@ export default function Inbox() {
       }))
 
       const convUpdateSub = supabase
-        .channel(`public:conversations:${selectedConv.id}`)
+        .channel(`inbox-active-conversation-${selectedConv.id}`)
         .on('postgres_changes', { 
-          event: 'UPDATE', 
+          event: '*', 
           schema: 'public', 
           table: 'conversations', 
           filter: `id=eq.${selectedConv.id}` 
         }, (payload) => {
-          const updatedConv = payload.new
-          setSelectedConv(prev => ({ ...prev, ...updatedConv }))
-          if (updatedConv.messages) {
+          console.log('Realtime active conversation update', payload)
+          if (payload.new && payload.new.messages) {
+            const updatedConv = payload.new
+            setSelectedConv(prev => ({ ...prev, ...updatedConv, rawMessages: updatedConv.messages }))
+            
             setMessages(updatedConv.messages.map((m, i) => {
               let ts = m.timestamp || m.created_at || updatedConv.updated_at || Date.now();
               let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
               const mediaUrl = m.media_url || m.url || (m.text?.startsWith('http') ? m.text : null);
               const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? 'audio' : 'text');
+              
+              let finalContent = m.content || m.text || m.media_url || m.url || '';
+              let finalType = m.type || m.message_type || inferredType;
+              if (finalContent.includes('[IMAGEN_BASE64_URL]:')) {
+                  finalType = 'image';
+                  finalContent = finalContent.replace('[IMAGEN_BASE64_URL]:', '').trim();
+              } else if (finalContent.includes('[Multimedia:')) {
+                  finalContent = '🖼️ [Multimedia no disponible]';
+              }
+
+              const dateStr = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+              const timeStr = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 
               return {
                 id: i,
                 sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-                text: m.content || m.text || m.media_url || m.url || '',
-                type: m.type || m.message_type || inferredType,
-                time: dateObj.toLocaleString('es-CO', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+                text: finalContent,
+                type: finalType,
+                time: `${dateStr} ${timeStr}`
               };
             }))
+            setTimeout(scrollToBottom, 100)
           }
         })
         .subscribe()
 
       return () => {
-        supabase.removeChannel(convUpdateSub)
+        if (convUpdateSub) {
+          supabase.removeChannel(convUpdateSub)
+        }
       }
     }
   }, [selectedConv])
