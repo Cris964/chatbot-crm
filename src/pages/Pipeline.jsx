@@ -169,12 +169,12 @@ export default function Pipeline() {
   return (
     <div className="page-content" style={{ paddingBottom: 0, display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height))' }}>
       <div className="page-header animate-slideUp" style={{ flexShrink: 0 }}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="page-title">Pipeline de Ventas</h1>
             <p className="page-subtitle">Valor total del pipeline: <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>${totalValue.toLocaleString()}</span></p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button className="btn btn-secondary" onClick={() => alert('Filtros avanzados próximamente')}><Filter size={16} /> Filtros</button>
             <button className="btn btn-secondary" onClick={() => alert('Personalización de columnas próximamente')}><Settings size={16} /> Personalizar</button>
             <button className="btn btn-primary" onClick={() => { setNewDeal({ ...newDeal, stage: 'Nuevo' }); setShowModal(true); }}>

@@ -154,7 +154,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
+      <div className="stats-grid animate-slideUp">
         <div className="stat-card animate-slideUp" style={{ animationDelay: '0.1s' }}>
           <div className="flex justify-between items-start mb-4">
              <div className="ai-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><DollarSign size={18} /></div>
@@ -208,7 +208,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '32px' }}>
+      <div className="dashboard-charts-grid">
         <div className="card animate-slideUp" style={{ animationDelay: '0.5s', padding: '32px' }}>
           <div className="flex justify-between items-center mb-8">
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>

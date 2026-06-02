@@ -133,7 +133,13 @@ export default function Layout({ session }) {
 
   return (
     <div className="app-layout">
-      <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+      {/* Mobile Backdrop */}
+      <div 
+        className={`sidebar-backdrop ${mobileOpen ? 'show' : ''}`} 
+        onClick={() => setMobileOpen(false)}
+      ></div>
+
+      <aside className={`sidebar ${isSidebarCollapsed && !mobileOpen ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="nexus-logo-wrapper">
              <NexusLogo size={isSidebarCollapsed ? 36 : 40} />
@@ -156,6 +162,7 @@ export default function Layout({ session }) {
                 <NavLink
                   key={item.to}
                   to={item.to}
+                  onClick={() => setMobileOpen(false)}
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
                   <item.icon size={20} />
@@ -193,7 +200,13 @@ export default function Layout({ session }) {
 
       <div className="main-content">
         <header className="top-header">
-          <button className="header-toggle" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
+          <button className="header-toggle" onClick={() => {
+            if (window.innerWidth <= 768) {
+              setMobileOpen(!mobileOpen)
+            } else {
+              setIsSidebarCollapsed(!isSidebarCollapsed)
+            }
+          }}>
             <Menu size={20} />
           </button>
 
