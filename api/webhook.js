@@ -294,13 +294,16 @@ Donde Score es un número del 1 al 100.
                     
                     if (botReplyText) {
                         // Analizar Tags
-                        const needsHuman = botReplyText.includes('[NEEDS_HUMAN]');
+                        const needsHumanMatch = botReplyText.match(/\[NEEDS_HUMAN(?::(.*?))?\]/i);
+                        const needsHuman = !!needsHumanMatch;
+                        const humanDept = needsHumanMatch ? (needsHumanMatch[1] || '').trim().toUpperCase() : null;
+
                         const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
                         const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
                         const imageMatch = botReplyText.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
                         const imageUrl = imageMatch ? imageMatch[1].trim() : null;
                         
-                        let cleanReply = botReplyText.replace('[NEEDS_HUMAN]', '').replace(/\[SALE_CONFIRMED: .*?\]/i, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA\]/i, '').replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
+                        let cleanReply = botReplyText.replace(/\[NEEDS_HUMAN(?::.*?)?\]/gi, '').replace(/\[SALE_CONFIRMED: .*?\]/i, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA\]/i, '').replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
 
                         // Actualizar Lead Pipeline
                         let stage = 'Contactado';
@@ -353,10 +356,12 @@ Donde Score es un número del 1 al 100.
 
                         // Crear Notificación si necesita humano
                         if (needsHuman) {
+                          let notifMsg = `Intervención requerida para ${senderName}`;
+                          if (humanDept) notifMsg += ` (Área: ${humanDept})`;
                           await supabase.from('notifications').insert([{
                             client_id: clientId,
                             conversation_id: conversationId,
-                            message: `Intervención requerida para ${senderName}`,
+                            message: notifMsg,
                             type: 'escalation'
                           }]);
                         }
