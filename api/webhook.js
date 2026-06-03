@@ -301,9 +301,10 @@ Donde Score es un número del 1 al 100.
                         const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
                         const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
                         const imageMatch = botReplyText.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+                        const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
                         const imageUrl = imageMatch ? imageMatch[1].trim() : null;
                         
-                        let cleanReply = botReplyText.replace(/\[NEEDS_HUMAN(?::.*?)?\]/gi, '').replace(/\[SALE_CONFIRMED: .*?\]/i, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA\]/i, '').replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
+                        let cleanReply = botReplyText.replace(/\[NEEDS_HUMAN(?::.*?)?\]/gi, '').replace(/\[SALE_CONFIRMED: .*?\]/i, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA(?::.*?)?\]/i, '').replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
 
                         // Actualizar Lead Pipeline
                         let stage = 'Contactado';
@@ -366,14 +367,35 @@ Donde Score es un número del 1 al 100.
                           }]);
                         }
                         
-                        // Notificación de Cita
-                        if (botReplyText.match(/\[CITA_AGENDADA\]/i)) {
+                        // Notificación de Cita y Registro
+                        if (citaMatch) {
+                          const appointmentDateStr = citaMatch[1] ? citaMatch[1].trim() : null;
+                          let msg = `Nueva cita agendada con ${senderName}`;
+                          if (appointmentDateStr) msg += ` para el ${appointmentDateStr}`;
+
                           await supabase.from('notifications').insert([{
                             client_id: clientId,
                             conversation_id: conversationId,
-                            message: `Nueva cita agendada con ${senderName}`,
+                            message: msg,
                             type: 'appointment'
                           }]);
+
+                          if (appointmentDateStr) {
+                             try {
+                               const parsedDate = new Date(appointmentDateStr);
+                               if (!isNaN(parsedDate)) {
+                                 await supabase.from('appointments').insert([{
+                                    client_id: clientId,
+                                    phone: senderPhone,
+                                    name: senderName,
+                                    appointment_date: parsedDate.toISOString(),
+                                    status: 'scheduled'
+                                 }]);
+                               }
+                             } catch(err) {
+                               console.error("Error parsing appointment date", err);
+                             }
+                          }
                         }
 
                         // Descontar Stock si hay venta y Notificar
