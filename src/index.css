@@ -61,35 +61,37 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
 
-  /* Overlay for inline styles */
+  /* Overlay & specific components */
   --overlay-rgb: 255, 255, 255;
+  --header-bg: rgba(5, 5, 8, 0.5);
 }
 
 [data-theme='light'] {
   /* Theme variables (Light Mode) */
-  --bg-primary: #F3F4F6;
+  --bg-primary: #F8FAFC;
   --bg-secondary: #FFFFFF;
   --bg-tertiary: #FFFFFF;
   --bg-elevated: #FFFFFF;
-  --bg-hover: rgba(0, 0, 0, 0.03);
-  --bg-active: rgba(0, 0, 0, 0.06);
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.08);
 
   /* Borders & Glass */
-  --glass-bg: #FFFFFF;
-  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.06);
   --border-default: rgba(0, 0, 0, 0.08);
 
   /* Text */
-  --text-primary: #111827;
-  --text-secondary: #4B5563;
-  --text-tertiary: #9CA3AF;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #64748B;
   
   /* Charts & UI */
   --chart-grid: rgba(0, 0, 0, 0.05);
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
 
-  /* Overlay for inline styles */
+  /* Overlay & specific components */
   --overlay-rgb: 0, 0, 0;
+  --header-bg: rgba(255, 255, 255, 0.85);
 }
 
 /* === Reset & Base === */
@@ -354,7 +356,7 @@ img {
 /* === Top Header === */
 .top-header {
   height: var(--header-height);
-  background: rgba(5, 5, 8, 0.3);
+  background: var(--header-bg);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--glass-border);
   display: flex;
@@ -2290,6 +2292,34 @@ select.form-input option {
   .page-title {
     font-size: 1.8rem !important;
     line-height: 1.2 !important;
+  }
+}
+
+/* === Calendar Specific === */
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 24px;
+  height: calc(100vh - 250px);
+}
+
+.calendar-day-cell:hover {
+  background: rgba(var(--overlay-rgb), 0.03) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.calendar-day-cell.is-today {
+  border: 1px solid var(--primary-500) !important;
+}
+
+@media (max-width: 1024px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .calendar-main-card {
+    min-height: 60vh !important;
   }
 }
 

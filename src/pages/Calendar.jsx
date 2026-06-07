@@ -103,10 +103,10 @@ export default function Calendar() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 24, height: 'calc(100vh - 250px)' }}>
+      <div className="calendar-layout">
         
         {/* Calendar Grid */}
-        <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
+        <div className="card calendar-main-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
           <div className="flex justify-between items-center mb-8">
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
             <div className="flex gap-2">
@@ -132,12 +132,14 @@ export default function Calendar() {
               const dayAppts = appointments.filter(a => a.date === currentDateStr);
               
               return (
-                <div key={i} style={{ 
-                    border: '1px solid rgba(var(--overlay-rgb), 0.03)', 
-                    minHeight: 100, 
-                    padding: 8,
-                    background: isToday ? 'rgba(99, 102, 241, 0.03)' : 'transparent',
-                    position: 'relative'
+                <div key={i} className={`calendar-day-cell ${isToday ? 'is-today' : ''}`} style={{ 
+                    border: '1px solid var(--glass-border)', 
+                    minHeight: 120, 
+                    padding: '8px 12px',
+                    background: isToday ? 'rgba(99, 102, 241, 0.05)' : 'rgba(var(--overlay-rgb), 0.01)',
+                    position: 'relative',
+                    borderRadius: 8,
+                    transition: 'all 0.2s ease'
                 }}>
                    {dayNum > 0 && dayNum <= daysInMonth && (
                      <>
@@ -169,7 +171,7 @@ export default function Calendar() {
         </div>
 
         {/* Upcoming Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="calendar-side-panel" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
            <div className="card" style={{ padding: 24 }}>
               <div className="flex items-center gap-2 mb-6">
                  <div className="ai-icon-wrapper mini"><Sparkles size={14} /></div>
