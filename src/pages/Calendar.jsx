@@ -4,19 +4,68 @@ import {
   ChevronLeft, ChevronRight, MoreHorizontal, 
   CheckCircle2, AlertCircle, Sparkles, MapPin, Search, X
 } from 'lucide-react'
+import { useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
 
 export default function Calendar() {
+  const tenant = useTenant()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState('Month')
   const [showModal, setShowModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [newAppt, setNewAppt] = useState({ title: '', date: '', time: '', contact: '' })
+  const [newAppt, setNewAppt] = useState({ title: '', date: '', time: '', contact: '', department: 'Trazzos' })
+  const [appointments, setAppointments] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Mock appointments
-  const appointments = [
-    { id: 1, title: 'Reunión NexusCRM', time: '10:00 AM', date: '2026-04-12', type: 'Demo', status: 'Confirmed', contact: 'Juan Pérez' },
-    { id: 2, title: 'Cierre de Venta - Bot Auto', time: '02:30 PM', date: '2026-04-12', type: 'Sales', status: 'Pending', contact: 'Maria Lopez' },
-  ]
+  useEffect(() => {
+    if (tenant.clientId) {
+      fetchAppointments()
+    }
+  }, [tenant.clientId])
+
+  const fetchAppointments = async () => {
+    setIsLoading(true)
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('client_id', tenant.clientId)
+      .order('date', { ascending: true })
+      
+    if (data) {
+      setAppointments(data.map(d => ({
+         id: d.id,
+         title: d.title,
+         time: d.time ? d.time.slice(0,5) : '00:00', // format HH:MM
+         date: d.date,
+         type: 'System',
+         status: d.status,
+         contact: d.contact_name || d.contact_phone || 'Cliente',
+         department: d.department || 'Trazzos'
+      })))
+    }
+    setIsLoading(false)
+  }
+
+  const handleCreate = async () => {
+    if (!newAppt.title || !newAppt.date || !newAppt.time) return alert("Llena los campos requeridos")
+    setIsSaving(true)
+    const { error } = await supabase.from('appointments').insert({
+       client_id: tenant.clientId,
+       title: newAppt.title,
+       date: newAppt.date,
+       time: newAppt.time,
+       contact_name: newAppt.contact,
+       department: newAppt.department,
+       status: 'Confirmed'
+    })
+    setIsSaving(false)
+    if (!error) {
+       setShowModal(false)
+       setNewAppt({ title: '', date: '', time: '', contact: '', department: 'Trazzos' })
+       fetchAppointments()
+    }
+  }
 
   const days = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
   const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -72,27 +121,45 @@ export default function Calendar() {
             ))}
             
             {Array.from({ length: 35 }).map((_, i) => {
-              const dayNum = i - 2 // Simple offset for demo
-              const isToday = dayNum === 11
-              const hasAppt = dayNum === 12
+              // Simplified calendar grid logic (always starting on 1st for demo purposes)
+              const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+              const dayNum = i - firstDay + 1;
+              const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+              
+              const isToday = dayNum === new Date().getDate() && currentDate.getMonth() === new Date().getMonth();
+              const currentDateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+              
+              const dayAppts = appointments.filter(a => a.date === currentDateStr);
               
               return (
                 <div key={i} style={{ 
                     border: '1px solid rgba(var(--overlay-rgb), 0.03)', 
                     minHeight: 100, 
-                    padding: 12,
+                    padding: 8,
                     background: isToday ? 'rgba(99, 102, 241, 0.03)' : 'transparent',
                     position: 'relative'
                 }}>
-                   {dayNum > 0 && dayNum <= 30 && (
+                   {dayNum > 0 && dayNum <= daysInMonth && (
                      <>
                         <span style={{ fontSize: '0.9rem', fontWeight: isToday ? 800 : 500, color: isToday ? 'var(--primary-400)' : 'var(--text-secondary)' }}>{dayNum}</span>
-                        {hasAppt && (
-                          <div style={{ marginTop: 8, padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid var(--primary-600)', borderRadius: 6 }}>
-                             <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary-300)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Demo CRM</div>
-                             <div style={{ fontSize: '0.6rem', color: 'rgba(var(--overlay-rgb), 0.5)' }}>10:00 AM</div>
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                          {dayAppts.slice(0, 3).map(a => (
+                            <div key={a.id} style={{ 
+                                padding: '4px 6px', 
+                                background: a.department === 'Crearte' ? 'rgba(249, 115, 22, 0.1)' : 'rgba(99, 102, 241, 0.1)', 
+                                border: `1px solid ${a.department === 'Crearte' ? 'var(--accent-amber)' : 'var(--primary-600)'}`, 
+                                borderRadius: 4 
+                            }}>
+                               <div style={{ fontSize: '0.65rem', fontWeight: 800, color: a.department === 'Crearte' ? 'var(--accent-amber)' : 'var(--primary-300)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                 {a.title}
+                               </div>
+                               <div style={{ fontSize: '0.6rem', color: 'rgba(var(--overlay-rgb), 0.5)' }}>{a.time}</div>
+                            </div>
+                          ))}
+                          {dayAppts.length > 3 && (
+                            <div style={{ fontSize: '0.65rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>+{dayAppts.length - 3} más</div>
+                          )}
+                        </div>
                      </>
                    )}
                 </div>
@@ -123,21 +190,32 @@ export default function Calendar() {
            <div className="card" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 20 }}>Próximas Citas</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                 {appointments.map(a => (
-                   <div key={a.id} style={{ padding: 16, background: 'rgba(var(--overlay-rgb), 0.02)', borderRadius: 16, border: '1px solid var(--glass-border)' }}>
+                 {appointments.filter(a => new Date(a.date) >= new Date()).slice(0, 5).map(a => (
+                   <div key={a.id} style={{ 
+                       padding: 16, 
+                       background: 'rgba(var(--overlay-rgb), 0.02)', 
+                       borderRadius: 16, 
+                       border: `1px solid ${a.department === 'Crearte' ? 'rgba(249, 115, 22, 0.3)' : 'var(--glass-border)'}` 
+                   }}>
                       <div className="flex justify-between items-start mb-2">
-                         <span className={`badge ${a.status === 'Confirmed' ? 'emerald' : 'amber'}`} style={{ fontSize: '0.6rem' }}>{a.status}</span>
+                         <div className="flex gap-2">
+                            <span className={`badge ${a.status === 'Confirmed' ? 'emerald' : 'amber'}`} style={{ fontSize: '0.6rem' }}>{a.status}</span>
+                            {a.department === 'Crearte' && <span className="badge amber" style={{ fontSize: '0.6rem' }}>Crearte</span>}
+                         </div>
                          <MoreHorizontal size={14} style={{ color: 'var(--text-tertiary)' }} />
                       </div>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>{a.title}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                         <Clock size={12} /> {a.time}
+                         <Clock size={12} /> {a.date} | {a.time}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                          <Users size={12} /> {a.contact}
                       </div>
                    </div>
                  ))}
+                 {appointments.length === 0 && !isLoading && (
+                    <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '2rem 0' }}>No hay citas próximas</div>
+                 )}
               </div>
            </div>
         </div>
@@ -168,21 +246,28 @@ export default function Calendar() {
                         <input type="time" className="input" value={newAppt.time} onChange={e => setNewAppt({...newAppt, time: e.target.value})} />
                     </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cliente / Contacto</label>
-                  <input type="text" className="input" placeholder="Buscar contacto..." value={newAppt.contact} onChange={e => setNewAppt({...newAppt, contact: e.target.value})} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cliente / Contacto</label>
+                      <input type="text" className="input" placeholder="Buscar contacto..." value={newAppt.contact} onChange={e => setNewAppt({...newAppt, contact: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Departamento</label>
+                      <select className="input" value={newAppt.department} onChange={e => setNewAppt({...newAppt, department: e.target.value})}>
+                          <option>Trazzos</option>
+                          <option>Crearte</option>
+                      </select>
+                    </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
                 <button 
                     className="btn btn-primary" 
-                    onClick={() => {
-                        alert('Cita agendada correctamente (Simulación)');
-                        setShowModal(false);
-                    }}
+                    disabled={isSaving}
+                    onClick={handleCreate}
                 >
-                    Agendar Cita
+                    {isSaving ? 'Agendando...' : 'Agendar Cita'}
                 </button>
               </div>
             </div>

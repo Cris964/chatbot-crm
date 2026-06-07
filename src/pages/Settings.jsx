@@ -64,6 +64,9 @@ export default function Settings() {
   const [workspaceData, setWorkspaceData] = useState({
     companyName: '',
     whatsapp_token: '',
+    facebook_page_id: '',
+    instagram_account_id: '',
+    facebook_access_token: '',
     prompt: '',
     email: '',
     timezone: 'America/Bogota (UTC-5)'
@@ -93,6 +96,9 @@ export default function Settings() {
         id: client.id,
         companyName: client.name || 'Mi Empresa',
         whatsapp_token: client.whatsapp_token || '',
+        facebook_page_id: client.facebook_page_id || '',
+        instagram_account_id: client.instagram_account_id || '',
+        facebook_access_token: client.facebook_access_token || '',
         prompt: client.prompt || '',
         email: client.email || session.user.email,
         timezone: client.timezone || 'America/Bogota (UTC-5)'
@@ -165,6 +171,9 @@ export default function Settings() {
         .update({ 
           name: workspaceData.companyName,
           whatsapp_token: workspaceData.whatsapp_token,
+          facebook_page_id: workspaceData.facebook_page_id,
+          instagram_account_id: workspaceData.instagram_account_id,
+          facebook_access_token: workspaceData.facebook_access_token,
           prompt: workspaceData.prompt,
           email: workspaceData.email,
           updated_at: new Date().toISOString()
@@ -279,8 +288,20 @@ export default function Settings() {
                       <input className="form-input" name="companyName" value={workspaceData.companyName} onChange={handleWorkspaceChange} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">WhatsApp Token</label>
+                      <label className="form-label">WhatsApp Token (API Oficial)</label>
                       <input className="form-input" name="whatsapp_token" value={workspaceData.whatsapp_token} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Facebook Page ID (Para Messenger)</label>
+                      <input className="form-input" name="facebook_page_id" value={workspaceData.facebook_page_id} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Instagram Account ID (Para IG Direct)</label>
+                      <input className="form-input" name="instagram_account_id" value={workspaceData.instagram_account_id} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Facebook Access Token (Para enviar por Messenger/IG)</label>
+                      <input type="password" className="form-input" name="facebook_access_token" value={workspaceData.facebook_access_token} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Prompt del Agente IA</label>

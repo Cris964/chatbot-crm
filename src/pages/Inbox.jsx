@@ -97,6 +97,7 @@ export default function Inbox() {
   const [conversationsList, setConversationsList] = useState([])
   const [activeTab, setActiveTab] = useState('all')
   const [selectedConv, setSelectedConv] = useState(null)
+  const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [botActive, setBotActive] = useState(true)
@@ -308,36 +309,49 @@ export default function Inbox() {
     setIsLoading(true)
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('conversations')
         .select('*, clients(*)')
         .eq('client_id', tenant.clientId)
-        .order('updated_at', { ascending: false })
+        
+      if (!tenant.isAdmin && tenant.session?.user?.id) {
+         query = query.eq('assigned_to', tenant.session.user.id)
+      }
+      
+      const { data, error } = await query.order('updated_at', { ascending: false })
       
       if (!error && data) {
         const mapped = data.map((conv) => {
           const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
 
-          return {
-            id: conv.id,
-            name: displayName,
-            preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
-            time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
-            channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
-            unread: conv.messages && conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role === 'user',
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
-            bg: '#6366f1',
-            tags: conv.needs_human ? ['Atención Req.'] : [],
-            intent: 'consulta',
-            botHandled: !conv.needs_human,
-            phone: conv.user_phone,
-            client: conv.clients,
-            rawMessages: conv.messages || [],
-            needs_human: conv.needs_human,
-            assigned_to: conv.assigned_to
-          }
-        })
-        setConversationsList(mapped)
+            let convTags = []
+            if (conv.needs_human) convTags.push('Atención Req.')
+            if (conv.assigned_to) {
+               convTags.push(`Asignado`)
+            } else if (conv.needs_human) {
+               convTags.push('Sin Asignar')
+            }
+
+            return {
+              id: conv.id,
+              name: displayName,
+              preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
+              time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
+              channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
+              unread: conv.messages && conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role === 'user',
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
+              bg: '#6366f1',
+              tags: convTags,
+              intent: 'consulta',
+              botHandled: !conv.needs_human,
+              phone: conv.user_phone,
+              client: conv.clients,
+              rawMessages: conv.messages || [],
+              needs_human: conv.needs_human,
+              assigned_to: conv.assigned_to
+            }
+          })
+          setConversationsList(mapped)
         if (mapped.length > 0 && !selectedConv) {
           setSelectedConv(mapped[0])
         }
@@ -656,17 +670,9 @@ export default function Inbox() {
         }
 
         @media (max-width: 768px) {
-          .inbox-layout {
-            grid-template-columns: 1fr; /* Stack everything */
-          }
-          .inbox-sidebar {
-            display: ${selectedConv ? 'none' : 'flex'};
-            width: 100%;
-          }
-          .chat-area {
-            display: ${selectedConv ? 'flex' : 'none'};
-            width: 100%;
-          }
+          .inbox-sidebar { width: 100%; }
+          .chat-area { width: 100%; }
+          .contact-panel { width: 100%; padding: 20px; }
         }
 
         .conversation-item {
@@ -706,19 +712,10 @@ export default function Inbox() {
 
       <div className="inbox-layout">
         {/* Sidebar */}
-        <div className="inbox-sidebar">
+        <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`}>
           <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
              <div className="flex justify-between items-center mb-4">
                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
-               {selectedConv && (
-                 <button 
-                   className="btn btn-ghost btn-sm md:hidden" 
-                   onClick={() => setSelectedConv(null)}
-                   style={{ display: window.innerWidth < 768 ? 'block' : 'none' }}
-                 >
-                   Volver
-                 </button>
-               )}
              </div>
              <div className="search-bar" style={{ padding: '8px 12px' }}>
                <Search size={16} />
@@ -764,7 +761,7 @@ export default function Inbox() {
               <div 
                 key={c.id} 
                 className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
-                onClick={() => setSelectedConv(c)}
+                onClick={() => { setSelectedConv(c); setMobileView('chat'); }}
                 style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
               >
                  <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
@@ -787,6 +784,15 @@ export default function Inbox() {
                        </div>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview}</p>
+                    {c.tags && c.tags.length > 0 && (
+                      <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+                         {c.tags.map((t, i) => (
+                            <span key={i} className={`badge ${t === 'Sin Asignar' ? 'rose' : t === 'Asignado' ? 'cyan' : 'amber'}`} style={{ fontSize: '0.6rem' }}>
+                               {t === 'Asignado' ? `Asignado a: ${teamMembers.find(m => m.user_id === c.assigned_to)?.full_name || 'Asesor'}` : t}
+                            </span>
+                         ))}
+                      </div>
+                    )}
                   </div>
                </div>
             ))}
@@ -794,15 +800,16 @@ export default function Inbox() {
         </div>
 
         {/* Chat Area */}
-        <div className="chat-area">
+        <div className={`chat-area inbox-panel-container ${mobileView !== 'chat' ? 'mobile-hidden' : ''}`}>
           {selectedConv ? (
             <>
               <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center' }}>
                  <button 
-                   className="mr-3 p-2 hover:bg-white/5 rounded-full md:hidden"
-                   onClick={() => setSelectedConv(null)}
+                   className="mr-3 p-2 rounded-full mobile-only"
+                   onClick={() => { setSelectedConv(null); setMobileView('list'); }}
+                   style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
                  >
-                   <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} />
+                   <ChevronRight size={24} style={{ transform: 'rotate(180deg)' }} />
                  </button>
                  <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0, overflow: 'hidden' }}>
                     {selectedConv.avatar?.startsWith('http') ? <img src={selectedConv.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : selectedConv.avatar}
@@ -824,6 +831,7 @@ export default function Inbox() {
                         <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={() => setBotActive(!botActive)} />
                      </div>
                      <div className="flex gap-1">
+                        <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
                         <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
                      </div>
                   </div>
@@ -894,8 +902,13 @@ export default function Inbox() {
         </div>
 
         {/* Info Panel */}
-        <div className="contact-panel">
-           <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Panel</h3>
+        <div className={`contact-panel inbox-panel-container ${mobileView !== 'info' ? 'mobile-hidden' : ''}`}>
+           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+             <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Panel</h3>
+             <button className="btn btn-ghost btn-sm mobile-only" onClick={() => setMobileView('chat')} style={{ padding: 4 }}>
+               <Close size={20} />
+             </button>
+           </div>
            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
              {['Contact', 'Deal Info', 'Timeline'].map(t => (
                <div 

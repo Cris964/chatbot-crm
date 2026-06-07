@@ -191,7 +191,7 @@ export default async function handler(req, res) {
               name: senderName,
               stage: 'Nuevo',
               score: 5,
-              source: 'WhatsApp',
+              source: channel === 'whatsapp' ? 'WhatsApp' : channel === 'messenger' ? 'Messenger' : 'Instagram',
               value: '$0',
               status: 'active'
             }]);
@@ -335,9 +335,13 @@ Donde Score es un número del 1 al 100.
                              }
                         } catch(e) { console.error('Lead error', e) }
 
-                        // Asignación a Ventas
+                        // Asignación a Ventas o Departamentos Específicos
                         let assignedUserId = null;
-                        if (saleMatch) {
+                        if (humanDept === 'CREARTE') {
+                             assignedUserId = '096b5cb3-9754-4581-be3c-d6c2a64caead'; // Crearte Admin UUID
+                        } else if (humanDept === 'ASESOR') {
+                             assignedUserId = '2db217bc-c72e-448a-9a8d-4b2469c93661'; // Asesor UUID
+                        } else if (saleMatch) {
                              const { data: vends } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('role', 'vendedor').eq('status', 'activo').limit(1);
                              if (vends && vends.length > 0) assignedUserId = vends[0].user_id;
                         }
@@ -384,14 +388,17 @@ Donde Score es un número del 1 al 100.
                              try {
                                const parsedDate = new Date(appointmentDateStr);
                                if (!isNaN(parsedDate)) {
-                                 await supabase.from('appointments').insert([{
-                                    client_id: clientId,
-                                    phone: senderPhone,
-                                    name: senderName,
-                                    appointment_date: parsedDate.toISOString(),
-                                    status: 'scheduled'
-                                 }]);
-                               }
+                                  await supabase.from('appointments').insert([{
+                                     client_id: clientId,
+                                     title: `Cita de Remodelación/Asesoría`,
+                                     date: parsedDate.toISOString().split('T')[0],
+                                     time: parsedDate.toISOString().split('T')[1].slice(0,5),
+                                     contact_name: senderName,
+                                     contact_phone: senderPhone,
+                                     department: humanDept === 'CREARTE' ? 'Crearte' : 'Trazzos',
+                                     status: 'Confirmed'
+                                  }]);
+                                }
                              } catch(err) {
                                console.error("Error parsing appointment date", err);
                              }

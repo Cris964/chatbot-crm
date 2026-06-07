@@ -4,15 +4,9 @@ import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
-  Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search, Truck
+  Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search, Truck, UploadCloud
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-
-const monthlyData = [
-  { month: 'Ene', ventas: 4000 },
-  { month: 'Feb', ventas: 3000 },
-  { month: 'Mar', ventas: 2000 },
-]
 
 function getPaymentBadge(status) {
   const map = { 'Pagado': 'emerald', 'Parcial': 'amber', 'Pendiente': 'violet', 'Vencido': 'rose' }
@@ -29,13 +23,15 @@ export default function Sales() {
   // New Modal States
   const [showModal, setShowModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [invoiceFile, setInvoiceFile] = useState(null)
   const [newSale, setNewSale] = useState({
     user_name: '',
     product: '',
     total: '',
     city: '',
     address: '',
-    payment_method: 'WhatsApp'
+    payment_method: 'WhatsApp',
+    sale_type: 'Digital'
   })
 
   useEffect(() => {
@@ -65,8 +61,11 @@ export default function Sales() {
         product: d.product || 'Producto',
         amount: d.total || 25000, 
         date: new Date(d.created_at).toLocaleDateString(),
+        raw_date: d.created_at,
         payment: d.status === 'pagado' ? 'Pagado' : 'Pendiente',
         method: d.payment_method || 'WhatsApp',
+        type: d.sale_type || 'Digital',
+        invoice_url: d.invoice_url || null,
         city: d.city || 'N/A',
         address: d.address || 'N/A',
         avatar: (d.user_name || 'C').substring(0,2).toUpperCase(),
@@ -88,6 +87,25 @@ export default function Sales() {
        return
     }
 
+    let uploadedUrl = null;
+    if (invoiceFile) {
+       if (invoiceFile.size > 5 * 1024 * 1024) {
+          alert('El archivo no debe superar los 5MB.');
+          setIsSaving(false);
+          return;
+       }
+       const ext = invoiceFile.name.split('.').pop();
+       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+       const { data: uploadData, error: uploadError } = await supabase.storage.from('invoices').upload(fileName, invoiceFile);
+       if (uploadError) {
+          alert('Error subiendo factura: ' + uploadError.message);
+          setIsSaving(false);
+          return;
+       }
+       const { data: { publicUrl } } = supabase.storage.from('invoices').getPublicUrl(fileName);
+       uploadedUrl = publicUrl;
+    }
+
     const { error } = await supabase.from('orders').insert({
       client_id: targetClientId,
       product: newSale.product,
@@ -97,12 +115,15 @@ export default function Sales() {
       city: newSale.city,
       address: newSale.address,
       payment_method: newSale.payment_method,
+      sale_type: newSale.sale_type,
+      invoice_url: uploadedUrl,
       created_at: new Date().toISOString()
     })
 
     if (!error) {
        setShowModal(false)
-       setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp' })
+       setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp', sale_type: 'Digital' })
+       setInvoiceFile(null)
        fetchSales(tenant.clientId)
     } else {
        alert('Error saving sale: ' + error.message)
@@ -113,6 +134,22 @@ export default function Sales() {
   const totalRevenue = salesList.reduce((acc, s) => acc + s.amount, 0)
   const monthlySales = salesList.length
   const ticketAvg = salesList.length > 0 ? totalRevenue / salesList.length : 0
+
+  let monthlyData = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((m, i) => {
+    const ventas = salesList
+      .filter(s => {
+        if (!s.raw_date) return false;
+        const d = new Date(s.raw_date);
+        return d.getMonth() === i && d.getFullYear() === new Date().getFullYear();
+      })
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    return { month: m, ventas };
+  }).filter(d => d.ventas > 0);
+
+  if (monthlyData.length === 0) {
+    const currMonthStr = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][new Date().getMonth()];
+    monthlyData.push({ month: currMonthStr, ventas: 0 });
+  }
 
   const filteredSales = salesList.filter(sale => {
     const query = searchQuery.toLowerCase();
@@ -239,9 +276,17 @@ export default function Sales() {
                 <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>${sale.amount.toLocaleString()}</td>
                 <td style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{sale.date}</td>
                 <td><span className={`badge ${getPaymentBadge(sale.payment)}`}>{sale.payment}</span></td>
-                <td style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{sale.method}</td>
+                <td>
+                   <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{sale.method}</div>
+                   <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{sale.type}</div>
+                </td>
                 <td>
                   <div className="flex gap-2">
+                    {sale.invoice_url && (
+                        <a href={sale.invoice_url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm" title="Ver Factura">
+                           <FileText size={14} color="var(--primary-400)" />
+                        </a>
+                    )}
                     {sale.payment === 'Pagado' && (
                       <button 
                         className="btn btn-primary btn-sm"
@@ -316,10 +361,31 @@ export default function Sales() {
                   </select>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Tipo de Venta</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: '0.85rem' }}>
+                      <input type="radio" name="sale_type" value="Digital" checked={newSale.sale_type === 'Digital'} onChange={e => setNewSale({...newSale, sale_type: e.target.value})} />
+                      Venta Digital
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: '0.85rem' }}>
+                      <input type="radio" name="sale_type" value="Presencial" checked={newSale.sale_type === 'Presencial'} onChange={e => setNewSale({...newSale, sale_type: e.target.value})} />
+                      Venta Presencial
+                    </label>
+                  </div>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Dirección de Entrega</label>
                   <input 
                     type="text" className="input" placeholder="Dirección completa" 
                     value={newSale.address} onChange={e => setNewSale({...newSale, address: e.target.value})}
+                  />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Factura (JPG o PDF, max 5MB)</label>
+                  <input 
+                    type="file" accept=".jpg,.jpeg,.png,.pdf" className="input" 
+                    onChange={e => setInvoiceFile(e.target.files[0])}
+                    style={{ padding: '8px' }}
                   />
                 </div>
               </div>

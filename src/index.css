@@ -2226,7 +2226,70 @@ select.form-input option {
   }
 
   .inbox-layout {
-    height: calc(100vh - 60px) !important;
+    height: calc(100dvh - 60px) !important;
+    grid-template-columns: 1fr !important;
+    overflow: hidden !important;
+  }
+}
+
+/* === Mobile UI Utilities (Stacked Views, Responsive Tables, etc.) === */
+
+/* Stack View classes for Inbox */
+.inbox-panel-container {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide panels on mobile if not active */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .data-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table th, .data-table td {
+    white-space: nowrap;
+  }
+  
+  .card {
+    padding: 16px; /* Reduce padding on mobile cards */
+  }
+
+  /* Fix overlapping headers on mobile */
+  .page-content > .flex.justify-between,
+  .page-header > .flex {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+  
+  /* Make action buttons in headers horizontally scrollable to prevent squishing */
+  .page-content > .flex.justify-between > .flex,
+  .page-header > .flex > .flex {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent buttons from shrinking */
+  .page-content > .flex.justify-between > .flex > .btn,
+  .page-header > .flex > .flex > .btn {
+    flex-shrink: 0;
+  }
+
+  .page-title {
+    font-size: 1.8rem !important;
+    line-height: 1.2 !important;
   }
 }
 
