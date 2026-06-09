@@ -241,7 +241,8 @@ export default async function handler(req, res) {
                     : '';
 
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
-SI EL CLIENTE PIDE UNA FOTO O CATÁLOGO DE UN PRODUCTO, DEBES ENVIAR LA IMAGEN USANDO EXACTAMENTE ESTA ETIQUETA AL FINAL DE TU MENSAJE: [SEND_IMAGE: URL] (Reemplaza URL por la URL de Foto del producto).
+SI EL CLIENTE PIDE UNA FOTO DE UN PRODUCTO, ¡ESTÁ ESTRICTAMENTE PROHIBIDO USAR MARKDOWN (ej. [Nombre](URL))! 
+DEBES enviar la imagen usando EXACTA Y ÚNICAMENTE esta etiqueta secreta al final de tu mensaje: [SEND_IMAGE: URL] (Reemplaza URL por la URL de Foto del producto).
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
 SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
 ADEMÁS, EVALÚA LA INTENCIÓN DEL CLIENTE Y AÑADE ESTE TAG AL FINAL DE TU RESPUESTA:
