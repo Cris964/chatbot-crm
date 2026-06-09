@@ -122,6 +122,30 @@ export default function Products() {
     reader.readAsBinaryString(file)
   }
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setIsSaving(true)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${tenant.clientId}-${Date.now()}.${fileExt}`
+    
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, file)
+
+    if (error) {
+      alert('Error al subir imagen: ' + error.message)
+    } else {
+      const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName)
+      
+      setForm({ ...form, image_url: publicUrlData.publicUrl })
+    }
+    setIsSaving(false)
+  }
+
   const handleSave = async (e) => {
     e.preventDefault()
     setIsSaving(true)
@@ -438,17 +462,30 @@ export default function Products() {
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
-                    URL de la Imagen (Opcional)
+                    Foto del Producto (Subida a la Nube)
                   </label>
-                  <input
-                    type="url"
-                    className="form-input"
-                    placeholder="Ej: https://tudominio.com/foto.jpg"
-                    value={form.image_url}
-                    onChange={e => setForm({ ...form, image_url: e.target.value })}
-                  />
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
-                    El chatbot de IA enviará esta imagen directamente por WhatsApp cuando ofrezca el producto.
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    {form.image_url && (
+                      <img src={form.image_url} alt="Producto" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <input
+                        type="url"
+                        className="form-input"
+                        placeholder="https://..."
+                        value={form.image_url}
+                        onChange={e => setForm({ ...form, image_url: e.target.value })}
+                        style={{ marginBottom: 8 }}
+                      />
+                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                        <Upload size={14} style={{ marginRight: 6 }} /> 
+                        {isSaving ? 'Subiendo...' : 'Subir Imagen desde el PC'}
+                        <input type="file" hidden accept="image/*" onChange={handleImageUpload} disabled={isSaving} />
+                      </label>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
+                    La IA enviará esta foto automáticamente por WhatsApp. Puedes subir el archivo o pegar un enlace.
                   </p>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
