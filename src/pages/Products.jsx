@@ -409,13 +409,13 @@ export default function Products() {
 
       {/* Create / Edit Modal */}
       {showModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
-          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 540, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', backdropFilter: 'blur(10px)', overflowY: 'auto' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 540, padding: 0, margin: 'auto' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontWeight: 800 }}>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
-            <form onSubmit={handleSave} style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+            <form onSubmit={handleSave} style={{ padding: 24 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>Nombre del Producto *</label>
