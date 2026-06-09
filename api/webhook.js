@@ -232,11 +232,11 @@ export default async function handler(req, res) {
                     if (p.price && p.price > 0) line += `. Precio: $${p.price}`;
                     if (p.promo_text) line += `. 🔥 PROMO: ${p.promo_text}`;
                     if (p.image_url) {
-                        const urls = p.image_url.split(',');
-                        if (urls.length > 1) {
-                            line += `. Fotos disponibles del producto (usa 2 o 3 máximo): ${urls.map(u => u.trim()).join(', ')}`;
+                        const urls = p.image_url.split(',').map(u => u.trim()).filter(Boolean);
+                        if (urls.length >= 2) {
+                            line += `. URL foto del producto: ${urls[0]} | URL foto instalado en ambiente: ${urls[1]}`;
                         } else {
-                            line += `. Foto disponible: ${urls[0].trim()}`;
+                            line += `. URL foto: ${urls[0]}`;
                         }
                     }
                     return line;
