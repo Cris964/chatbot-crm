@@ -311,12 +311,33 @@ Donde Score es un número del 1 al 100.
                         const humanDept = needsHumanMatch ? (needsHumanMatch[1] || '').trim().toUpperCase() : null;
 
                         const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
-                        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
-                        const imageMatch = botReplyText.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
                         const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
-                        const imageUrl = imageMatch ? imageMatch[1].trim() : null;
+
+                        // Find all image URLs using global regex
+                        const imageUrls = [];
+                        const imageRegex = /\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi;
+                        let match;
+                        while ((match = imageRegex.exec(botReplyText)) !== null) {
+                            imageUrls.push(match[1].trim());
+                        }
+
+                        // Fallback: If AI stubbornly outputs a Markdown link to a Supabase image
+                        const mdRegex = /\[.*?\]\((https?:\/\/[^\)]+)\)/gi;
+                        let m;
+                        while ((m = mdRegex.exec(botReplyText)) !== null) {
+                            if (m[1].includes('supabase.co/storage')) {
+                                imageUrls.push(m[1].trim());
+                            }
+                        }
                         
-                        let cleanReply = botReplyText.replace(/\[NEEDS_HUMAN(?::.*?)?\]/gi, '').replace(/\[SALE_CONFIRMED: .*?\]/i, '').replace(/\[LEAD_STATE:.*?\]/i, '').replace(/\[CITA_AGENDADA(?::.*?)?\]/i, '').replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
+                        let cleanReply = botReplyText.replace(/\[NEEDS_HUMAN(?::.*?)?\]/gi, '').replace(/\[SALE_CONFIRMED: .*?\]/gi, '').replace(/\[LEAD_STATE:.*?\]/gi, '').replace(/\[CITA_AGENDADA(?::.*?)?\]/gi, '').replace(/\[SEND_IMAGE:.*?\]/gi, '');
+                        
+                        // Strip out the Markdown link so it doesn't show in the text response
+                        cleanReply = cleanReply.replace(/\[.*?\]\((https?:\/\/[^\)]+)\)/gi, (fullMatch, url) => {
+                            if (url.includes('supabase.co/storage')) return '';
+                            return fullMatch;
+                        }).trim();
 
                         // Actualizar Lead Pipeline
                         let stage = 'Contactado';
@@ -446,17 +467,21 @@ Donde Score es un número del 1 al 100.
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            if (imageUrl) {
-                                await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-                                  method: 'POST',
-                                  headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    messaging_product: 'whatsapp',
-                                    to: senderPhone,
-                                    type: 'image',
-                                    image: { link: imageUrl }
-                                  })
-                                }).catch(e => console.error("Image send error", e));
+                            if (imageUrls && imageUrls.length > 0) {
+                                for (const img of imageUrls) {
+                                    await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+                                      method: 'POST',
+                                      headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        messaging_product: 'whatsapp',
+                                        to: senderPhone,
+                                        type: 'image',
+                                        image: { link: img }
+                                      })
+                                    }).catch(e => console.error("Image send error", e));
+                                    // Small delay between sending multiple images to ensure order
+                                    await new Promise(r => setTimeout(r, 500));
+                                }
                             }
 
                             await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
