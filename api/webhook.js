@@ -469,6 +469,10 @@ Donde Score es un número del 1 al 100.
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
                             if (imageUrls && imageUrls.length > 0) {
                                 for (const img of imageUrls) {
+                                    let finalImgUrl = img;
+                                    if (img.toLowerCase().endsWith('.webp')) {
+                                        finalImgUrl = `https://images.weserv.nl/?url=${encodeURIComponent(img)}&output=jpg`;
+                                    }
                                     await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                       method: 'POST',
                                       headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
@@ -476,9 +480,27 @@ Donde Score es un número del 1 al 100.
                                         messaging_product: 'whatsapp',
                                         to: senderPhone,
                                         type: 'image',
-                                        image: { link: img }
+                                        image: { link: finalImgUrl }
                                       })
-                                    }).catch(e => console.error("Image send error", e));
+                                    })
+                                    .then(async imgRes => {
+                                      if (!imgRes.ok) {
+                                          const imgErr = await imgRes.json();
+                                          console.error('[WHATSAPP IMAGE ERROR]', imgErr);
+                                          // Enviar mensaje de error en lugar de la imagen si falla
+                                          await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+                                              method: 'POST',
+                                              headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({
+                                                messaging_product: 'whatsapp',
+                                                to: senderPhone,
+                                                type: 'text',
+                                                text: { body: "*(Error de sistema: No se pudo cargar la imagen)*" }
+                                              })
+                                          });
+                                      }
+                                    })
+                                    .catch(e => console.error("Image send error", e));
                                     // Small delay between sending multiple images to ensure order
                                     await new Promise(r => setTimeout(r, 500));
                                 }
