@@ -250,14 +250,19 @@ export default async function handler(req, res) {
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
 SI EL CLIENTE PIDE UNA FOTO DE UN PRODUCTO, ¡ESTÁ ESTRICTAMENTE PROHIBIDO USAR MARKDOWN (ej. [Nombre](URL))! 
 DEBES enviar la imagen usando EXACTA Y ÚNICAMENTE esta etiqueta secreta: [SEND_IMAGE: URL].
-MUY IMPORTANTE SOBRE CÓMO ENVIAR FOTOS: NUNCA uses listas numeradas (ej. "1. Foto del producto") ni viñetas. Háblale al cliente de forma MUY natural y humana, interrumpiendo tu texto con la etiqueta para que parezca que estás chateando.
-Ejemplo EXACTO de cómo debes estructurar tu respuesta cuando envías varias fotos:
-"¡Claro Cristian! Mira, este es el piso oscuro en formato listón que te comentaba:"
+REGLA DE ORO PARA FOTOS - LEE ESTO CON ATENCIÓN:
+❌ ESTÁ TOTALMENTE PROHIBIDO escribir cualquier título, encabezado, etiqueta o nombre antes de la etiqueta [SEND_IMAGE]. EJEMPLOS DE LO QUE JAMÁS DEBES HACER:
+❌ PROHIBIDO: "*Foto del Producto*:"
+❌ PROHIBIDO: "1. Foto del Producto:"
+❌ PROHIBIDO: "Aquí la imagen:"
+❌ PROHIBIDO: "Foto del ambiente:"
+✅ CORRECTO - SOLO debes escribir una frase natural y conversacional, seguida DIRECTO de la etiqueta, así:
+"Mira, te mando el piso que te comentaba para que lo veas:"
 [SEND_IMAGE: URL_DEL_PRODUCTO]
-"Y así es como se vería ya instalado en un espacio real, queda súper elegante y acogedor:"
+"Y así queda en un espacio real, el resultado es increíble:"
 [SEND_IMAGE: URL_AMBIENTE]
-"¿Qué te parece? ¿Te gusta este estilo o prefieres que miremos opciones más claras?"
-
+"¿Qué te parece? ¿Apostamos por ese estilo?"
+La frase antes de la imagen DEBE terminar en dos puntos (:) y ser natural, como si lo estuvieras mandando tú desde el celular.
 Si el producto tiene varias URLs, escoge 2 o máximo 3 para enviarle de forma natural.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
 SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
