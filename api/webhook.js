@@ -231,7 +231,14 @@ export default async function handler(req, res) {
                     let line = `- ${p.name}: ${p.description || 'Sin descripción'}`;
                     if (p.price && p.price > 0) line += `. Precio: $${p.price}`;
                     if (p.promo_text) line += `. 🔥 PROMO: ${p.promo_text}`;
-                    if (p.image_url) line += `. URL de Foto: ${p.image_url}`;
+                    if (p.image_url) {
+                        const urls = p.image_url.split(',');
+                        if (urls.length > 1) {
+                            line += `. URL de Foto del Producto: ${urls[0].trim()} | URL de Foto Instalado (Ambiente): ${urls[1].trim()}`;
+                        } else {
+                            line += `. URL de Foto del Producto: ${urls[0].trim()}`;
+                        }
+                    }
                     return line;
                   }).join('\n');
 
@@ -242,7 +249,10 @@ export default async function handler(req, res) {
 
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
 SI EL CLIENTE PIDE UNA FOTO DE UN PRODUCTO, ¡ESTÁ ESTRICTAMENTE PROHIBIDO USAR MARKDOWN (ej. [Nombre](URL))! 
-DEBES enviar la imagen usando EXACTA Y ÚNICAMENTE esta etiqueta secreta al final de tu mensaje: [SEND_IMAGE: URL] (Reemplaza URL por la URL de Foto del producto).
+DEBES enviar la imagen usando EXACTA Y ÚNICAMENTE esta etiqueta secreta al final de tu mensaje: [SEND_IMAGE: URL].
+SI EL PRODUCTO TIENE DOS FOTOS (Producto y Ambiente), DEBES ENVIAR AMBAS FOTOS USANDO DOS ETIQUETAS SEGUIDAS:
+[SEND_IMAGE: URL_PRODUCTO]
+[SEND_IMAGE: URL_AMBIENTE]
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
 SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
 ADEMÁS, EVALÚA LA INTENCIÓN DEL CLIENTE Y AÑADE ESTE TAG AL FINAL DE TU RESPUESTA:

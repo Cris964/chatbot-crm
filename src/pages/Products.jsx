@@ -35,7 +35,8 @@ const EMPTY_PRODUCT = {
   promo_text: '',
   stock: 0,
   min_stock: 0,
-  image_url: ''
+  image_url_1: '',
+  image_url_2: ''
 }
 
 export default function Products() {
@@ -78,6 +79,7 @@ export default function Products() {
 
   const openEdit = (product) => {
     setEditingProduct(product)
+    const urls = (product.image_url || '').split(',');
     setForm({
       name: product.name,
       description: product.description || '',
@@ -87,7 +89,8 @@ export default function Products() {
       promo_text: product.promo_text || '',
       stock: product.stock || 0,
       min_stock: product.min_stock || 0,
-      image_url: product.image_url || ''
+      image_url_1: urls[0] ? urls[0].trim() : '',
+      image_url_2: urls[1] ? urls[1].trim() : ''
     })
     setShowModal(true)
   }
@@ -122,7 +125,7 @@ export default function Products() {
     reader.readAsBinaryString(file)
   }
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e, fieldName) => {
     const file = e.target.files[0]
     if (!file) return
 
@@ -141,7 +144,7 @@ export default function Products() {
         .from('product-images')
         .getPublicUrl(fileName)
       
-      setForm({ ...form, image_url: publicUrlData.publicUrl })
+      setForm({ ...form, [fieldName]: publicUrlData.publicUrl })
     }
     setIsSaving(false)
   }
@@ -149,6 +152,8 @@ export default function Products() {
   const handleSave = async (e) => {
     e.preventDefault()
     setIsSaving(true)
+
+    const combinedUrls = [form.image_url_1, form.image_url_2].map(u => u?.trim()).filter(Boolean).join(',') || null;
 
     const payload = {
       name: form.name.trim(),
@@ -159,7 +164,7 @@ export default function Products() {
       promo_text: form.promo_text.trim() || null,
       stock: parseInt(form.stock) || 0,
       min_stock: parseInt(form.min_stock) || 0,
-      image_url: form.image_url.trim() || null,
+      image_url: combinedUrls,
       client_id: tenant.clientId,
       updated_at: new Date().toISOString(),
     }
@@ -462,30 +467,56 @@ export default function Products() {
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
-                    Foto del Producto (Subida a la Nube)
+                    Foto del Producto (Suelto)
                   </label>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    {form.image_url && (
-                      <img src={form.image_url} alt="Producto" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
+                    {form.image_url_1 && (
+                      <img src={form.image_url_1} alt="Producto" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
                     )}
                     <div style={{ flex: 1 }}>
                       <input
                         type="url"
                         className="form-input"
                         placeholder="https://..."
-                        value={form.image_url}
-                        onChange={e => setForm({ ...form, image_url: e.target.value })}
+                        value={form.image_url_1}
+                        onChange={e => setForm({ ...form, image_url_1: e.target.value })}
                         style={{ marginBottom: 8 }}
                       />
                       <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex' }}>
                         <Upload size={14} style={{ marginRight: 6 }} /> 
                         {isSaving ? 'Subiendo...' : 'Subir Imagen desde el PC'}
-                        <input type="file" hidden accept="image/*" onChange={handleImageUpload} disabled={isSaving} />
+                        <input type="file" hidden accept="image/*" onChange={e => handleImageUpload(e, 'image_url_1')} disabled={isSaving} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                    Foto de Instalación (Ambiente)
+                  </label>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    {form.image_url_2 && (
+                      <img src={form.image_url_2} alt="Ambiente" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <input
+                        type="url"
+                        className="form-input"
+                        placeholder="https://..."
+                        value={form.image_url_2}
+                        onChange={e => setForm({ ...form, image_url_2: e.target.value })}
+                        style={{ marginBottom: 8 }}
+                      />
+                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                        <Upload size={14} style={{ marginRight: 6 }} /> 
+                        {isSaving ? 'Subiendo...' : 'Subir Imagen desde el PC'}
+                        <input type="file" hidden accept="image/*" onChange={e => handleImageUpload(e, 'image_url_2')} disabled={isSaving} />
                       </label>
                     </div>
                   </div>
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
-                    La IA enviará esta foto automáticamente por WhatsApp. Puedes subir el archivo o pegar un enlace.
+                    La IA enviará AMBAS fotos automáticamente por WhatsApp cuando le pidan catálogo.
                   </p>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
