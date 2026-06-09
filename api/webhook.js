@@ -331,16 +331,21 @@ Donde Score es un número del 1 al 100.
                         let lastIndex = 0;
                         let extractionMatch;
 
-                        const cleanText = (text) => text
-                                                        .replace(/\[NEEDS_HUMAN(?:\s*:.*?)?\]/gi, '')
-                                                        .replace(/\[SALE_CONFIRMED: .*?\]/gi, '')
-                                                        .replace(/\[LEAD_STATE:.*?\]/gi, '')
-                                                        .replace(/\[CITA_AGENDADA(?:\s*:.*?)?\]/gi, '')
-                                                        // Strip AI-generated labels like: *Foto del Producto*: or 1. Foto del Producto:
-                                                        .replace(/^\s*(\d+\.\s*)?\*[^*]+\*\s*:\s*$/gim, '')
-                                                        .replace(/^\s*(\d+\.\s*)?[A-ZÁÉÍÓÚ][A-Za-záéíóú ]+:\s*$/gim, '')
-                                                        .replace(/\n{3,}/g, '\n\n')
-                                                        .trim();
+                        const cleanText = (text) => {
+                            let t = text;
+                            t = t.replace(/\[NEEDS_HUMAN(?:\s*:.*?)?\]/gi, '');
+                            t = t.replace(/\[SALE_CONFIRMED:.*?\]/gi, '');
+                            t = t.replace(/\[LEAD_STATE:.*?\]/gi, '');
+                            t = t.replace(/\[CITA_AGENDADA(?:\s*:.*?)?\]/gi, '');
+                            // Strip AI-generated image labels like *Foto del Producto*: or *Ejemplo de Instalación*:
+                            // This matches *anything*: on its own line OR inline, globally
+                            t = t.replace(/\*[^\n*]{1,80}\*\s*:\s*/g, '');
+                            // Strip numbered labels like: 1. Foto del Producto:
+                            t = t.replace(/^\s*\d+\.\s*[^\n]{1,80}:\s*$/gim, '');
+                            // Clean up extra blank lines
+                            t = t.replace(/\n{3,}/g, '\n\n');
+                            return t.trim();
+                        };
 
                         while ((extractionMatch = extractionRegex.exec(botReplyText)) !== null) {
                             let textBefore = botReplyText.slice(lastIndex, extractionMatch.index);
@@ -367,7 +372,6 @@ Donde Score es un número del 1 al 100.
                         // Auto-inject second image from catalog if AI only sent 1
                         const sentImageUrls = messageQueue.filter(m => m.type === 'image').map(m => m.content);
                         if (sentImageUrls.length === 1 && companyProducts) {
-                            // Find which product the AI was showing (match the URL back to a product)
                             const sentBase = sentImageUrls[0].split('?')[0].split('/').pop().toLowerCase();
                             const matchedProduct = companyProducts.find(p => {
                                 if (!p.image_url) return false;
@@ -378,7 +382,6 @@ Donde Score es un número del 1 al 100.
                             });
                             if (matchedProduct && matchedProduct.image_url) {
                                 const allUrls = matchedProduct.image_url.split(',').map(u => u.trim());
-                                // Find a URL that wasn't already sent
                                 const extraUrl = allUrls.find(u => {
                                     const base = u.split('/').pop().toLowerCase();
                                     return !sentImageUrls.some(s => s.includes(base.split('.')[0]));
@@ -393,6 +396,33 @@ Donde Score es un número del 1 al 100.
                                     messageQueue.splice(lastImgIdx + 1, 0, { type: 'image', content: secondImg });
                                 }
                             }
+                        }
+
+                        // Reorder queue: intro text → all images → closing text
+                        // This ensures images are never sandwiched between text chunks in weird ways
+                        if (messageQueue.filter(m => m.type === 'image').length >= 2) {
+                            const introTexts = [];
+                            const images = [];
+                            const closingTexts = [];
+                            let foundImage = false;
+                            let allImagesFound = false;
+                            const totalImages = messageQueue.filter(m => m.type === 'image').length;
+                            let imgCount = 0;
+                            for (const item of messageQueue) {
+                                if (item.type === 'image') {
+                                    images.push(item);
+                                    foundImage = true;
+                                    imgCount++;
+                                    if (imgCount === totalImages) allImagesFound = true;
+                                } else if (!foundImage) {
+                                    introTexts.push(item);
+                                } else {
+                                    closingTexts.push(item);
+                                }
+                            }
+                            // Rebuild: intro → images → closing
+                            messageQueue.length = 0;
+                            messageQueue.push(...introTexts, ...images, ...closingTexts);
                         }
 
                         // Actualizar Lead Pipeline
