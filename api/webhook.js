@@ -218,10 +218,9 @@ export default async function handler(req, res) {
         if (openRouterKey && clientSetup.prompt) {
             try {
                 // ========== DYNAMIC INVENTORY LOADING ==========
-                // Read products from the products table for THIS specific company
                 const { data: companyProducts } = await supabase
                   .from('products')
-                  .select('name, description, price, category, promo_text')
+                  .select('name, description, price, category, promo_text, image_url')
                   .eq('client_id', clientId)
                   .eq('active', true);
 
@@ -232,6 +231,7 @@ export default async function handler(req, res) {
                     let line = `- ${p.name}: ${p.description || 'Sin descripción'}`;
                     if (p.price && p.price > 0) line += `. Precio: $${p.price}`;
                     if (p.promo_text) line += `. 🔥 PROMO: ${p.promo_text}`;
+                    if (p.image_url) line += `. URL de Foto: ${p.image_url}`;
                     return line;
                   }).join('\n');
 
@@ -241,6 +241,7 @@ export default async function handler(req, res) {
                     : '';
 
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
+SI EL CLIENTE PIDE UNA FOTO O CATÁLOGO DE UN PRODUCTO, DEBES ENVIAR LA IMAGEN USANDO EXACTAMENTE ESTA ETIQUETA AL FINAL DE TU MENSAJE: [SEND_IMAGE: URL] (Reemplaza URL por la URL de Foto del producto).
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
 SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
 ADEMÁS, EVALÚA LA INTENCIÓN DEL CLIENTE Y AÑADE ESTE TAG AL FINAL DE TU RESPUESTA:

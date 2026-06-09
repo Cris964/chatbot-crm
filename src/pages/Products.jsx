@@ -34,7 +34,8 @@ const EMPTY_PRODUCT = {
   active: true,
   promo_text: '',
   stock: 0,
-  min_stock: 0
+  min_stock: 0,
+  image_url: ''
 }
 
 export default function Products() {
@@ -85,7 +86,8 @@ export default function Products() {
       active: product.active,
       promo_text: product.promo_text || '',
       stock: product.stock || 0,
-      min_stock: product.min_stock || 0
+      min_stock: product.min_stock || 0,
+      image_url: product.image_url || ''
     })
     setShowModal(true)
   }
@@ -133,6 +135,7 @@ export default function Products() {
       promo_text: form.promo_text.trim() || null,
       stock: parseInt(form.stock) || 0,
       min_stock: parseInt(form.min_stock) || 0,
+      image_url: form.image_url.trim() || null,
       client_id: tenant.clientId,
       updated_at: new Date().toISOString(),
     }
@@ -431,6 +434,21 @@ export default function Products() {
                   />
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
                     La IA mencionará esta promo cuando recomiende el producto.
+                  </p>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                    URL de la Imagen (Opcional)
+                  </label>
+                  <input
+                    type="url"
+                    className="form-input"
+                    placeholder="Ej: https://tudominio.com/foto.jpg"
+                    value={form.image_url}
+                    onChange={e => setForm({ ...form, image_url: e.target.value })}
+                  />
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
+                    El chatbot de IA enviará esta imagen directamente por WhatsApp cuando ofrezca el producto.
                   </p>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>

@@ -1,72 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: '.env.vercel.local' });
 
-const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-const TRAZZOS_ID = 'c90f532b-0b32-4614-9c21-bbf664213468';
-
-const PROMPT_TRAZZOS = `
-# PROMPT MAESTRO — AGENTE IA TRAZZOS
-
-Eres el asesor comercial digital oficial de Trazzos Espacios y Arquitectura y de Aquí Tu Remodelación By Trazzos.
-TU NOMBRE ES CAMI.
-
-# REGLA DE SALUDO OBLIGATORIA
-- Debes presentarte siempre diciendo "Hola soy Cami...".
-- Si conoces el nombre del cliente (que se te proporcionará en el contexto), saluda diciendo "Hola [Nombre], soy Cami...".
-- Ejemplo: "Hola Juan, soy Cami de Trazzos, ¿cómo estás?" o "Hola, soy Cami de Trazzos, ¿con quién tengo el gusto?".
-
-# FUNCIÓN PRINCIPAL
-Tu función NO es responder como un chatbot.
-Tu función es actuar como un asesor humano experto en remodelación, acabados y diseño de espacios.
-Debes conversar de forma natural, cálida, cercana y profesional. Nunca debes sonar robótico, genérico ni automático.
-
-# IDENTIDAD DEL AGENTE
-Actúas como:
-* Asesor consultivo especializado en remodelación
-* Experto en acabados y obra blanca
-* Consultor de diseño
-* Guía comercial
-* Generador de confianza
-* Agendador de visitas y reuniones
-
-# FILOSOFÍA DE VENTA
-Trazzos no vende solamente materiales, vende: espacios renovados, diseño, tranquilidad y soluciones completas.
-
-# COMPORTAMIENTO OBLIGATORIO
-Debes:
-* responder de forma natural
-* sonar humano
-* hacer preguntas estratégicas
-* asesorar antes de vender
-* llevar siempre al siguiente paso comercial (visita, reunión o cotización)
-
-# TONO DE COMUNICACIÓN
-Cálido, profesional, cercano, elegante.
-Usa expresiones como: "Te cuento...", "Mira...", "Para asesorarte mejor...", "Lo ideal en tu caso sería...".
-
-# ESTRATEGIA COMERCIAL
-SI EL CLIENTE PIDE: pisos, porcelanato, baños, cocinas, remodelación, grifería, sanitarios.
-NO respondas inmediatamente con precio.
-Primero pregunta: dónde será instalado, estilo que busca, medidas, si es vivienda o local, etc.
-
-# HORARIOS Y UBICACIÓN
-Ubicación: Cra 8 #72B-85, barrio Alfonso López, Cali.
-Horario: Lun 9-5, Mar-Vie 9-5:30, Sáb 9-4.
-
-# REGLA MÁS IMPORTANTE
-Tu trabajo es asesorar, conectar y generar confianza. Cada conversación debe sentirse personalizada.
-`;
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 async function updateTrazzosPrompt() {
+    console.log("Fetching Trazzos Prompt...");
+    const { data: clients, error: fetchErr } = await supabase.from('clients').select('id, name, prompt').ilike('name', '%Trazzos%');
+    
+    if (fetchErr || !clients || clients.length === 0) {
+        console.error("Error fetching Trazzos:", fetchErr);
+        return;
+    }
+
+    const trazzos = clients[0];
+    let prompt = trazzos.prompt;
+
+    // Remove the Google Drive section
+    const driveSectionRegex = /# ENLACE DE FOTOS Y CATÁLOGO[\s\S]*?(?:https:\/\/drive\.google\.com[^\s]*)/g;
+    prompt = prompt.replace(driveSectionRegex, '');
+
+    // Optionally, add a new instruction explicitly (though webhook.js already injects it, doing it here reinforces it)
+    const newInstruction = `\n# FOTOS DE PRODUCTOS
+- Si el cliente te pide fotos, catálogo o imágenes de los productos, envíalas utilizando el comando [SEND_IMAGE: URL] que te proporciona el sistema en la lista de productos disponibles. (Nunca envíes links de Google Drive).`;
+    
+    if (!prompt.includes('[SEND_IMAGE:')) {
+        prompt += newInstruction;
+    }
+
     console.log("Updating Trazzos Prompt...");
+    const { error: updateErr } = await supabase.from('clients').update({ prompt: prompt }).eq('id', trazzos.id);
     
-    await supabase.from('clients').update({
-        prompt: PROMPT_TRAZZOS
-    }).eq('id', TRAZZOS_ID);
-    
-    console.log("Trazzos prompt updated.");
+    if (updateErr) {
+        console.error("Error updating prompt:", updateErr);
+    } else {
+        console.log("✅ Trazzos prompt updated successfully. Removed Drive link.");
+    }
 }
 
 updateTrazzosPrompt();
