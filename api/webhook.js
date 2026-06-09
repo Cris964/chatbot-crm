@@ -314,30 +314,39 @@ Donde Score es un número del 1 al 100.
         const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
                         const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
 
-                        // Find all image URLs using global regex
-                        const imageUrls = [];
-                        const imageRegex = /\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi;
-                        let match;
-                        while ((match = imageRegex.exec(botReplyText)) !== null) {
-                            imageUrls.push(match[1].trim());
+                                                // Message Interleaving Logic (Text -> Image -> Text)
+                        const messageQueue = [];
+                        const extractionRegex = /(\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\))/gi;
+                        let lastIndex = 0;
+                        let extractionMatch;
+
+                        const cleanText = (text) => text.replace(/\[NEEDS_HUMAN(?:\s*:.*?)?\]/gi, '')
+                                                        .replace(/\[SALE_CONFIRMED: .*?\]/gi, '')
+                                                        .replace(/\[LEAD_STATE:.*?\]/gi, '')
+                                                        .replace(/\[CITA_AGENDADA(?:\s*:.*?)?\]/gi, '')
+                                                        .trim();
+
+                        while ((extractionMatch = extractionRegex.exec(botReplyText)) !== null) {
+                            let textBefore = botReplyText.slice(lastIndex, extractionMatch.index);
+                            textBefore = cleanText(textBefore);
+                            if (textBefore) {
+                                messageQueue.push({ type: 'text', content: textBefore });
+                            }
+
+                            let url = (extractionMatch[2] || extractionMatch[3]).trim();
+                            let finalImgUrl = url;
+                            if (url.toLowerCase().endsWith('.webp')) {
+                                finalImgUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
+                            }
+                            messageQueue.push({ type: 'image', content: finalImgUrl });
+                            lastIndex = extractionRegex.lastIndex;
                         }
 
-                        // Fallback: If AI stubbornly outputs a Markdown link to a Supabase image
-                        const mdRegex = /\[.*?\]\((https?:\/\/[^\)]+)\)/gi;
-                        let m;
-                        while ((m = mdRegex.exec(botReplyText)) !== null) {
-                            if (m[1].includes('supabase.co/storage')) {
-                                imageUrls.push(m[1].trim());
-                            }
+                        let textAfter = botReplyText.slice(lastIndex);
+                        textAfter = cleanText(textAfter);
+                        if (textAfter) {
+                            messageQueue.push({ type: 'text', content: textAfter });
                         }
-                        
-                        let cleanReply = botReplyText.replace(/\[NEEDS_HUMAN(?::.*?)?\]/gi, '').replace(/\[SALE_CONFIRMED: .*?\]/gi, '').replace(/\[LEAD_STATE:.*?\]/gi, '').replace(/\[CITA_AGENDADA(?::.*?)?\]/gi, '').replace(/\[SEND_IMAGE:.*?\]/gi, '');
-                        
-                        // Strip out the Markdown link so it doesn't show in the text response
-                        cleanReply = cleanReply.replace(/\[.*?\]\((https?:\/\/[^\)]+)\)/gi, (fullMatch, url) => {
-                            if (url.includes('supabase.co/storage')) return '';
-                            return fullMatch;
-                        }).trim();
 
                         // Actualizar Lead Pipeline
                         let stage = 'Contactado';
@@ -380,9 +389,10 @@ Donde Score es un número del 1 al 100.
                         }
 
                         // Guardar en CRM
+                        const cleanReplyForDB = cleanText(botReplyText).replace(/\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\)/gi, '');
                         const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
                         let updatePayload = {
-                            messages: [...(latest?.messages || []), { role: 'agent', content: cleanReply, timestamp: new Date().toISOString() }],
+                            messages: [...(latest?.messages || []), { role: 'agent', content: cleanReplyForDB, timestamp: new Date().toISOString() }],
                             updated_at: new Date().toISOString(),
                             needs_human: needsHuman
                         };
@@ -467,12 +477,24 @@ Donde Score es un número del 1 al 100.
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
 
                         if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            if (imageUrls && imageUrls.length > 0) {
-                                for (const img of imageUrls) {
-                                    let finalImgUrl = img;
-                                    if (img.toLowerCase().endsWith('.webp')) {
-                                        finalImgUrl = `https://images.weserv.nl/?url=${encodeURIComponent(img)}&output=jpg`;
-                                    }
+                            for (const msg of messageQueue) {
+                                if (msg.type === 'text') {
+                                    await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
+                                      method: 'POST',
+                                      headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        messaging_product: 'whatsapp',
+                                        to: senderPhone,
+                                        type: 'text',
+                                        text: { body: msg.content }
+                                      })
+                                    }).then(async r => {
+                                        if (!r.ok) {
+                                            const errData = await r.json();
+                                            console.error('[WHATSAPP TEXT ERROR]', errData);
+                                        }
+                                    });
+                                } else if (msg.type === 'image') {
                                     await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                       method: 'POST',
                                       headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
@@ -480,14 +502,12 @@ Donde Score es un número del 1 al 100.
                                         messaging_product: 'whatsapp',
                                         to: senderPhone,
                                         type: 'image',
-                                        image: { link: finalImgUrl }
+                                        image: { link: msg.content }
                                       })
-                                    })
-                                    .then(async imgRes => {
+                                    }).then(async imgRes => {
                                       if (!imgRes.ok) {
                                           const imgErr = await imgRes.json();
                                           console.error('[WHATSAPP IMAGE ERROR]', imgErr);
-                                          // Enviar mensaje de error en lugar de la imagen si falla
                                           await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                               method: 'POST',
                                               headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
@@ -499,35 +519,11 @@ Donde Score es un número del 1 al 100.
                                               })
                                           });
                                       }
-                                    })
-                                    .catch(e => console.error("Image send error", e));
-                                    // Small delay between sending multiple images to ensure order
-                                    await new Promise(r => setTimeout(r, 500));
+                                    }).catch(e => console.error("Image send error", e));
                                 }
+                                // Ensure strict sequential delivery
+                                await new Promise(r => setTimeout(r, 600));
                             }
-
-                            await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                messaging_product: 'whatsapp',
-                                to: senderPhone,
-                                type: 'text',
-                                text: { body: cleanReply }
-                              })
-                            }).then(async r => {
-                                if (!r.ok) {
-                                    const errData = await r.json();
-                                    console.error('[WHATSAPP SEND ERROR]', errData);
-                                    const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
-                                    await supabase.from('conversations').update({
-                                        messages: [...(latest?.messages || []), { role: 'agent', content: `[ERROR META]: ${errData.error?.message || 'Error desconocido'}`, timestamp: new Date().toISOString() }]
-                                    }).eq('id', conversationId);
-                                }
-                            });
                         }
                     }
                 } else {
