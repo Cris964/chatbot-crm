@@ -234,9 +234,9 @@ export default async function handler(req, res) {
                     if (p.image_url) {
                         const urls = p.image_url.split(',');
                         if (urls.length > 1) {
-                            line += `. URL de Foto del Producto: ${urls[0].trim()} | URL de Foto Instalado (Ambiente): ${urls[1].trim()}`;
+                            line += `. Fotos disponibles del producto (usa 2 o 3 máximo): ${urls.map(u => u.trim()).join(', ')}`;
                         } else {
-                            line += `. URL de Foto del Producto: ${urls[0].trim()}`;
+                            line += `. Foto disponible: ${urls[0].trim()}`;
                         }
                     }
                     return line;
