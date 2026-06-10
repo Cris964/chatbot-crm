@@ -248,28 +248,22 @@ export default async function handler(req, res) {
                     : '';
 
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
-SI EL CLIENTE PIDE UNA FOTO DE UN PRODUCTO, ¡ESTÁ ESTRICTAMENTE PROHIBIDO USAR MARKDOWN (ej. [Nombre](URL))! 
-DEBES enviar la imagen usando EXACTA Y ÚNICAMENTE esta etiqueta secreta: [SEND_IMAGE: URL].
-REGLA DE ORO PARA FOTOS - LEE ESTO CON ATENCIÓN:
-❌ ESTÁ TOTALMENTE PROHIBIDO escribir cualquier título, encabezado, etiqueta o nombre antes de la etiqueta [SEND_IMAGE]. EJEMPLOS DE LO QUE JAMÁS DEBES HACER:
-❌ PROHIBIDO: "*Foto del Producto*:"
-❌ PROHIBIDO: "1. Foto del Producto:"
-❌ PROHIBIDO: "Aquí la imagen:"
-❌ PROHIBIDO: "Foto del ambiente:"
-✅ CORRECTO - SOLO debes escribir una frase natural y conversacional, seguida DIRECTO de la etiqueta, así:
-"Mira, te mando el piso que te comentaba para que lo veas:"
-[SEND_IMAGE: URL_DEL_PRODUCTO]
-"Y así queda en un espacio real, el resultado es increíble:"
-[SEND_IMAGE: URL_AMBIENTE]
-"¿Qué te parece? ¿Apostamos por ese estilo?"
-La frase antes de la imagen DEBE terminar en dos puntos (:) y ser natural, como si lo estuvieras mandando tú desde el celular.
-Si el producto tiene varias URLs, escoge 2 o máximo 3 para enviarle de forma natural.
-SI EL CLIENTE PIDE HABLAR CON UN ASESOR, HUMANO O PERSONA, O SI NO SABES RESPONDER, INCLUYE EL TAG '[NEEDS_HUMAN]' AL FINAL DE TU MENSAJE.
-SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
-ADEMÁS, EVALÚA LA INTENCIÓN DEL CLIENTE Y AÑADE ESTE TAG AL FINAL DE TU RESPUESTA:
-[LEAD_STATE: Etapa | Score]
-Donde Etapa es uno de: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Venta Perdida".
-Donde Score es un número del 1 al 100.
+REGLAS DE FOTOS (MUY IMPORTANTE):
+1. SOLO puedes usar URLs que estén listadas en el catálogo de arriba, del MISMO PRODUCTO que estás mostrando. JAMÁS mezcles URLs de productos distintos.
+2. Si el producto tiene "URL foto del producto" Y "URL foto instalado en ambiente", DEBES enviar AMBAS.
+3. Usa EXACTAMENTE esta etiqueta para cada imagen: [SEND_IMAGE: URL]
+4. ❌ PROHIBIDO escribir títulos antes de la imagen como: *Foto del Producto*: | 1. Foto del producto: | Aquí la imagen:
+5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:), como si chatearas tú mismo:
+"Mira, te mando el piso que te comentaba:"
+[SEND_IMAGE: URL_FOTO_DEL_PRODUCTO]
+"Y así queda ya instalado, queda espectacular:"
+[SEND_IMAGE: URL_FOTO_INSTALADO_AMBIENTE]
+"¿Qué te parece ese estilo?"
+6. Si el producto solo tiene una foto, manda solo esa.
+SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
+SI EL CLIENTE CONFIRMA COMPRA, INCLUYE '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
+EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
+Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Venta Perdida". Score: 1-100.
 `;
                 } else {
                   inventoryContext = '\n[No hay productos configurados en el catálogo. Responde de forma general y amable. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN]]\n';
@@ -369,58 +363,22 @@ Donde Score es un número del 1 al 100.
                             messageQueue.push({ type: 'text', content: textAfter });
                         }
 
-                        // Auto-inject second image from catalog if AI only sent 1
-                        const sentImageUrls = messageQueue.filter(m => m.type === 'image').map(m => m.content);
-                        if (sentImageUrls.length === 1 && companyProducts) {
-                            const sentBase = sentImageUrls[0].split('?')[0].split('/').pop().toLowerCase();
-                            const matchedProduct = companyProducts.find(p => {
-                                if (!p.image_url) return false;
-                                return p.image_url.split(',').some(u => {
-                                    const base = u.trim().split('/').pop().toLowerCase();
-                                    return base === sentBase || sentBase.includes(base.split('.')[0]) || base.includes(sentBase.split('.')[0]);
-                                });
-                            });
-                            if (matchedProduct && matchedProduct.image_url) {
-                                const allUrls = matchedProduct.image_url.split(',').map(u => u.trim());
-                                const extraUrl = allUrls.find(u => {
-                                    const base = u.split('/').pop().toLowerCase();
-                                    return !sentImageUrls.some(s => s.includes(base.split('.')[0]));
-                                });
-                                if (extraUrl) {
-                                    let secondImg = extraUrl;
-                                    if (extraUrl.toLowerCase().endsWith('.webp')) {
-                                        secondImg = `https://images.weserv.nl/?url=${encodeURIComponent(extraUrl)}&output=jpg`;
-                                    }
-                                    // Insert after last image in queue
-                                    const lastImgIdx = messageQueue.map(m => m.type).lastIndexOf('image');
-                                    messageQueue.splice(lastImgIdx + 1, 0, { type: 'image', content: secondImg });
-                                }
-                            }
-                        }
-
                         // Reorder queue: intro text → all images → closing text
-                        // This ensures images are never sandwiched between text chunks in weird ways
                         if (messageQueue.filter(m => m.type === 'image').length >= 2) {
                             const introTexts = [];
                             const images = [];
                             const closingTexts = [];
                             let foundImage = false;
-                            let allImagesFound = false;
-                            const totalImages = messageQueue.filter(m => m.type === 'image').length;
-                            let imgCount = 0;
                             for (const item of messageQueue) {
                                 if (item.type === 'image') {
                                     images.push(item);
                                     foundImage = true;
-                                    imgCount++;
-                                    if (imgCount === totalImages) allImagesFound = true;
                                 } else if (!foundImage) {
                                     introTexts.push(item);
                                 } else {
                                     closingTexts.push(item);
                                 }
                             }
-                            // Rebuild: intro → images → closing
                             messageQueue.length = 0;
                             messageQueue.push(...introTexts, ...images, ...closingTexts);
                         }
