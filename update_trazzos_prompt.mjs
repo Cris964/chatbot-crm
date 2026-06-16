@@ -6,7 +6,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 
 async function updateTrazzosPrompt() {
     console.log("Fetching Trazzos Prompt...");
-    const { data: clients, error: fetchErr } = await supabase.from('clients').select('id, name, prompt').ilike('name', '%Trazzos%');
+    const { data: clients, error: fetchErr } = await supabase.from('clients').select('id, name, prompt').eq('id', 'c90f532b-0b32-4614-9c21-bbf664213468');
     
     if (fetchErr || !clients || clients.length === 0) {
         console.error("Error fetching Trazzos:", fetchErr);

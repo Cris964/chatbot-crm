@@ -217,12 +217,63 @@ export default async function handler(req, res) {
 
         if (openRouterKey && clientSetup.prompt) {
             try {
-                // ========== DYNAMIC INVENTORY LOADING ==========
-                const { data: companyProducts } = await supabase
+                let { data: companyProducts } = await supabase
                   .from('products')
                   .select('name, description, price, category, promo_text, image_url')
                   .eq('client_id', clientId)
-                  .eq('active', true);
+                  .eq('active', true)
+                  .limit(1000);
+
+                if (companyProducts && companyProducts.length > 50) {
+                    const recentUserMsgs = finalMessages.filter(m => m.role === 'user').slice(-2).map(m => (m.content || '').toLowerCase()).join(' ');
+                    const stopWords = ['para', 'como', 'este', 'esta', 'pero', 'quiero', 'necesito', 'busco', 'tienen', 'tiene', 'del', 'las', 'los', 'que', 'por', 'con', 'sin', 'una', 'uno', 'mas', 'muy', 'son'];
+                    let keywords = recentUserMsgs.split(/[^a-záéíóúñ]+/).filter(w => w.length >= 3 && !stopWords.includes(w));
+                    
+                    // Mapeo de sinónimos comunes de color y tipo
+                    const synonyms = { 
+                        'plateada': ['cromada', 'satinada', 'cromo'], 
+                        'plateado': ['cromado', 'satinado', 'cromo'],
+                        'dorada': ['oro', 'gold', 'dorado', 'dorada'],
+                        'dorado': ['oro', 'gold', 'dorado', 'dorada']
+                    };
+                    let expandedKeywords = [...keywords];
+                    keywords.forEach(k => { if (synonyms[k]) expandedKeywords.push(...synonyms[k]); });
+
+                    if (expandedKeywords.length > 0) {
+                        const scoredProducts = companyProducts.map(p => {
+                            let score = 0;
+                            const targetStr = ((p.name || '') + " " + (p.category || '') + " " + (p.description || '')).toLowerCase();
+                            expandedKeywords.forEach(k => { if (targetStr.includes(k)) score++; });
+                            
+                            // Penalizar "oro rosa" si el usuario no pidió explícitamente "rosa"
+                            if ((targetStr.includes('oro rosa') || targetStr.includes('rose gold')) && !expandedKeywords.includes('rosa') && !expandedKeywords.includes('rose')) {
+                                score -= 5;
+                            }
+                            
+                            // Exclusiones mutuas estrictas (evitar confundir lavamanos con lavaplatos y pisos con paredes)
+                            if (targetStr.includes('lavaplatos') && !expandedKeywords.includes('lavaplatos') && expandedKeywords.includes('lavamanos')) {
+                                score -= 10;
+                            }
+                            if (targetStr.includes('lavamanos') && !expandedKeywords.includes('lavamanos') && expandedKeywords.includes('lavaplatos')) {
+                                score -= 10;
+                            }
+                            if (targetStr.match(/\bpisos?\b/) && !expandedKeywords.includes('piso') && !expandedKeywords.includes('pisos') && (expandedKeywords.includes('pared') || expandedKeywords.includes('paredes'))) {
+                                score -= 10;
+                            }
+                            if (targetStr.match(/\bpared(es)?\b/) && !expandedKeywords.includes('pared') && !expandedKeywords.includes('paredes') && (expandedKeywords.includes('piso') || expandedKeywords.includes('pisos'))) {
+                                score -= 10;
+                            }
+                            
+                            return { ...p, score };
+                        });
+                        scoredProducts.sort((a, b) => b.score - a.score);
+                        companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 25);
+                        // Fallback si no hay coincidencias estrictas, usar sin filtro pero limitado
+                        if (companyProducts.length === 0) companyProducts = scoredProducts.slice(0, 15);
+                    } else {
+                        companyProducts = companyProducts.slice(0, 15);
+                    }
+                }
 
                 let inventoryContext = '';
                 
@@ -234,7 +285,7 @@ export default async function handler(req, res) {
                     if (p.image_url) {
                         const urls = p.image_url.split(',').map(u => u.trim()).filter(Boolean);
                         if (urls.length >= 2) {
-                            line += `. URL foto del producto: ${urls[0]} | URL foto instalado en ambiente: ${urls[1]}`;
+                            line += `. URL foto 1: ${urls[0]} | URL foto 2: ${urls[1]}`;
                         } else {
                             line += `. URL foto: ${urls[0]}`;
                         }
@@ -250,18 +301,17 @@ export default async function handler(req, res) {
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
 REGLAS DE FOTOS (MUY IMPORTANTE):
 1. SOLO puedes usar URLs que estén listadas en el catálogo de arriba, del MISMO PRODUCTO que estás mostrando. JAMÁS mezcles URLs de productos distintos.
-2. Si el producto tiene "URL foto del producto" Y "URL foto instalado en ambiente", DEBES enviar AMBAS.
-3. Usa EXACTAMENTE esta etiqueta para cada imagen: [SEND_IMAGE: URL]
+2. Si el producto tiene "URL foto 1" Y "URL foto 2", DEBES enviar AMBAS. Como no sabes cuál es la foto del producto y cuál es la del ambiente instalado, preséntalas juntas.
+3. Usa EXACTAMENTE esta etiqueta para cada imagen, REEMPLAZANDO la palabra "URL" por el enlace web de la foto: [SEND_IMAGE: URL]
 4. ❌ PROHIBIDO escribir títulos antes de la imagen como: *Foto del Producto*: | 1. Foto del producto: | Aquí la imagen:
-5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:), como si chatearas tú mismo:
-"Mira, te mando el piso que te comentaba:"
-[SEND_IMAGE: URL_FOTO_DEL_PRODUCTO]
-"Y así queda ya instalado, queda espectacular:"
-[SEND_IMAGE: URL_FOTO_INSTALADO_AMBIENTE]
+5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:), presentando ambas fotos a la vez:
+"Mira, aquí tienes las fotos de este producto, tanto en detalle como ya instalado en ambiente:"
+[SEND_IMAGE: URL_FOTO_1]
+[SEND_IMAGE: URL_FOTO_2]
 "¿Qué te parece ese estilo?"
-6. Si el producto solo tiene una foto, manda solo esa.
+6. Si el producto solo tiene una foto, manda solo esa con una frase natural.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
-SI EL CLIENTE CONFIRMA COMPRA, INCLUYE '[SALE_CONFIRMED: Nombre del Producto]' AL FINAL.
+REGLA SOBRE ASESORES: NUNCA uses la frase "asesor humano". Si vas a transferir el chat o alguien pide ayuda de un asesor, di EXACTAMENTE: "Te voy a dejar con un asesor para cotizar el envío." y nada más.
 EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
 Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Venta Perdida". Score: 1-100.
 `;
@@ -319,11 +369,13 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
         const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
                         const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
 
-                                                // Message Interleaving Logic (Text -> Image -> Text)
+                                                // Message Interleaving Logic (Text -> Media -> Text)
                         const messageQueue = [];
-                        const extractionRegex = /(\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\))/gi;
+                        const extractionRegex = /(\[(SEND_IMAGE|SEND_VIDEO):\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\))/gi;
                         let lastIndex = 0;
                         let extractionMatch;
+
+                        const forbiddenNames = ['San Francisco', 'Macao', 'Torrejon', 'Tahoe', 'Bali', 'Java', 'Marruecos', 'Jade', 'Magna', 'Orvix', 'Zyra', 'Aluvia', 'Manantial', 'Laguna', 'Montecarlo', 'Temesi', 'Giorno', 'Burgos', 'Cima', 'Fratelo', 'Granada', 'Nyren', 'Sevilla', 'Tirso', 'Adriatico', 'Azurita', 'Barat', 'Cianita', 'Cocora', 'Dakar', 'Foresta', 'Iseo', 'Indonesia', 'Casablanca', 'Baru', 'Gili', 'Nebriza', 'Ocrea'];
 
                         const cleanText = (text) => {
                             let t = text;
@@ -331,11 +383,19 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                             t = t.replace(/\[SALE_CONFIRMED:.*?\]/gi, '');
                             t = t.replace(/\[LEAD_STATE:.*?\]/gi, '');
                             t = t.replace(/\[CITA_AGENDADA(?:\s*:.*?)?\]/gi, '');
+                            t = t.replace(/\[TRANSFERIR_ASESOR\]/gi, '');
                             // Strip AI-generated image labels like *Foto del Producto*: or *Ejemplo de Instalación*:
                             // This matches *anything*: on its own line OR inline, globally
                             t = t.replace(/\*[^\n*]{1,80}\*\s*:\s*/g, '');
                             // Strip numbered labels like: 1. Foto del Producto:
                             t = t.replace(/^\s*\d+\.\s*[^\n]{1,80}:\s*$/gim, '');
+                            
+                            // Agresivo filtro de nombres comerciales
+                            for (const name of forbiddenNames) {
+                                const regex = new RegExp('\\b' + name + '\\b', 'gi');
+                                t = t.replace(regex, 'este modelo');
+                            }
+                            
                             // Clean up extra blank lines
                             t = t.replace(/\n{3,}/g, '\n\n');
                             return t.trim();
@@ -345,42 +405,51 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                             let textBefore = botReplyText.slice(lastIndex, extractionMatch.index);
                             textBefore = cleanText(textBefore);
                             if (textBefore) {
-                                messageQueue.push({ type: 'text', content: textBefore });
+                                const paragraphs = textBefore.split(/\n{1,}/);
+                                for (const p of paragraphs) {
+                                    if (p.trim()) messageQueue.push({ type: 'text', content: p.trim() });
+                                }
                             }
 
-                            let url = (extractionMatch[2] || extractionMatch[3]).trim();
-                            let finalImgUrl = url;
-                            if (url.toLowerCase().endsWith('.webp')) {
-                                finalImgUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
+                            let url = (extractionMatch[3] || extractionMatch[4]).trim();
+                            let isVideo = extractionMatch[2] === 'SEND_VIDEO';
+                            let msgType = isVideo ? 'video' : 'image';
+                            
+                            let finalMediaUrl = url;
+                            if (msgType === 'image' && url.toLowerCase().endsWith('.webp')) {
+                                finalMediaUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
                             }
-                            messageQueue.push({ type: 'image', content: finalImgUrl });
+                            messageQueue.push({ type: msgType, content: finalMediaUrl });
                             lastIndex = extractionRegex.lastIndex;
                         }
 
                         let textAfter = botReplyText.slice(lastIndex);
                         textAfter = cleanText(textAfter);
                         if (textAfter) {
-                            messageQueue.push({ type: 'text', content: textAfter });
+                            const paragraphs = textAfter.split(/\n{1,}/);
+                            for (const p of paragraphs) {
+                                if (p.trim()) messageQueue.push({ type: 'text', content: p.trim() });
+                            }
                         }
 
-                        // Reorder queue: intro text → all images → closing text
-                        if (messageQueue.filter(m => m.type === 'image').length >= 2) {
+                        // Reorder queue: intro text → all media → closing text
+                        if (messageQueue.filter(m => m.type !== 'text').length >= 2) {
                             const introTexts = [];
-                            const images = [];
+                            const media = [];
                             const closingTexts = [];
-                            let foundImage = false;
+                            let foundMedia = false;
                             for (const item of messageQueue) {
-                                if (item.type === 'image') {
-                                    images.push(item);
-                                    foundImage = true;
-                                } else if (!foundImage) {
+                                if (item.type !== 'text') {
+                                    media.push(item);
+                                    foundMedia = true;
+                                } else if (!foundMedia) {
                                     introTexts.push(item);
                                 } else {
                                     closingTexts.push(item);
                                 }
                             }
                             messageQueue.length = 0;
-                            messageQueue.push(...introTexts, ...images, ...closingTexts);
+                            messageQueue.push(...introTexts, ...media, ...closingTexts);
                         }
 
                         // Actualizar Lead Pipeline
@@ -529,20 +598,22 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                                             console.error('[WHATSAPP TEXT ERROR]', errData);
                                         }
                                     });
-                                } else if (msg.type === 'image') {
+                                } else if (msg.type === 'image' || msg.type === 'video') {
+                                    const payload = {
+                                        messaging_product: 'whatsapp',
+                                        to: senderPhone,
+                                        type: msg.type
+                                    };
+                                    payload[msg.type] = { link: msg.content };
+                                    
                                     await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                       method: 'POST',
                                       headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        messaging_product: 'whatsapp',
-                                        to: senderPhone,
-                                        type: 'image',
-                                        image: { link: msg.content }
-                                      })
-                                    }).then(async imgRes => {
-                                      if (!imgRes.ok) {
-                                          const imgErr = await imgRes.json();
-                                          console.error('[WHATSAPP IMAGE ERROR]', imgErr);
+                                      body: JSON.stringify(payload)
+                                    }).then(async res => {
+                                      if (!res.ok) {
+                                          const errData = await res.json();
+                                          console.error(`[WHATSAPP ${msg.type.toUpperCase()} ERROR]`, errData);
                                           await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                               method: 'POST',
                                               headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
@@ -550,11 +621,11 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                                                 messaging_product: 'whatsapp',
                                                 to: senderPhone,
                                                 type: 'text',
-                                                text: { body: "*(Error de sistema: No se pudo cargar la imagen)*" }
+                                                text: { body: `*(Error de sistema: No se pudo cargar el ${msg.type === 'video' ? 'video' : 'archivo multimedia'})*` }
                                               })
                                           });
                                       }
-                                    }).catch(e => console.error("Image send error", e));
+                                    }).catch(e => console.error("Media send error", e));
                                 }
                                 // Ensure strict sequential delivery
                                 await new Promise(r => setTimeout(r, 600));

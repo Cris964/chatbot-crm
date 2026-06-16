@@ -22,71 +22,57 @@ export default async function handler(req, res) {
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
 
-    // Buscar citas para enviar recordatorio 24h
+    // Buscar citas para mañana
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
     const { data: appts24h, error: err24 } = await supabase
       .from('appointments')
       .select('*, clients(whatsapp_token, phone_number_id, name)')
-      .eq('status', 'scheduled')
+      .eq('status', 'Confirmed')
       .eq('reminder_24h_sent', false)
-      .gte('appointment_date', new Date(now.getTime() + 23 * 60 * 60 * 1000).toISOString())
-      .lte('appointment_date', new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString());
+      .eq('date', tomorrowStr);
 
-    if (err24) console.error("Error fetching 24h appointments:", err24);
+    if (err24) console.error("Error fetching tomorrow appointments:", err24);
 
-    // Buscar citas para hoy (se asume que este cron corre cada hora, pero a las 8 AM detecta las de hoy)
-    // Buscamos citas agendadas para el día actual que no tengan recordatorio
-    const todayStart = new Date(now);
-    todayStart.setHours(0,0,0,0);
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23,59,59,999);
-
+    // Buscar citas para hoy
+    const todayStr = now.toISOString().split('T')[0];
     const { data: apptsToday, error: errToday } = await supabase
       .from('appointments')
       .select('*, clients(whatsapp_token, phone_number_id, name)')
-      .eq('status', 'scheduled')
+      .eq('status', 'Confirmed')
       .eq('reminder_today_sent', false)
-      .gte('appointment_date', todayStart.toISOString())
-      .lte('appointment_date', todayEnd.toISOString());
+      .eq('date', todayStr);
     
     if (errToday) console.error("Error fetching today appointments:", errToday);
 
-    const is8AM = now.getHours() === 8 || now.getHours() === 13; // Ajustar por zona horaria de Vercel (UTC). 8 AM EST/COT = 13:00 UTC.
-
+    // Vercel cron triggers at 10:00 UTC (05:00 COT). We can just process them unconditionally
+    // since the cron ONLY runs once a day. No need for strict hour checks.
     let sentCount = 0;
 
-    // Procesar Recordatorios de 24 horas
+    // Procesar Recordatorios de Mañana (24h)
     if (appts24h && appts24h.length > 0) {
       for (const appt of appts24h) {
          const clientSetup = appt.clients;
          if (!clientSetup?.whatsapp_token || !clientSetup?.phone_number_id) continue;
          
-         const aptDate = new Date(appt.appointment_date);
-         const timeStr = aptDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-         const msg = `Hola${appt.name ? ' ' + appt.name : ''}, te recordamos tu cita de asesoría con ${clientSetup.name || 'nosotros'} programada para mañana a las ${timeStr}. ¡Te esperamos!`;
+         const timeStr = appt.time ? appt.time : '';
+         const msg = `Hola${appt.contact_name ? ' ' + appt.contact_name : ''}, te recordamos tu cita presencial con ${clientSetup.name || 'nosotros'} programada para MAÑANA a las ${timeStr}. ¡Te esperamos!`;
          
-         await sendWhatsApp(clientSetup.whatsapp_token, clientSetup.phone_number_id, appt.phone, msg);
+         await sendWhatsApp(clientSetup.whatsapp_token, clientSetup.phone_number_id, appt.contact_phone, msg);
          await supabase.from('appointments').update({ reminder_24h_sent: true }).eq('id', appt.id);
          sentCount++;
       }
     }
 
-    // Procesar Recordatorios de Hoy (solo si es la hora adecuada)
-    if (is8AM && apptsToday && apptsToday.length > 0) {
+    // Procesar Recordatorios de Hoy
+    if (apptsToday && apptsToday.length > 0) {
       for (const appt of apptsToday) {
-         // Si la cita es muy temprano y ya pasó, la saltamos
-         if (new Date(appt.appointment_date) < now) {
-             await supabase.from('appointments').update({ reminder_today_sent: true }).eq('id', appt.id);
-             continue;
-         }
-
          const clientSetup = appt.clients;
          if (!clientSetup?.whatsapp_token || !clientSetup?.phone_number_id) continue;
          
-         const aptDate = new Date(appt.appointment_date);
-         const timeStr = aptDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-         const msg = `Hola${appt.name ? ' ' + appt.name : ''}, te recordamos que tienes una cita de asesoría con ${clientSetup.name || 'nosotros'} HOY a las ${timeStr}. ¡Te esperamos!`;
+         const timeStr = appt.time ? appt.time : '';
+         const msg = `Hola${appt.contact_name ? ' ' + appt.contact_name : ''}, te recordamos que tienes una cita de asesoría con ${clientSetup.name || 'nosotros'} HOY a las ${timeStr}. ¡Te esperamos!`;
          
-         await sendWhatsApp(clientSetup.whatsapp_token, clientSetup.phone_number_id, appt.phone, msg);
+         await sendWhatsApp(clientSetup.whatsapp_token, clientSetup.phone_number_id, appt.contact_phone, msg);
          await supabase.from('appointments').update({ reminder_today_sent: true }).eq('id', appt.id);
          sentCount++;
       }

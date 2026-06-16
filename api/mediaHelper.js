@@ -103,7 +103,8 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
 
     } else if (type === 'image') {
       const base64 = buffer.toString('base64');
-      return `[IMAGEN_BASE64_URL]: data:${mimeType};base64,${base64}`;
+      const caption = messageObj.image.caption || '';
+      return `${caption} [IMAGEN_BASE64_URL]: data:${mimeType};base64,${base64}`;
 
     } else if (type === 'video') {
       return '[Video recibido: Pídele al cliente que describa en texto o nota de voz lo que contiene.]';

@@ -9,20 +9,19 @@ async function run() {
     if (!clients || clients.length === 0) return;
     
     const clientId = clients[0].id;
-    const { data: conversations, error } = await supabase
+    const { data: conv } = await supabase
         .from('conversations')
-        .select('user_phone, needs_human, user_name, updated_at')
-        .eq('client_id', clientId);
+        .select('messages, needs_human')
+        .eq('client_id', clientId)
+        .eq('user_phone', '573163799745')
+        .single();
         
-    if (error) {
-        console.error('Error fetching conversations:', error);
-        return;
+    console.log("Needs Human:", conv?.needs_human);
+    if (conv && conv.messages) {
+        console.log(JSON.stringify(conv.messages.slice(-5), null, 2));
+    } else {
+        console.log('No messages found');
     }
-    
-    console.log(`Conversaciones para ${clients[0].name}:`);
-    conversations.forEach(c => {
-        console.log(`Phone: ${c.user_phone} | Name: ${c.user_name} | Needs Human: ${c.needs_human} | Last Updated: ${c.updated_at}`);
-    });
 }
 
 run();
