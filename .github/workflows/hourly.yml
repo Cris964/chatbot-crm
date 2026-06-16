@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Hit the Hourly Cron Endpoint
         env:
-          VERCEL_URL: "https://chatbot-crm-xi.vercel.app/api/cron/hourly"
+          VERCEL_URL: "https://chatbot-crm-xi.vercel.app/api/campaign?action=hourly_reminder"
           AUTH_TOKEN: "nexus_secure_123"
         run: |
           curl -X POST -H "Authorization: Bearer $AUTH_TOKEN" $VERCEL_URL
