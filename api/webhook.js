@@ -31,23 +31,39 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const body = req.body;
-      if (body.object !== 'whatsapp_business_account') {
-        return res.status(404).send('Not a WhatsApp event');
+      if (!['whatsapp_business_account', 'page', 'instagram'].includes(body.object)) {
+        return res.status(404).send('Event not supported');
       }
 
+      let messageObj, senderPhone, senderName, recipientId, channel;
       const entry = body.entry?.[0];
-      const changes = entry?.changes?.[0]?.value;
 
-      if (!changes || !changes.messages || changes.messages.length === 0) {
-        return res.status(200).send('No message payload');
+      if (body.object === 'whatsapp_business_account') {
+          const changes = entry?.changes?.[0]?.value;
+          if (!changes || !changes.messages || changes.messages.length === 0) return res.status(200).send('No message payload');
+          messageObj = changes.messages[0];
+          senderPhone = messageObj.from;
+          senderName = changes.contacts?.[0]?.profile?.name || 'Cliente';
+          recipientId = changes.metadata?.phone_number_id;
+          channel = 'whatsapp';
+      } else if (body.object === 'page' || body.object === 'instagram') {
+          const messaging = entry?.messaging?.[0];
+          if (!messaging || (!messaging.message && !messaging.postback)) return res.status(200).send('No message');
+          
+          messageObj = messaging.message || { text: messaging.postback?.payload || '' };
+          messageObj.id = messageObj.mid || `mid.${Date.now()}`;
+          messageObj.from = messaging.sender.id;
+          
+          if (messageObj.text && !messageObj.type) {
+              messageObj.type = 'text';
+              messageObj.text = { body: messageObj.text };
+          }
+          
+          senderPhone = messaging.sender.id; // PSID / IGSID
+          senderName = 'Cliente (Redes)';
+          recipientId = messaging.recipient.id;
+          channel = body.object === 'page' ? 'messenger' : 'instagram';
       }
-
-      const messageObj = changes.messages[0];
-      const contactObj = changes.contacts?.[0];
-      const phoneNumberId = changes.metadata.phone_number_id;
-
-      const senderPhone = messageObj.from;
-      const senderName = contactObj?.profile?.name || 'Cliente';
       
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
       const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -98,16 +114,17 @@ export default async function handler(req, res) {
         console.error('[LOCK EXCEPTION]', e);
       }
 
-      // 1. Identificar cliente por phone_number_id (multi-tenant)
-      console.log(`[DEBUG] phoneNumberId recibido: "${phoneNumberId}"`);
+      // 1. Identificar cliente por recipientId (multi-tenant)
+      console.log(`[DEBUG] recipientId recibido: "${recipientId}" - Canal: ${channel}`);
       console.log(`[DEBUG] supabaseUrl: ${supabaseUrl ? 'SET' : 'MISSING'}`);
       console.log(`[DEBUG] supabaseKey type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE' : 'ANON'}`);
 
-      const { data: clients, error: clientErr } = await supabase
-        .from('clients')
-        .select('id, user_id, active, prompt, model, whatsapp_token, name, phone_number_id')
-        .eq('phone_number_id', phoneNumberId)
-        .limit(1);
+      let clientQuery = supabase.from('clients').select('id, user_id, active, prompt, model, whatsapp_token, name, phone_number_id, facebook_page_id, instagram_account_id, facebook_access_token');
+      if (channel === 'whatsapp') clientQuery = clientQuery.eq('phone_number_id', recipientId);
+      if (channel === 'messenger') clientQuery = clientQuery.eq('facebook_page_id', recipientId);
+      if (channel === 'instagram') clientQuery = clientQuery.eq('instagram_account_id', recipientId);
+      
+      const { data: clients, error: clientErr } = await clientQuery.limit(1);
 
       console.log(`[DEBUG] clients encontrados: ${clients?.length || 0}, error: ${clientErr?.message || 'none'}`);
 
@@ -576,22 +593,18 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                           }
                         }
 
-                        // Enviar a WhatsApp
+                        // Enviar a WhatsApp / Messenger / Instagram
                         const WHATSAPP_TOKEN = clientSetup.whatsapp_token || process.env.WHATSAPP_TOKEN;
                         const PHONE_NUMBER_ID = clientSetup.phone_number_id || process.env.PHONE_NUMBER_ID;
+                        const FB_TOKEN = clientSetup.facebook_access_token;
 
-                        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-                            for (const msg of messageQueue) {
+                        for (const msg of messageQueue) {
+                            if (channel === 'whatsapp' && WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
                                 if (msg.type === 'text') {
                                     await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                       method: 'POST',
                                       headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        messaging_product: 'whatsapp',
-                                        to: senderPhone,
-                                        type: 'text',
-                                        text: { body: msg.content }
-                                      })
+                                      body: JSON.stringify({ messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: msg.content } })
                                     }).then(async r => {
                                         if (!r.ok) {
                                             const errData = await r.json();
@@ -599,11 +612,7 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                                         }
                                     });
                                 } else if (msg.type === 'image' || msg.type === 'video') {
-                                    const payload = {
-                                        messaging_product: 'whatsapp',
-                                        to: senderPhone,
-                                        type: msg.type
-                                    };
+                                    const payload = { messaging_product: 'whatsapp', to: senderPhone, type: msg.type };
                                     payload[msg.type] = { link: msg.content };
                                     
                                     await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
@@ -617,19 +626,36 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                                           await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                                               method: 'POST',
                                               headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({
-                                                messaging_product: 'whatsapp',
-                                                to: senderPhone,
-                                                type: 'text',
-                                                text: { body: `*(Error de sistema: No se pudo cargar el ${msg.type === 'video' ? 'video' : 'archivo multimedia'})*` }
-                                              })
+                                              body: JSON.stringify({ messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: `*(Error de sistema: No se pudo cargar el archivo multimedia)*` } })
                                           });
                                       }
                                     }).catch(e => console.error("Media send error", e));
                                 }
-                                // Ensure strict sequential delivery
-                                await new Promise(r => setTimeout(r, 600));
+                            } else if ((channel === 'messenger' || channel === 'instagram') && FB_TOKEN) {
+                                let payload = { recipient: { id: senderPhone }, message: {} };
+                                if (msg.type === 'text') {
+                                    payload.message.text = msg.content;
+                                } else if (msg.type === 'image' || msg.type === 'video') {
+                                    payload.message.attachment = {
+                                        type: msg.type,
+                                        payload: { url: msg.content, is_reusable: true }
+                                    };
+                                }
+                                
+                                await fetch(`https://graph.facebook.com/v21.0/me/messages?access_token=${FB_TOKEN}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                }).then(async r => {
+                                    if (!r.ok) {
+                                        const errData = await r.json();
+                                        console.error(`[${channel.toUpperCase()} SEND ERROR]`, errData);
+                                    }
+                                }).catch(e => console.error("FB Media send error", e));
                             }
+                            
+                            // Ensure strict sequential delivery
+                            await new Promise(r => setTimeout(r, 600));
                         }
                     }
                 } else {
