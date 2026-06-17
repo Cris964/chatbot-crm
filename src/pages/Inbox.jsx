@@ -863,22 +863,36 @@ export default function Inbox() {
               <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {messages.map(m => (
                     <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
-                        {m.type === 'image' || (m.text && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
+                        {m.type === 'image' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
                           <div>
                             {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" avatar={m.sender === 'client' ? selectedConv?.avatar : null} />}
                             <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text?.startsWith('http') ? '' : m.text?.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
                           </div>
-                        ) : m.type === 'video' ? (
+                        ) : m.type === 'video' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(mp4|webm|ogg)/i)) ? (
                           <video controls src={m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'document' ? (
                           <a href={m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
                         ) : (
                           <div>
                             {(() => {
-                              const imgMatch = m.text?.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
-                              const vidMatch = m.text?.match(/\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/i);
+                              // Extract all image URLs
+                              const imgMatches = [];
+                              const imgRegex = /\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi;
+                              let match;
+                              while ((match = imgRegex.exec(m.text || '')) !== null) {
+                                imgMatches.push(match[1]);
+                              }
+
+                              // Extract all video URLs
+                              const vidMatches = [];
+                              const vidRegex = /\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/gi;
+                              let vMatch;
+                              while ((vMatch = vidRegex.exec(m.text || '')) !== null) {
+                                vidMatches.push(vMatch[1]);
+                              }
+
                               const cleanMsgText = m.text
                                 ?.replace(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi, '')
                                 ?.replace(/\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/gi, '')
@@ -886,9 +900,13 @@ export default function Inbox() {
                               
                               return (
                                 <>
-                                  {cleanMsgText && <p style={{ margin: 0, wordBreak: 'break-word' }}>{cleanMsgText}</p>}
-                                  {imgMatch && <img src={imgMatch[1]} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }} />}
-                                  {vidMatch && <video controls src={vidMatch[1]} style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }} />}
+                                  {cleanMsgText && <p style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{cleanMsgText}</p>}
+                                  {imgMatches.map((url, idx) => (
+                                    <img key={idx} src={url} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8, display: 'block' }} />
+                                  ))}
+                                  {vidMatches.map((url, idx) => (
+                                    <video key={idx} controls src={url} style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8, display: 'block' }} />
+                                  ))}
                                 </>
                               );
                             })()}
