@@ -49,6 +49,8 @@ export default function Leads() {
   const [isLoading, setIsLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [isAddingLead, setIsAddingLead] = useState(false)
+  const [teamMembers, setTeamMembers] = useState([])
+  const [selectedAssignee, setSelectedAssignee] = useState('All')
   
   // New Lead Form State
   const [newLead, setNewLead] = useState({
@@ -59,14 +61,24 @@ export default function Leads() {
     source: 'WhatsApp',
     stage: 'Nuevo',
     score: 0,
-    value: ''
+    value: '',
+    assigned_to: ''
   })
+
+  const fetchTeamMembers = async () => {
+    const { data } = await supabase
+      .from('team_members')
+      .select('user_id, full_name')
+      .eq('client_id', tenant.clientId)
+    if (data) setTeamMembers(data)
+  }
 
   useEffect(() => {
     let subscription = null;
 
     if (tenant.clientId && !tenant.isLoading) {
       fetchLeads()
+      fetchTeamMembers()
 
       // Subscribe to real-time changes
       subscription = supabase.channel('leads-page-changes')
@@ -114,6 +126,7 @@ export default function Leads() {
     const leadToInsert = {
       ...newLead,
       user_id: session.user.id,
+      assigned_to: newLead.assigned_to || null,
       client_id: tenant.clientId,
       score: Math.floor(Math.random() * 40) + 30, 
       created_at: new Date().toISOString()
@@ -123,7 +136,7 @@ export default function Leads() {
 
     if (!error) {
       setShowModal(false)
-      setNewLead({ name: '', email: '', phone: '', company: '', source: 'WhatsApp', stage: 'Nuevo', score: 0, value: '' })
+      setNewLead({ name: '', email: '', phone: '', company: '', source: 'WhatsApp', stage: 'Nuevo', score: 0, value: '', assigned_to: '' })
       fetchLeads()
     } else {
       console.error('Error adding lead:', error)
@@ -180,9 +193,18 @@ export default function Leads() {
           />
         </div>
         <div className="flex gap-2">
-           {['All Status', 'Source', 'Priority', 'Assigned'].map(f => (
-             <button key={f} className="btn btn-ghost btn-sm" style={{ fontSize: '0.85rem' }}>{f} <ChevronDown size={14} /></button>
-           ))}
+           <select 
+             className="btn btn-ghost btn-sm" 
+             style={{ fontSize: '0.85rem', appearance: 'auto', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '0 8px', color: 'var(--text-secondary)' }}
+             value={selectedAssignee}
+             onChange={e => setSelectedAssignee(e.target.value)}
+           >
+             <option value="All" style={{ background: '#111' }}>Todos los Asesores</option>
+             <option value="Unassigned" style={{ background: '#111' }}>Sin Asignar</option>
+             {teamMembers.map(m => (
+               <option key={m.user_id} value={m.user_id} style={{ background: '#111' }}>{m.full_name}</option>
+             ))}
+           </select>
         </div>
       </div>
 
@@ -194,6 +216,7 @@ export default function Leads() {
                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>SOURCE</th>
                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>STAGE</th>
                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>SCORE</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ASSIGNED TO</th>
                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>DEAL VALUE</th>
                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ACTIONS</th>
              </tr>
@@ -201,20 +224,36 @@ export default function Leads() {
            <tbody>
              {isLoading ? (
                <tr>
-                 <td colSpan="6" style={{ padding: '40px', textAlign: 'center' }}>
+                 <td colSpan="7" style={{ padding: '40px', textAlign: 'center' }}>
                    <div className="spinner" style={{ margin: '0 auto 12px' }} />
                    <p style={{ color: 'var(--text-tertiary)' }}>Fetching your real leads from Naturel...</p>
                  </td>
                </tr>
-             ) : leads.filter(l => l.name?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
+             ) : leads.filter(l => {
+                 const matchesSearch = l.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                       l.company?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                       l.email?.toLowerCase().includes(searchQuery.toLowerCase());
+                 const matchesAssignee = selectedAssignee === 'All' || 
+                                         (selectedAssignee === 'Unassigned' && !l.assigned_to) || 
+                                         l.assigned_to === selectedAssignee;
+                 return matchesSearch && matchesAssignee;
+             }).length === 0 ? (
                <tr>
-                 <td colSpan="6" style={{ padding: '40px', textAlign: 'center' }}>
+                 <td colSpan="7" style={{ padding: '40px', textAlign: 'center' }}>
                     <p style={{ color: 'var(--text-tertiary)' }}>No leads found.</p>
                  </td>
                </tr>
              ) : (
                leads
-                 .filter(l => l.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+                 .filter(l => {
+                     const matchesSearch = l.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                           l.company?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                           l.email?.toLowerCase().includes(searchQuery.toLowerCase());
+                     const matchesAssignee = selectedAssignee === 'All' || 
+                                             (selectedAssignee === 'Unassigned' && !l.assigned_to) || 
+                                             l.assigned_to === selectedAssignee;
+                     return matchesSearch && matchesAssignee;
+                 })
                  .map((l, i) => (
                    <tr key={l.id} className="table-row-hover" style={{ borderBottom: i === leads.length - 1 ? 'none' : '1px solid rgba(var(--overlay-rgb), 0.03)' }}>
                      <td style={{ padding: '24px' }}>
@@ -248,6 +287,27 @@ export default function Leads() {
                         </select>
                       </td>
                       <td><ScoreBadge score={l.score} onScoreChange={(newScore) => handleUpdateLead(l.id, { score: newScore })} /></td>
+                      <td>
+                        <select 
+                            className="badge-select"
+                            value={l.assigned_to || ''} 
+                            onChange={(e) => handleUpdateLead(l.id, { assigned_to: e.target.value || null })}
+                            style={{ 
+                                background: 'rgba(var(--overlay-rgb), 0.05)', 
+                                border: '1px solid var(--glass-border)',
+                                color: "var(--text-primary)",
+                                borderRadius: 8,
+                                fontSize: '0.75rem',
+                                padding: '4px 8px',
+                                fontWeight: 600
+                            }}
+                        >
+                            <option value="" style={{ background: '#111' }}>Sin Asignar</option>
+                            {teamMembers.map(m => (
+                                <option key={m.user_id} value={m.user_id} style={{ background: '#111' }}>{m.full_name}</option>
+                            ))}
+                        </select>
+                      </td>
                      <td style={{ fontWeight: 800, color: 'var(--accent-emerald)' }}>{l.value || '$0'}</td>
                      <td>
                         <div className="flex gap-2">
@@ -316,6 +376,19 @@ export default function Leads() {
                     type="text" className="input" placeholder="$0.00" 
                     value={newLead.value} onChange={e => setNewLead({...newLead, value: e.target.value})}
                   />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Asignado A</label>
+                  <select 
+                    className="input" 
+                    value={newLead.assigned_to} 
+                    onChange={e => setNewLead({...newLead, assigned_to: e.target.value})}
+                  >
+                    <option value="">Sin Asignar</option>
+                    {teamMembers.map(m => (
+                      <option key={m.user_id} value={m.user_id}>{m.full_name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>

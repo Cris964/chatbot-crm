@@ -226,8 +226,10 @@ export default function Inbox() {
       setMessages((selectedConv.rawMessages || []).map((m, i) => {
         let ts = m.timestamp || m.created_at || selectedConv.updated_at || Date.now();
         let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
-        const mediaUrl = m.media_url || m.url || (m.text?.startsWith('http') ? m.text : null);
-        const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? 'audio' : 'text');
+        const mediaUrl = m.media_url || m.url || 
+          (m.content?.startsWith('http') ? m.content : null) || 
+          (m.text?.startsWith('http') ? m.text : null);
+        const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac|m4a|webm)/i)) ? 'audio' : 'text');
         
         let finalContent = m.content || m.text || m.media_url || m.url || '';
         let finalType = m.type || m.message_type || inferredType;
@@ -246,7 +248,7 @@ export default function Inbox() {
           sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
           text: finalContent,
           type: m.media_type || finalType,
-          media_url: m.media_url,
+          media_url: mediaUrl,
           time: `${dateStr} ${timeStr}`
         };
       }))
@@ -267,8 +269,10 @@ export default function Inbox() {
             setMessages(updatedConv.messages.map((m, i) => {
               let ts = m.timestamp || m.created_at || updatedConv.updated_at || Date.now();
               let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
-              const mediaUrl = m.media_url || m.url || (m.text?.startsWith('http') ? m.text : null);
-              const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac)/i)) ? 'audio' : 'text');
+              const mediaUrl = m.media_url || m.url || 
+                (m.content?.startsWith('http') ? m.content : null) || 
+                (m.text?.startsWith('http') ? m.text : null);
+              const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac|m4a|webm)/i)) ? 'audio' : 'text');
               
               let finalContent = m.content || m.text || m.media_url || m.url || '';
               let finalType = m.type || m.message_type || inferredType;
@@ -287,7 +291,7 @@ export default function Inbox() {
                 sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
                 text: finalContent,
                 type: m.media_type || finalType,
-                media_url: m.media_url,
+                media_url: mediaUrl,
                 time: `${dateStr} ${timeStr}`
               };
             }))
@@ -335,7 +339,21 @@ export default function Inbox() {
             return {
               id: conv.id,
               name: displayName,
-              preview: (conv.messages && conv.messages.length > 0) ? (conv.messages[conv.messages.length - 1].content || conv.messages[conv.messages.length - 1].text || 'Inició conversación...') : 'Inició conversación...',
+              preview: (() => {
+                if (!conv.messages || conv.messages.length === 0) return 'Inició conversación...';
+                const lastMsg = conv.messages[conv.messages.length - 1];
+                let lastMsgText = lastMsg.content || lastMsg.text || 'Inició conversación...';
+                if (lastMsgText.includes('[IMAGEN_BASE64_URL]:') || lastMsgText.includes('[SEND_IMAGE:')) {
+                  return '📷 Foto';
+                } else if (lastMsgText.includes('[SEND_VIDEO:')) {
+                  return '🎥 Video';
+                } else if (lastMsgText.includes('[Multimedia:')) {
+                  return '🖼️ Multimedia';
+                } else if (lastMsg.type === 'audio' || lastMsg.type === 'voice') {
+                  return '🎙️ Audio';
+                }
+                return lastMsgText;
+              })(),
               time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
               channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
               unread: conv.messages && conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role === 'user',
@@ -505,13 +523,13 @@ export default function Inbox() {
     try {
       const fileName = `voice_${Date.now()}.webm`
       const { data, error } = await supabase.storage
-        .from('media')
+        .from('whatsapp_media')
         .upload(fileName, audioBlob, { contentType: 'audio/webm' })
         
       if (error) throw error
 
       const { data: publicUrlData } = supabase.storage
-        .from('media')
+        .from('whatsapp_media')
         .getPublicUrl(fileName)
 
       const audioUrl = publicUrlData.publicUrl
@@ -566,13 +584,13 @@ export default function Inbox() {
     try {
       const fileName = `${Date.now()}_${file.name}`
       const { data, error } = await supabase.storage
-        .from('media')
+        .from('whatsapp_media')
         .upload(fileName, file)
       
       if (error) throw error
 
       const { data: publicUrlData } = supabase.storage
-        .from('media')
+        .from('whatsapp_media')
         .getPublicUrl(fileName)
 
       const fileUrl = publicUrlData.publicUrl
@@ -610,7 +628,12 @@ export default function Inbox() {
         }
         
         fetchConversations()
+      } else {
+        throw dbError
       }
+    } catch (err) {
+      console.error("Upload error:", err)
+      alert("Error al subir el archivo: " + err.message)
     } finally {
       setIsLoading(false)
     }
@@ -840,19 +863,36 @@ export default function Inbox() {
               <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {messages.map(m => (
                     <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
-                        {m.type === 'image' || (m.text && m.text.match(/\.(jpeg|jpg|gif|png)/i)) ? (
+                        {m.type === 'image' || (m.text && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
                           <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
                           <div>
                             {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" avatar={m.sender === 'client' ? selectedConv?.avatar : null} />}
-                            <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
+                            <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text?.startsWith('http') ? '' : m.text?.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
                           </div>
                         ) : m.type === 'video' ? (
                           <video controls src={m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'document' ? (
                           <a href={m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
                         ) : (
-                          <p style={{ margin: 0, wordBreak: 'break-word' }}>{m.text}</p>
+                          <div>
+                            {(() => {
+                              const imgMatch = m.text?.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+                              const vidMatch = m.text?.match(/\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/i);
+                              const cleanMsgText = m.text
+                                ?.replace(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi, '')
+                                ?.replace(/\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/gi, '')
+                                ?.trim();
+                              
+                              return (
+                                <>
+                                  {cleanMsgText && <p style={{ margin: 0, wordBreak: 'break-word' }}>{cleanMsgText}</p>}
+                                  {imgMatch && <img src={imgMatch[1]} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }} />}
+                                  {vidMatch && <video controls src={vidMatch[1]} style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }} />}
+                                </>
+                              );
+                            })()}
+                          </div>
                         )}
                         <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
                           {m.time}
