@@ -5,7 +5,7 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight,
-  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle
+  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -378,7 +378,8 @@ export default function Inbox() {
               rawMessages: conv.messages || [],
               needs_human: conv.needs_human,
               assigned_to: conv.assigned_to,
-              department: conv.department
+              department: conv.department,
+              archived: conv.archived
             }
           })
           setConversationsList(mapped)
@@ -763,7 +764,7 @@ export default function Inbox() {
                <input type="text" placeholder="Buscar..." style={{ fontSize: '0.85rem' }} />
              </div>
              <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
-                {['all', 'whatsapp', 'instagram', 'messenger'].map(tab => (
+                {['all', 'whatsapp', 'instagram', 'messenger', 'archived'].map(tab => (
                    <button 
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -774,7 +775,7 @@ export default function Inbox() {
                          textTransform: 'capitalize', whiteSpace: 'nowrap'
                       }}
                    >
-                      {tab === 'all' ? 'Todos' : tab}
+                      {tab === 'all' ? 'Todos' : tab === 'archived' ? 'Archivados' : tab}
                    </button>
                 ))}
              </div>
@@ -798,7 +799,7 @@ export default function Inbox() {
                  <div className="spinner" style={{ margin: '0 auto 12px' }} />
                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
               </div>
-            ) : conversationsList.filter(c => activeTab === 'all' || c.channel === activeTab).map(c => (
+            ) : conversationsList.filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab))).map(c => (
               <div 
                 key={c.id} 
                 className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
@@ -888,6 +889,19 @@ export default function Inbox() {
                      <div className="flex gap-1">
                         <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
                         <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
+                        <button 
+                           className="btn btn-secondary btn-sm"
+                           title={selectedConv?.archived ? "Desarchivar" : "Archivar"}
+                           onClick={async () => {
+                              const newArchivedState = !selectedConv.archived;
+                              const updatedConv = { ...selectedConv, archived: newArchivedState };
+                              setSelectedConv(updatedConv);
+                              setConversationsList(prev => prev.map(c => c.id === updatedConv.id ? updatedConv : c));
+                              await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', updatedConv.id);
+                           }}
+                        >
+                           <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-emerald)' : 'var(--text-secondary)' }} />
+                        </button>
                      </div>
                   </div>
               </div>

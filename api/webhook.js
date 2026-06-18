@@ -401,8 +401,12 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                         const humanDept = needsHumanMatch ? (needsHumanMatch[1] || '').trim().toUpperCase() : null;
 
                         const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
-        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
+                        const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
                         const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
+                        
+                        // Extraer Nombre del Cliente
+                        const nameMatch = botReplyText.match(/\[CLIENT_NAME:\s*(.+?)\]/i);
+                        let clientNameExtracted = nameMatch ? nameMatch[1].trim() : null;
 
                                                 // Message Interleaving Logic (Text -> Media -> Text)
                         const messageQueue = [];
@@ -502,15 +506,24 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                              score = 100;
                         }
 
+                        // Actualizar nombre si la IA lo descubrió
+                        let finalSenderName = senderName;
+                        if (clientNameExtracted && clientNameExtracted.toLowerCase() !== 'cliente') {
+                             finalSenderName = clientNameExtracted;
+                             // Opcional: Actualizar 'user_name' en la tabla conversations de una vez
+                             await supabase.from('conversations').update({ user_name: finalSenderName }).eq('id', conversationId);
+                             console.log(`[NAME EXTRACTED] Updated conversation ${conversationId} user_name to ${finalSenderName}`);
+                        }
+
                         try {
                              const { data: existingLead } = await supabase.from('leads').select('id').eq('client_id', clientId).eq('phone', senderPhone).single();
                              if (existingLead) {
-                                  await supabase.from('leads').update({ stage, score, name: senderName }).eq('id', existingLead.id);
+                                  await supabase.from('leads').update({ stage, score, name: finalSenderName }).eq('id', existingLead.id);
                              } else {
                                   await supabase.from('leads').insert([{
                                        client_id: clientId,
                                        phone: senderPhone,
-                                       name: senderName,
+                                       name: finalSenderName,
                                        stage,
                                        score,
                                        source: 'WhatsApp',
@@ -531,7 +544,9 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                         }
 
                         // Guardar en CRM
-                        const cleanReplyForDB = cleanText(botReplyText).replace(/\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\)/gi, '');
+                        const cleanReplyForDB = cleanText(botReplyText)
+                            .replace(/\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\)/gi, '')
+                            .replace(/\[CLIENT_NAME:.*?\]/i, '');
                         const { data: latest } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
                         let updatePayload = {
                             messages: [...(latest?.messages || []), { role: 'agent', content: cleanReplyForDB, timestamp: new Date().toISOString() }],
