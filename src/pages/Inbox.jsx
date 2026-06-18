@@ -226,7 +226,11 @@ export default function Inbox() {
       setBotActive(selectedConv.needs_human === false || selectedConv.needs_human == null);
       setMessages((selectedConv.rawMessages || []).map((m, i) => {
         let ts = m.timestamp || m.created_at || selectedConv.updated_at || Date.now();
-        let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
+        let safeTs = ts;
+        if (typeof ts === 'string' && ts.includes('T') && !ts.endsWith('Z')) {
+           safeTs += 'Z';
+        }
+        let dateObj = (typeof safeTs === 'string' && /^\d{10}$/.test(safeTs)) ? new Date(parseInt(safeTs) * 1000) : ((typeof safeTs === 'number' && safeTs < 20000000000) ? new Date(safeTs * 1000) : new Date(safeTs));
         const mediaUrl = m.media_url || m.url || 
           (m.content?.startsWith('http') ? m.content : null) || 
           (m.text?.startsWith('http') ? m.text : null);
@@ -269,7 +273,11 @@ export default function Inbox() {
             
             setMessages(updatedConv.messages.map((m, i) => {
               let ts = m.timestamp || m.created_at || updatedConv.updated_at || Date.now();
-              let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
+              let safeTs = ts;
+              if (typeof ts === 'string' && ts.includes('T') && !ts.endsWith('Z')) {
+                 safeTs += 'Z';
+              }
+              let dateObj = (typeof safeTs === 'string' && /^\d{10}$/.test(safeTs)) ? new Date(parseInt(safeTs) * 1000) : ((typeof safeTs === 'number' && safeTs < 20000000000) ? new Date(safeTs * 1000) : new Date(safeTs));
               const mediaUrl = m.media_url || m.url || 
                 (m.content?.startsWith('http') ? m.content : null) || 
                 (m.text?.startsWith('http') ? m.text : null);
@@ -365,7 +373,13 @@ export default function Inbox() {
                 }
                 return lastMsgText;
               })(),
-              time: conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
+              time: (() => {
+                 if (!conv.updated_at) return '';
+                 const safeDateStr = (typeof conv.updated_at === 'string' && conv.updated_at.includes('T') && !conv.updated_at.endsWith('Z')) 
+                    ? conv.updated_at + 'Z' 
+                    : conv.updated_at;
+                 return new Date(safeDateStr).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+              })(),
               channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
               unread: conv.messages && conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role === 'user',
               avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
