@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       // Manejo Multimedia (Audio / Imagen / Video)
       if (!textResponse && messageObj.type !== 'text') {
         try {
-            const tempClient = await supabase.from('clients').select('*').eq('phone_number_id', phoneNumberId).single();
+            const tempClient = await supabase.from('clients').select('*').eq('phone_number_id', recipientId).single();
             const whatsappToken = tempClient?.data?.whatsapp_token;
             const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
             
@@ -358,7 +358,7 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                 // Support for Base64 Images injected by processMediaMessage
                 const aiMessages = [
                     { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n\n${inventoryContext}` },
-                    ...finalMessages.slice(-10).map(m => {
+                    ...finalMessages.slice(-30).map(m => {
                         let cleanContent = m.content || "";
                         if (m.role === 'user' && cleanContent) {
                             cleanContent = cleanContent.replace(/^\[Nota de Voz del Cliente\]:\s*/, '');
