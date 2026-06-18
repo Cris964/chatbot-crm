@@ -330,11 +330,21 @@ export default function Inbox() {
           const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
 
             let convTags = []
-            if (conv.needs_human) convTags.push('Atención Req.')
+            if (conv.needs_human) convTags.push({ label: 'Atención Req.', color: 'var(--accent-red, #ef4444)' })
+            
+            if (conv.department) {
+                const dept = conv.department.toUpperCase();
+                let color = '#6b7280'; // gray
+                if (dept === 'TRAZZOS') color = '#3b82f6'; // blue
+                else if (dept === 'TREARQ') color = '#22c55e'; // green
+                else if (dept === 'ASESOR') color = '#f97316'; // orange
+                convTags.push({ label: dept, color: color });
+            }
+
             if (conv.assigned_to) {
-               convTags.push(`Asignado`)
+               convTags.push({ label: 'Asignado', color: '#8b5cf6' }) // purple
             } else if (conv.needs_human) {
-               convTags.push('Sin Asignar')
+               convTags.push({ label: 'Sin Asignar', color: '#6b7280' })
             }
 
             return {
@@ -367,7 +377,8 @@ export default function Inbox() {
               client: conv.clients,
               rawMessages: conv.messages || [],
               needs_human: conv.needs_human,
-              assigned_to: conv.assigned_to
+              assigned_to: conv.assigned_to,
+              department: conv.department
             }
           })
           setConversationsList(mapped)

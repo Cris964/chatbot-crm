@@ -524,6 +524,9 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                         if (assignedUserId) {
                              updatePayload.assigned_to = assignedUserId;
                         }
+                        if (humanDept) {
+                             updatePayload.department = humanDept;
+                        }
 
                         await supabase.from('conversations').update(updatePayload).eq('id', conversationId);
 
