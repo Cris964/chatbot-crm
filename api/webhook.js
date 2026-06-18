@@ -301,19 +301,18 @@ export default async function handler(req, res) {
                 
                 if (companyProducts && companyProducts.length > 0) {
                   const productLines = companyProducts.map(p => {
-                    let line = `- ${p.name}: ${p.description || 'Sin descripción'}`;
-                    if (p.price && p.price > 0) line += `. Precio: $${p.price}`;
-                    if (p.promo_text) line += `. 🔥 PROMO: ${p.promo_text}`;
+                    let line = `---
+PRODUCTO: ${p.name}
+DESCRIPCIÓN: ${p.description || 'Sin descripción'}
+PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
+                    if (p.promo_text) line += `\nPROMOCIÓN: ${p.promo_text}`;
                     if (p.image_url) {
                         const urls = p.image_url.split(',').map(u => u.trim()).filter(Boolean);
-                        if (urls.length >= 2) {
-                            line += `. URL foto 1: ${urls[0]} | URL foto 2: ${urls[1]}`;
-                        } else {
-                            line += `. URL foto: ${urls[0]}`;
-                        }
+                        line += `\nFOTOS DEL PRODUCTO:\n` + urls.map((u, i) => `Foto ${i+1}: ${u}`).join('\n');
                     }
+                    line += `\n---`;
                     return line;
-                  }).join('\n');
+                  }).join('\n\n');
 
                   const promos = companyProducts.filter(p => p.promo_text);
                   const promoSection = promos.length > 0 
