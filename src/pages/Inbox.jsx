@@ -561,7 +561,8 @@ export default function Inbox() {
         .from('conversations')
         .update({ 
           messages: [...selectedConv.rawMessages, messageObj],
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          needs_human: true
         })
         .eq('id', selectedConv.id)
 
@@ -622,7 +623,8 @@ export default function Inbox() {
         .from('conversations')
         .update({ 
           messages: [...selectedConv.rawMessages, messageObj],
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          needs_human: true
         })
         .eq('id', selectedConv.id)
 
