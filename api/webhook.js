@@ -284,6 +284,20 @@ export default async function handler(req, res) {
                                 score -= 10;
                             }
                             
+                            // Penalizar fuertemente accesorios si buscan pisos/paredes
+                            const buscaRevestimiento = expandedKeywords.some(k => ['piso', 'pisos', 'pared', 'paredes', 'porcelanato', 'ceramica'].includes(k));
+                            const esAccesorio = targetStr.includes('accesorio') || targetStr.includes('griferia') || targetStr.includes('ducha') || targetStr.includes('sanitario');
+                            if (esAccesorio && buscaRevestimiento && !expandedKeywords.includes('accesorio') && !expandedKeywords.includes('griferia')) {
+                                score -= 20;
+                            }
+                            
+                            // Penalizar pisos/paredes si buscan accesorios
+                            const buscaAccesorio = expandedKeywords.some(k => ['griferia', 'ducha', 'accesorio', 'sanitario'].includes(k));
+                            const esRevestimiento = targetStr.match(/\b(piso|pisos|pared|paredes|porcelanato|ceramica)\b/);
+                            if (esRevestimiento && buscaAccesorio && !buscaRevestimiento) {
+                                score -= 20;
+                            }
+                            
                             return { ...p, score };
                         });
                         scoredProducts.sort((a, b) => b.score - a.score);

@@ -382,8 +382,12 @@ export default function Inbox() {
             }
           })
           setConversationsList(mapped)
-        if (mapped.length > 0 && !selectedConv) {
-          setSelectedConv(mapped[0])
+        if (mapped.length > 0) {
+          setSelectedConv(prev => {
+             if (!prev) return mapped[0];
+             const updatedCurrent = mapped.find(c => c.id === prev.id);
+             return updatedCurrent || prev;
+          });
         }
       }
     } catch (err) {
@@ -432,7 +436,7 @@ export default function Inbox() {
       .update({ 
         messages: [...selectedConv.rawMessages, messageObj],
         updated_at: new Date().toISOString(),
-        needs_human: false
+        needs_human: true // Al responder el asesor, mantener la IA apagada
       })
       .eq('id', selectedConv.id)
 
