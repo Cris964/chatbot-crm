@@ -220,7 +220,8 @@ export default async function handler(req, res) {
       }
 
       // 4. AI Dispatch — DYNAMIC per-company (no more hardcoded Naturel products)
-      if (clients?.[0]?.active !== false && conversationId) {
+      const isNeedsHuman = existingChats?.[0]?.needs_human === true;
+      if (clients?.[0]?.active !== false && conversationId && !isNeedsHuman) {
         const clientSetup = clients[0];
         const openRouterKey = process.env.OPENROUTER_API_KEY;
 
@@ -251,7 +252,9 @@ export default async function handler(req, res) {
                         'plateada': ['cromada', 'satinada', 'cromo'], 
                         'plateado': ['cromado', 'satinado', 'cromo'],
                         'dorada': ['oro', 'gold', 'dorado', 'dorada'],
-                        'dorado': ['oro', 'gold', 'dorado', 'dorada']
+                        'dorado': ['oro', 'gold', 'dorado', 'dorada'],
+                        'pared': ['paredes', 'muro', 'muros', 'revestimiento', 'enchape', 'fachada', 'baño'],
+                        'piso': ['pisos', 'suelo', 'ceramica', 'porcelanato', 'interior', 'exterior']
                     };
                     let expandedKeywords = [...keywords];
                     keywords.forEach(k => { if (synonyms[k]) expandedKeywords.push(...synonyms[k]); });
@@ -285,10 +288,12 @@ export default async function handler(req, res) {
                         });
                         scoredProducts.sort((a, b) => b.score - a.score);
                         companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 25);
-                        // Fallback si no hay coincidencias estrictas, usar sin filtro pero limitado
-                        if (companyProducts.length === 0) companyProducts = scoredProducts.slice(0, 15);
+                        // Se eliminó el fallback de cargar 15 productos al azar si no hay coincidencias.
+                        // Es mejor que la IA sepa que no hay coincidencias y haga más preguntas indagatorias.
                     } else {
-                        companyProducts = companyProducts.slice(0, 15);
+                        // Si el usuario no usó ninguna palabra clave relevante, 
+                        // tampoco enviamos productos al azar.
+                        companyProducts = [];
                     }
                 }
 
@@ -333,7 +338,7 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
 Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Venta Perdida". Score: 1-100.
 `;
                 } else {
-                  inventoryContext = '\n[No hay productos configurados en el catálogo. Responde de forma general y amable. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN]]\n';
+                  inventoryContext = '\n[INVENTARIO OCULTO/VACÍO]: No se encontraron productos que coincidan con la descripción del cliente en esta búsqueda. OBLIGATORIO: Hazle más preguntas para indagar exactamente qué busca (material, uso interior/exterior, formato, colores). NO ofrezcas productos ni fotos, porque no tienes el catálogo a la mano ahora mismo. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN:ASESOR]\n';
                 }
                 // ========== END DYNAMIC INVENTORY ==========
 
