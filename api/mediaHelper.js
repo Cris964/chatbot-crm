@@ -102,9 +102,28 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey) 
       };
 
     } else if (type === 'image') {
-      const base64 = buffer.toString('base64');
-      const caption = messageObj.image.caption || '';
-      return `${caption} [IMAGEN_BASE64_URL]: data:${mimeType};base64,${base64}`;
+      const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpeg';
+      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+      let imageUrl = null;
+      try {
+        const { data: uploadData, error: uploadErr } = await supabase.storage.from('whatsapp_media').upload(fileName, buffer, {
+           contentType: mimeType,
+           upsert: true
+        });
+        if (!uploadErr && uploadData) {
+           const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+           imageUrl = publicUrlData.publicUrl;
+        }
+      } catch (err) {
+        console.error("Error uploading image to supabase storage:", err);
+      }
+      
+      const caption = messageObj.image?.caption || '';
+      return {
+          text: caption || '📷 Imagen recibida',
+          mediaUrl: imageUrl,
+          mediaType: 'image'
+      };
 
     } else if (type === 'video') {
       return '[Video recibido: Pídele al cliente que describa en texto o nota de voz lo que contiene.]';

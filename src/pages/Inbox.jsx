@@ -223,6 +223,7 @@ export default function Inbox() {
 
   useEffect(() => {
     if (selectedConv) {
+      setBotActive(selectedConv.needs_human === false || selectedConv.needs_human == null);
       setMessages((selectedConv.rawMessages || []).map((m, i) => {
         let ts = m.timestamp || m.created_at || selectedConv.updated_at || Date.now();
         let dateObj = (typeof ts === 'string' && /^\d{10}$/.test(ts)) ? new Date(parseInt(ts) * 1000) : ((typeof ts === 'number' && ts < 20000000000) ? new Date(ts * 1000) : new Date(ts));
@@ -851,7 +852,15 @@ export default function Inbox() {
                      <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
                         <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>AI</span>
-                        <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={() => setBotActive(!botActive)} />
+                        <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={async () => {
+                          const newState = !botActive;
+                          setBotActive(newState);
+                          if (selectedConv) {
+                            selectedConv.needs_human = !newState;
+                            const { error } = await supabase.from('conversations').update({ needs_human: !newState }).eq('id', selectedConv.id);
+                            if (error) console.error("Error updating AI status", error);
+                          }
+                        }} />
                      </div>
                      <div className="flex gap-1">
                         <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
@@ -864,16 +873,21 @@ export default function Inbox() {
                   {messages.map(m => (
                     <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
                         {m.type === 'image' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
-                          <img src={m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                          <div>
+                            <img src={m.media_url || m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                            {m.media_url && m.text && m.text !== m.media_url && m.text !== '📷 Imagen recibida' && (
+                              <p style={{ margin: '4px 0 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>{m.text}</p>
+                            )}
+                          </div>
                         ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
                           <div>
                             {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" avatar={m.sender === 'client' ? selectedConv?.avatar : null} />}
                             <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text?.startsWith('http') ? '' : m.text?.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
                           </div>
                         ) : m.type === 'video' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(mp4|webm|ogg)/i)) ? (
-                          <video controls src={m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                          <video controls src={m.media_url || m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                         ) : m.type === 'document' ? (
-                          <a href={m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
+                          <a href={m.media_url || m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
                         ) : (
                           <div>
                             {(() => {
