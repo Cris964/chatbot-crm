@@ -392,7 +392,7 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
 
                                                 // Message Interleaving Logic (Text -> Media -> Text)
                         const messageQueue = [];
-                        const extractionRegex = /(\[(SEND_IMAGE|SEND_VIDEO):\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\))/gi;
+                        const extractionRegex = /(\[(SEND_IMAGE|SEND_VIDEO):\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\)|(https?:\/\/.*?supabase\.co\/storage\S+))/gi;
                         let lastIndex = 0;
                         let extractionMatch;
 
@@ -432,8 +432,11 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
                                 }
                             }
 
-                            let url = (extractionMatch[3] || extractionMatch[4]).trim();
-                            let isVideo = extractionMatch[2] === 'SEND_VIDEO';
+                            let url = (extractionMatch[3] || extractionMatch[4] || extractionMatch[5]).trim();
+                            // Clean trailing punctuation if it caught a raw URL
+                            url = url.replace(/[\)\]\.,]+$/, '');
+                            
+                            let isVideo = extractionMatch[2] === 'SEND_VIDEO' || url.toLowerCase().endsWith('.mp4');
                             let msgType = isVideo ? 'video' : 'image';
                             
                             let finalMediaUrl = url;

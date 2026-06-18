@@ -821,11 +821,17 @@ export default function Inbox() {
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview}</p>
                     {c.tags && c.tags.length > 0 && (
                       <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
-                         {c.tags.map((t, i) => (
-                            <span key={i} className={`badge ${t === 'Sin Asignar' ? 'rose' : t === 'Asignado' ? 'cyan' : 'amber'}`} style={{ fontSize: '0.6rem' }}>
-                               {t === 'Asignado' ? `Asignado a: ${teamMembers.find(m => m.user_id === c.assigned_to)?.full_name || 'Asesor'}` : t}
-                            </span>
-                         ))}
+                         {c.tags.map((t, i) => {
+                            const isString = typeof t === 'string';
+                            const label = isString ? t : t.label;
+                            const color = isString ? '#f59e0b' : (t.color || '#f59e0b');
+                            
+                            return (
+                              <span key={i} className="badge" style={{ fontSize: '0.6rem', backgroundColor: `${color}20`, color: color, borderColor: `${color}40`, border: '1px solid' }}>
+                                 {label === 'Asignado' ? `Asignado a: ${teamMembers.find(m => m.user_id === c.assigned_to)?.full_name || 'Asesor'}` : label}
+                              </span>
+                            );
+                         })}
                       </div>
                     )}
                   </div>
