@@ -11,6 +11,10 @@
     {
       "path": "/api/campaign?action=cron_followup",
       "schedule": "30 14 * * *"
+    },
+    {
+      "path": "/api/cron_followup",
+      "schedule": "0 * * * *"
     }
   ],
   "rewrites": [

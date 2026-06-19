@@ -172,7 +172,8 @@ export default async function handler(req, res) {
         finalMessages = [...(chat.messages || []), newMsgNode];
         await supabase.from('conversations').update({
              messages: finalMessages,
-             updated_at: new Date().toISOString()
+             updated_at: new Date().toISOString(),
+             followup_count: 0 // Reiniciar el contador de seguimiento si el usuario responde
         }).eq('id', chat.id);
         conversationId = chat.id;
       } else {
