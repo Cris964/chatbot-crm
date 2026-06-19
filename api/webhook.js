@@ -248,14 +248,15 @@ export default async function handler(req, res) {
                     const stopWords = ['para', 'como', 'este', 'esta', 'pero', 'quiero', 'necesito', 'busco', 'tienen', 'tiene', 'del', 'las', 'los', 'que', 'por', 'con', 'sin', 'una', 'uno', 'mas', 'muy', 'son'];
                     let keywords = recentUserMsgs.split(/[^a-záéíóúñ]+/).filter(w => w.length >= 3 && !stopWords.includes(w));
                     
-                    // Mapeo de sinónimos comunes de color y tipo
                     const synonyms = { 
                         'plateada': ['cromada', 'satinada', 'cromo'], 
                         'plateado': ['cromado', 'satinado', 'cromo'],
                         'dorada': ['oro', 'gold', 'dorado', 'dorada'],
                         'dorado': ['oro', 'gold', 'dorado', 'dorada'],
                         'pared': ['paredes', 'muro', 'muros', 'revestimiento', 'enchape', 'fachada', 'baño'],
-                        'piso': ['pisos', 'suelo', 'ceramica', 'porcelanato', 'interior', 'exterior']
+                        'piso': ['pisos', 'suelo', 'ceramica', 'porcelanato', 'interior', 'exterior'],
+                        'ceramica': ['cerámica', 'ceramicas', 'cerámicas'],
+                        'madera': ['maderas', 'listón', 'liston', 'maderato']
                     };
                     let expandedKeywords = [...keywords];
                     keywords.forEach(k => { if (synonyms[k]) expandedKeywords.push(...synonyms[k]); });
@@ -286,7 +287,7 @@ export default async function handler(req, res) {
                             }
                             
                             // Penalizar fuertemente accesorios si buscan pisos/paredes
-                            const buscaRevestimiento = expandedKeywords.some(k => ['piso', 'pisos', 'pared', 'paredes', 'porcelanato', 'ceramica'].includes(k));
+                            const buscaRevestimiento = expandedKeywords.some(k => ['piso', 'pisos', 'pared', 'paredes', 'porcelanato', 'ceramica', 'cerámica', 'madera'].includes(k));
                             const esAccesorio = targetStr.includes('accesorio') || targetStr.includes('griferia') || targetStr.includes('ducha') || targetStr.includes('sanitario');
                             if (esAccesorio && buscaRevestimiento && !expandedKeywords.includes('accesorio') && !expandedKeywords.includes('griferia')) {
                                 score -= 20;
@@ -294,10 +295,30 @@ export default async function handler(req, res) {
                             
                             // Penalizar pisos/paredes si buscan accesorios
                             const buscaAccesorio = expandedKeywords.some(k => ['griferia', 'ducha', 'accesorio', 'sanitario'].includes(k));
-                            const esRevestimiento = targetStr.match(/\b(piso|pisos|pared|paredes|porcelanato|ceramica)\b/);
+                            const esRevestimiento = targetStr.match(/\b(piso|pisos|pared|paredes|porcelanato|ceramica|cerámica|madera)\b/);
                             if (esRevestimiento && buscaAccesorio && !buscaRevestimiento) {
                                 score -= 20;
                             }
+
+                            // Exclusiones de Categoría Estricta (Cerámica vs Porcelanato vs Madera)
+                            const pidePorcelanato = expandedKeywords.includes('porcelanato');
+                            const pideCeramica = expandedKeywords.includes('ceramica') || expandedKeywords.includes('cerámica');
+                            const pideMadera = expandedKeywords.includes('madera');
+                            
+                            const esPorcelanato = targetStr.includes('porcelanato');
+                            const esCeramica = targetStr.includes('ceramica') || targetStr.includes('cerámica');
+                            const esMadera = targetStr.includes('madera') || targetStr.includes('listón');
+
+                            if (pidePorcelanato && esCeramica && !esPorcelanato) score -= 15;
+                            if (pideCeramica && esPorcelanato && !esCeramica) score -= 15;
+                            
+                            if (pideMadera && !esMadera && (esCeramica || esPorcelanato)) score -= 10;
+                            if (!pideMadera && esMadera) score -= 5;
+                            
+                            // Boost extra por match exacto de categoría
+                            if (pidePorcelanato && esPorcelanato) score += 5;
+                            if (pideCeramica && esCeramica) score += 5;
+                            if (pideMadera && esMadera) score += 10;
                             
                             return { ...p, score };
                         });
@@ -337,13 +358,13 @@ PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
                   inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
 REGLAS DE FOTOS (MUY IMPORTANTE):
 1. SOLO puedes usar URLs que estén listadas en el catálogo de arriba, del MISMO PRODUCTO que estás mostrando. JAMÁS mezcles URLs de productos distintos.
-2. Si el producto tiene "URL foto 1" Y "URL foto 2", DEBES enviar AMBAS. Como no sabes cuál es la foto del producto y cuál es la del ambiente instalado, preséntalas juntas.
-3. Usa EXACTAMENTE esta etiqueta para cada imagen, REEMPLAZANDO la palabra "URL" por el enlace web de la foto: [SEND_IMAGE: URL]
+2. Si el producto tiene "Foto 1" Y "Foto 2", DEBES enviar AMBAS. Como no sabes cuál es la foto del producto y cuál es la del ambiente instalado, preséntalas juntas.
+3. Usa EXACTAMENTE esta etiqueta para cada imagen, poniendo la URL REAL (que empieza con https://) de la foto que está en el catálogo: [SEND_IMAGE: https://...]
 4. ❌ PROHIBIDO escribir títulos antes de la imagen como: *Foto del Producto*: | 1. Foto del producto: | Aquí la imagen:
 5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:), presentando ambas fotos a la vez:
 "Mira, aquí tienes las fotos de este producto, tanto en detalle como ya instalado en ambiente:"
-[SEND_IMAGE: URL_FOTO_1]
-[SEND_IMAGE: URL_FOTO_2]
+[SEND_IMAGE: https://url_real_de_la_foto_1.jpg]
+[SEND_IMAGE: https://url_real_de_la_foto_2.jpg]
 "¿Qué te parece ese estilo?"
 6. Si el producto solo tiene una foto, manda solo esa con una frase natural.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.

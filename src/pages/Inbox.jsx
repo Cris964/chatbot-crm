@@ -672,6 +672,54 @@ export default function Inbox() {
     }
   }
 
+  const handleDeleteMessage = async (msgIndex) => {
+    if (!selectedConv || !window.confirm("¿Seguro que deseas eliminar este mensaje del CRM? (No se borrará del WhatsApp del cliente)")) return;
+    try {
+      const updatedMessages = [...selectedConv.rawMessages];
+      updatedMessages.splice(msgIndex, 1);
+      
+      const { error } = await supabase
+        .from('conversations')
+        .update({ messages: updatedMessages })
+        .eq('id', selectedConv.id);
+        
+      if (!error) {
+        setSelectedConv({...selectedConv, rawMessages: updatedMessages});
+        fetchConversations();
+      } else {
+        alert("Error al eliminar mensaje: " + error.message);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleEditMessage = async (msgIndex, currentText) => {
+    if (!selectedConv) return;
+    const newText = window.prompt("Edita el texto del mensaje:", currentText);
+    if (newText === null || newText === currentText) return; // Cancelled or no change
+
+    try {
+      const updatedMessages = [...selectedConv.rawMessages];
+      updatedMessages[msgIndex] = { ...updatedMessages[msgIndex], content: newText, text: newText };
+      
+      const { error } = await supabase
+        .from('conversations')
+        .update({ messages: updatedMessages })
+        .eq('id', selectedConv.id);
+        
+      if (!error) {
+        setSelectedConv({...selectedConv, rawMessages: updatedMessages});
+        fetchConversations();
+      } else {
+        alert("Error al editar mensaje: " + error.message);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+
   return (
     <div className="inbox-container">
       <style>{`
@@ -908,13 +956,32 @@ export default function Inbox() {
                            title={selectedConv?.archived ? "Desarchivar" : "Archivar"}
                            onClick={async () => {
                               const newArchivedState = !selectedConv.archived;
-                              const updatedConv = { ...selectedConv, archived: newArchivedState };
-                              setSelectedConv(updatedConv);
-                              setConversationsList(prev => prev.map(c => c.id === updatedConv.id ? updatedConv : c));
-                              await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', updatedConv.id);
+                              const { error } = await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', selectedConv.id);
+                              if (!error) {
+                                  setSelectedConv({...selectedConv, archived: newArchivedState});
+                                  fetchConversations();
+                              }
                            }}
                         >
-                           <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-emerald)' : 'var(--text-secondary)' }} />
+                           <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-amber)' : 'inherit' }} />
+                        </button>
+                        <button 
+                           className="btn btn-secondary btn-sm"
+                           title="Eliminar Chat Completo"
+                           style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
+                           onClick={async () => {
+                              if (window.confirm('¿Estás seguro de que quieres eliminar todo el historial de este chat? Esta acción no se puede deshacer.')) {
+                                  const { error } = await supabase.from('conversations').delete().eq('id', selectedConv.id);
+                                  if (!error) {
+                                      setSelectedConv(null);
+                                      fetchConversations();
+                                  } else {
+                                      alert('Error al eliminar el chat: ' + error.message);
+                                  }
+                              }
+                           }}
+                        >
+                           <Trash2 size={14} />
                         </button>
                      </div>
                   </div>
@@ -977,7 +1044,13 @@ export default function Inbox() {
                             })()}
                           </div>
                         )}
-                        <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
+                          {m.sender === 'agent' && (
+                            <>
+                              <span title="Editar en CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleEditMessage(messages.indexOf(m), m.text || m.content || '')}>✏️</span>
+                              <span title="Eliminar del CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleDeleteMessage(messages.indexOf(m))}>🗑️</span>
+                            </>
+                          )}
                           {m.time}
                         </div>
                     </div>
@@ -1002,7 +1075,7 @@ export default function Inbox() {
                         {!isRecording ? (
                           <>
                             <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
-                            <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*,audio/*" />
+                            <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" />
                             <button type="submit" className="btn btn-primary btn-sm" disabled={!newMessage.trim()}><Send size={16} /></button>
                             <button type="button" className="btn btn-ghost btn-sm" onClick={startRecording}><Mic size={18} /></button>
                           </>
