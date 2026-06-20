@@ -870,7 +870,7 @@ export default function Inbox() {
               </div>
             ) : conversationsList
                 .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
-                .filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.phone.includes(searchQuery))
+                .filter(c => !searchQuery || (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) || (c.phone && c.phone.includes(searchQuery)))
                 .map(c => (
               <div 
                 key={c.id} 
