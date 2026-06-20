@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { processMediaMessage } from './mediaHelper.js';
+import { processMediaMessage } from './_mediaHelper.js';
 
 export default async function handler(req, res) {
   // CORS Definitions
