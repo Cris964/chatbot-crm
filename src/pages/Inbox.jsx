@@ -870,7 +870,15 @@ export default function Inbox() {
               </div>
             ) : conversationsList
                 .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
-                .filter(c => !searchQuery || (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) || (c.phone && c.phone.includes(searchQuery)))
+                .filter(c => {
+                   if (!searchQuery) return true;
+                   const q = searchQuery.toLowerCase();
+                   if (c.name && c.name.toLowerCase().includes(q)) return true;
+                   if (c.phone && c.phone.includes(q)) return true;
+                   if (c.preview && c.preview.toLowerCase().includes(q)) return true;
+                   if (c.rawMessages && c.rawMessages.some(m => (m.content || m.text || '').toLowerCase().includes(q))) return true;
+                   return false;
+                })
                 .map(c => (
               <div 
                 key={c.id} 
