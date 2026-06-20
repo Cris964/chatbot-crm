@@ -96,6 +96,7 @@ export default function Inbox() {
   const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
   const [activeTab, setActiveTab] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [selectedConv, setSelectedConv] = useState(null)
   const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
   const [messages, setMessages] = useState([])
@@ -823,7 +824,13 @@ export default function Inbox() {
              </div>
              <div className="search-bar" style={{ padding: '8px 12px' }}>
                <Search size={16} />
-               <input type="text" placeholder="Buscar..." style={{ fontSize: '0.85rem' }} />
+               <input 
+                  type="text" 
+                  placeholder="Buscar..." 
+                  style={{ fontSize: '0.85rem' }} 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+               />
              </div>
              <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
                 {['all', 'whatsapp', 'instagram', 'messenger', 'archived'].map(tab => (
@@ -861,7 +868,10 @@ export default function Inbox() {
                  <div className="spinner" style={{ margin: '0 auto 12px' }} />
                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
               </div>
-            ) : conversationsList.filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab))).map(c => (
+            ) : conversationsList
+                .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
+                .filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.phone.includes(searchQuery))
+                .map(c => (
               <div 
                 key={c.id} 
                 className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
