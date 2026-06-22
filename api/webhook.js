@@ -323,7 +323,7 @@ export default async function handler(req, res) {
                             return { ...p, score };
                         });
                         scoredProducts.sort((a, b) => b.score - a.score);
-                        companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 25);
+                        companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 8);
                         // Se eliminó el fallback de cargar 15 productos al azar si no hay coincidencias.
                         // Es mejor que la IA sepa que no hay coincidencias y haga más preguntas indagatorias.
                     } else {
