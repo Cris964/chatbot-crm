@@ -79,7 +79,7 @@ export default async function handler(req, res) {
             const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
             
             if (whatsappToken) {
-               const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey);
+               const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey, supabase);
                if (typeof mediaResult === 'object' && mediaResult !== null) {
                   textResponse = mediaResult.text;
                   messageObj._mediaUrl = mediaResult.mediaUrl;
@@ -138,6 +138,11 @@ export default async function handler(req, res) {
         // Fallback: si no hay match por phone_number_id, listar todos los clientes para debug
         const { data: allClients } = await supabase.from('clients').select('id, name, phone_number_id').limit(10);
         console.log(`[DEBUG] Todos los clientes en DB: ${JSON.stringify(allClients)}`);
+      }
+
+      if (!clientId) {
+        console.error(`[WEBHOOK ERROR] No se encontró cliente para recipientId: ${recipientId} (Channel: ${channel}). Ignorando.`);
+        return res.status(200).send('CLIENT_NOT_FOUND');
       }
 
       // 2. Gestionar Conversación
@@ -732,9 +737,9 @@ Etapa: "Nuevo", "Contactado", "Interesado", "Negociación", "Venta Cerrada", "Ve
 
       return res.status(200).send('EVENT_RECEIVED');
 
-    } catch (e) {
-      console.error("[WEBHOOK EXCEPTION]", e);
-      return res.status(500).json({ error: 'Internal logic fail' });
+    } catch (error) {
+      console.error('[FATAL WEBHOOK ERROR]', error);
+      return res.status(500).json({ error: 'Internal logic fail', details: error.message, stack: error.stack });
     }
   }
 
