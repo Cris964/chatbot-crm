@@ -142,6 +142,8 @@ export default async function handler(req, res) {
 
       if (!clientId) {
         console.error(`[WEBHOOK ERROR] No se encontró cliente para recipientId: ${recipientId} (Channel: ${channel}). Ignorando.`);
+        // Escribir a la base de datos para debugging
+        try { await supabase.from('processed_messages').insert([{ id: `DEBUG_MISSING_ID_${recipientId}` }]); } catch(e){}
         return res.status(200).send('CLIENT_NOT_FOUND');
       }
 
