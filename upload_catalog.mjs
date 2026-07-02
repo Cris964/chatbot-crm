@@ -3,110 +3,131 @@ import fs from 'fs';
 import path from 'path';
 import mime from 'mime-types';
 import dotenv from 'dotenv';
+dotenv.config();
 
-dotenv.config({ path: '.env.vercel.local' });
+const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY);
+const BUCKET_NAME = 'whatsapp_media';
+const UPLOAD_BASE_DIR = 'trazzos_catalog_v2';
+const SOURCE_DIR = 'C:\\Users\\eliza\\Downloads\\Trazzos-20260701T125455Z-3-001\\Trazzos';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const CLIENT_ID = 'c90f532b-0b32-4614-9c21-bbf664213468';
-const BASE_DIR = 'C:\\Users\\keine\\Downloads\\Trazzos-20260611T203117Z-3-001\\Trazzos';
-
-async function uploadFile(filePath, fileName, relPath) {
-    const fileBuffer = fs.readFileSync(filePath);
-    const contentType = mime.lookup(filePath) || 'image/jpeg';
-    
-    // Normalize path for storage (replace backslashes)
-    const storagePath = `catalog/${Date.now()}_${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
-    const { data, error } = await supabase.storage
-        .from('product-images')
-        .upload(storagePath, fileBuffer, { contentType, upsert: true });
-
-    if (error) {
-        console.error(`Failed to upload ${fileName}:`, error.message);
-        return null;
-    }
-
-    const { data: publicData } = supabase.storage.from('product-images').getPublicUrl(storagePath);
-    return publicData.publicUrl;
+function getCleanName(filename) {
+    let name = filename.replace(/\.(png|jpe?g|webp|gif|bmp)$/i, '');
+    name = name.replace(/\(\d+\)/g, '').trim();
+    name = name.replace(/\.+$/, '').trim();
+    return name;
 }
 
-async function start() {
-    console.log("Fetching existing products to avoid duplicates...");
-    let allExisting = [];
-    let page = 0;
-    while (true) {
-        const { data, error } = await supabase.from('products').select('name').eq('client_id', CLIENT_ID).range(page*1000, (page+1)*1000 - 1);
-        if (error || !data || data.length === 0) break;
-        allExisting.push(...data);
-        page++;
-    }
-    console.log(`Found ${allExisting.length} existing products.`);
-
-    let addedCount = 0;
-    let skippedCount = 0;
-
-    async function processDirectory(dirPath, relativeParts) {
-        const items = fs.readdirSync(dirPath, { withFileTypes: true });
-
-        for (const item of items) {
-            const fullPath = path.join(dirPath, item.name);
-            
-            if (item.isDirectory()) {
-                await processDirectory(fullPath, [...relativeParts, item.name]);
-            } else {
-                if (item.name.match(/\.(jpg|jpeg|png|webp)$/i)) {
-                    const baseName = item.name.replace(/\.[^/.]+$/, "");
-                    
-                    // Check if exists
-                    // We check if the existing name contains the baseName (or vice versa) to be robust against name cleaning
-                    const exists = allExisting.some(p => 
-                        p.name.toLowerCase().includes(baseName.toLowerCase()) || 
-                        baseName.toLowerCase().includes(p.name.toLowerCase())
-                    );
-
-                    if (exists) {
-                        console.log(`Skipping existing: ${baseName}`);
-                        skippedCount++;
-                        continue;
-                    }
-
-                    console.log(`Uploading ${item.name}...`);
-                    const url = await uploadFile(fullPath, item.name, relativeParts.join('/'));
-                    
-                    if (url) {
-                        // Category is the first folder (e.g. Grifería)
-                        const category = relativeParts[0] || 'Catálogo';
-                        
-                        // The name will be the base filename
-                        const productName = baseName;
-                        
-                        // We put all the rich path information into the description for the AI to search
-                        const descriptionTags = relativeParts.join(' | ');
-                        const description = `Categoría completa: ${descriptionTags}. Archivo: ${baseName}`;
-
-                        await supabase.from('products').insert([{
-                            client_id: CLIENT_ID,
-                            name: productName,
-                            description: description,
-                            price: 0,
-                            category: category,
-                            active: true,
-                            stock: 10,
-                            min_stock: 2,
-                            image_url: url
-                        }]);
-                        
-                        allExisting.push({ name: productName }); // prevent duplicate uploads of the same file in different formats
-                        addedCount++;
-                    }
-                }
-            }
+function walkDir(dir, fileList = []) {
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        if (fs.statSync(filePath).isDirectory()) {
+            walkDir(filePath, fileList);
+        } else {
+            fileList.push(filePath);
         }
     }
-
-    console.log("Starting catalog upload...");
-    await processDirectory(BASE_DIR, []);
-    console.log(`Upload complete! Added: ${addedCount}. Skipped: ${skippedCount}.`);
+    return fileList;
 }
 
-start();
+async function run() {
+    console.log('Fetching Trazzos client_id...');
+    const { data: clientData, error: clientError } = await supabase.from('clients').select('id').eq('name', 'Trazzos').single();
+    if (clientError || !clientData) {
+        console.error('Error fetching client:', clientError);
+        return;
+    }
+    const clientId = clientData.id;
+    console.log(`Found Trazzos client_id: ${clientId}`);
+
+    console.log(`Reading directory: ${SOURCE_DIR}`);
+    const files = walkDir(SOURCE_DIR);
+    
+    // Group files by base name
+    const groupedProducts = {};
+    for (const file of files) {
+        const ext = path.extname(file);
+        if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase())) continue;
+        
+        const filename = path.basename(file);
+        const relativePath = path.relative(SOURCE_DIR, file);
+        const folderName = path.dirname(relativePath).replace(/\\/g, ' - ');
+        const cleanName = getCleanName(filename);
+        
+        if (!groupedProducts[cleanName]) {
+            groupedProducts[cleanName] = {
+                name: cleanName,
+                category: folderName,
+                files: []
+            };
+        }
+        groupedProducts[cleanName].files.push(file);
+    }
+
+    const totalProducts = Object.keys(groupedProducts).length;
+    console.log(`Found ${totalProducts} unique products across ${files.length} images.`);
+
+    // Upload to storage
+    const uploadedProducts = [];
+    let count = 0;
+    for (const [name, data] of Object.entries(groupedProducts)) {
+        count++;
+        console.log(`[${count}/${totalProducts}] Processing: ${name}`);
+        const uploadedUrls = [];
+        for (let i = 0; i < data.files.length; i++) {
+            const localFile = data.files[i];
+            const ext = path.extname(localFile);
+            // create a safe storage name
+            const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const storagePath = `${UPLOAD_BASE_DIR}/${safeName}_${i}${ext}`;
+            
+            const fileContent = fs.readFileSync(localFile);
+            const contentType = mime.lookup(localFile) || 'application/octet-stream';
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from(BUCKET_NAME)
+                .upload(storagePath, fileContent, { contentType, upsert: true });
+                
+            if (uploadError) {
+                console.error(`  -> Upload error for ${localFile}:`, uploadError);
+            } else {
+                const { data: publicUrlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
+                uploadedUrls.push(publicUrlData.publicUrl);
+            }
+        }
+        
+        if (uploadedUrls.length > 0) {
+            uploadedProducts.push({
+                client_id: clientId,
+                name: name,
+                category: data.category,
+                description: data.category,
+                image_url: uploadedUrls.join(', '),
+                price: 0,
+                active: true,
+                stock: 999
+            });
+        }
+    }
+    
+    console.log(`Finished uploads. Preparing to insert ${uploadedProducts.length} products to database.`);
+    
+    // Delete old products
+    console.log('Deleting old Trazzos products...');
+    const { error: delError } = await supabase.from('products').delete().eq('client_id', clientId);
+    if (delError) {
+        console.error('Error deleting old products:', delError);
+        return;
+    }
+    
+    // Insert new products
+    console.log('Inserting new products...');
+    const { error: insertError } = await supabase.from('products').insert(uploadedProducts);
+    if (insertError) {
+        console.error('Error inserting new products:', insertError);
+    } else {
+        console.log('Successfully inserted all new products!');
+    }
+}
+
+run();

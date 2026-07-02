@@ -208,7 +208,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="dashboard-charts-grid">
+      <div className="charts-grid">
         <div className="card animate-slideUp" style={{ animationDelay: '0.5s', padding: '32px' }}>
           <div className="flex justify-between items-center mb-8">
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>

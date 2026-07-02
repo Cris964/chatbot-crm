@@ -210,7 +210,7 @@ export default function Layout({ session }) {
             <Menu size={20} />
           </button>
 
-          <div className="header-search">
+          <div className="header-search" style={{ display: 'none' }}>
             <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
             <input type="text" placeholder="Search for deals, tasks or clients... (⌘K)" />
             <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4 }}>

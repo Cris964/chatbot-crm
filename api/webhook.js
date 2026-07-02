@@ -315,7 +315,8 @@ export default async function handler(req, res) {
               }).catch(e => console.error('FB Media send error', e));
           } // closes else if channel === messenger
           
-          await new Promise(r => setTimeout(r, 600));
+          const delay = msg.type === 'text' ? Math.max(2500, Math.min(5000, msg.content.length * 30)) : 1500;
+          await new Promise(r => setTimeout(r, delay));
       } // closes for (const msg)
 
       return res.status(200).send('EVENT_RECEIVED');
