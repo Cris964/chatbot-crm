@@ -19,7 +19,7 @@ export async function dispatchToAI({
     .limit(1000);
 
   if (companyProducts && companyProducts.length > 50) {
-      const recentUserMsgs = finalMessages.filter(m => m.role === 'user').slice(-2).map(m => (m.content || '').toLowerCase()).join(' ');
+      const recentUserMsgs = finalMessages.filter(m => m.role === 'user').slice(-5).map(m => (m.content || '').toLowerCase()).join(' ');
       const stopWords = ['para', 'como', 'este', 'esta', 'pero', 'quiero', 'necesito', 'busco', 'tienen', 'tiene', 'del', 'las', 'los', 'que', 'por', 'con', 'sin', 'una', 'uno', 'mas', 'muy', 'son', 'color'];
       let keywords = recentUserMsgs.split(/[^a-záéíóúñ0-9x]+/).filter(w => w.length >= 2 && !stopWords.includes(w));
       
@@ -59,8 +59,8 @@ export async function dispatchToAI({
               if (targetStr.match(/\bpared(es)?\b/) && !expandedKeywords.includes('pared') && !expandedKeywords.includes('paredes') && (expandedKeywords.includes('piso') || expandedKeywords.includes('pisos'))) score -= 10;
               
               const buscaRevestimiento = expandedKeywords.some(k => ['piso', 'pisos', 'pared', 'paredes', 'porcelanato', 'ceramica', 'cerámica', 'madera'].includes(k));
-              const esAccesorio = targetStr.includes('accesorio') || targetStr.includes('griferia') || targetStr.includes('ducha') || targetStr.includes('sanitario');
-              if (esAccesorio && buscaRevestimiento && !expandedKeywords.includes('accesorio') && !expandedKeywords.includes('griferia')) score -= 20;
+              const esAccesorio = targetStr.match(/\b(accesorio|griferia|ducha|sanitario|lavamanos|lavaplatos|mueble|espejo|corona)\b/i);
+              if (esAccesorio && buscaRevestimiento && !expandedKeywords.some(k => ['accesorio', 'griferia', 'lavamanos', 'sanitario'].includes(k))) score -= 50;
               
               const buscaAccesorio = expandedKeywords.some(k => ['griferia', 'ducha', 'accesorio', 'sanitario'].includes(k));
               const esRevestimiento = targetStr.match(/\b(piso|pisos|pared|paredes|porcelanato|ceramica|cerámica|madera)\b/);
@@ -85,7 +85,7 @@ export async function dispatchToAI({
               return { ...p, score };
           });
           scoredProducts.sort((a, b) => b.score - a.score);
-          companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 8);
+          companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 15);
       } else {
           companyProducts = [];
       }
