@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
@@ -116,6 +116,31 @@ export default function Inbox() {
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const recordingTimerRef = useRef(null)
+
+  const dealInfo = useMemo(() => {
+    if (!selectedConv || !selectedConv.rawMessages) return null;
+    const aiMsgs = selectedConv.rawMessages.filter(m => m.role === 'agent' || m.role === 'assistant');
+    const summaryMsg = aiMsgs.slice().reverse().find(m => {
+       const txt = m.content || m.text || '';
+       return txt.includes('- Producto y Cantidad:');
+    });
+    
+    if (!summaryMsg) return null;
+    const text = summaryMsg.content || summaryMsg.text || '';
+    
+    const extractField = (regex) => {
+       const match = text.match(regex);
+       return match ? match[1].trim() : 'N/A';
+    };
+
+    return {
+       producto: extractField(/- Producto y Cantidad:\s*([^\n]+)/i),
+       nombre: extractField(/- Nombre:\s*([^\n]+)/i),
+       ubicacion: extractField(/- Ubicación:\s*([^\n]+)/i),
+       telefono: extractField(/- Teléfono:\s*([^\n]+)/i),
+       fecha: extractField(/- Fecha:\s*([^\n]+)/i)
+    };
+  }, [selectedConv]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -1165,11 +1190,35 @@ export default function Inbox() {
               )}
               {activeInfoTab === 'Deal Info' && (
                 <div className="animate-slideUp">
-                   <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Ventas</h4>
-                   <div style={{ padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 8 }}>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)' }}>ESTIMADO</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>$250k</div>
-                   </div>
+                   <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Resumen de Venta</h4>
+                   {dealInfo ? (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                       <div style={{ padding: '12px', background: 'var(--primary-700)', borderRadius: 8, border: '1px solid var(--primary-600)' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Producto y Cantidad</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{dealInfo.producto}</div>
+                       </div>
+                       <div style={{ padding: '12px', background: 'var(--primary-700)', borderRadius: 8, border: '1px solid var(--primary-600)' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Cliente</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{dealInfo.nombre}</div>
+                       </div>
+                       <div style={{ padding: '12px', background: 'var(--primary-700)', borderRadius: 8, border: '1px solid var(--primary-600)' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Ubicación</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{dealInfo.ubicacion}</div>
+                       </div>
+                       <div style={{ padding: '12px', background: 'var(--primary-700)', borderRadius: 8, border: '1px solid var(--primary-600)' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Teléfono</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{dealInfo.telefono}</div>
+                       </div>
+                       <div style={{ padding: '12px', background: 'var(--primary-700)', borderRadius: 8, border: '1px solid var(--primary-600)' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Fecha de Inicio / Entrega</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{dealInfo.fecha}</div>
+                       </div>
+                     </div>
+                   ) : (
+                     <div style={{ padding: '16px', background: 'rgba(var(--overlay-rgb), 0.05)', borderRadius: 8, textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Aún no se han recopilado los datos del cliente.</div>
+                     </div>
+                   )}
                 </div>
               )}
               {activeInfoTab === 'Timeline' && (
