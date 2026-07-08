@@ -37,7 +37,8 @@ export async function dispatchToAI({
           'grande': ['50x100', '58x118', '60x120', 'grandes'],
           'griferia': ['grifería', 'lavamanos', 'lavaplatos', 'monocontrol', 'vessel', 'placa', 'alta', 'baja', 'griferias', 'grifo'],
           'sanitario': ['sanitarios', 'inodoro', 'wc', 'poceta'],
-          'accesorio': ['accesorios', 'rejilla', 'jabonera', 'papelera'],
+          'accesorio': ['accesorios', 'rejilla', 'rejillas', 'jabonera', 'papelera'],
+          'rejilla': ['rejillas', 'accesorio', 'accesorios'],
           'fachada': ['fachaleta', 'fachaletas', 'piedra', 'muro', 'fachadas'],
           'mueble': ['muebles', 'gabinete', 'combo', 'lavamanos']
       };
@@ -59,10 +60,10 @@ export async function dispatchToAI({
               if (targetStr.match(/\bpared(es)?\b/) && !expandedKeywords.includes('pared') && !expandedKeywords.includes('paredes') && (expandedKeywords.includes('piso') || expandedKeywords.includes('pisos'))) score -= 10;
               
               const buscaRevestimiento = expandedKeywords.some(k => ['piso', 'pisos', 'pared', 'paredes', 'porcelanato', 'ceramica', 'cerámica', 'madera'].includes(k));
-              const esAccesorio = targetStr.match(/\b(accesorio|griferia|ducha|sanitario|lavamanos|lavaplatos|mueble|espejo|corona)\b/i);
-              if (esAccesorio && buscaRevestimiento && !expandedKeywords.some(k => ['accesorio', 'griferia', 'lavamanos', 'sanitario'].includes(k))) score -= 50;
+              const esAccesorio = targetStr.match(/\b(accesorio|accesorios|griferia|ducha|sanitario|lavamanos|lavaplatos|mueble|espejo|corona|rejilla|rejillas)\b/i);
+              if (esAccesorio && buscaRevestimiento && !expandedKeywords.some(k => ['accesorio', 'griferia', 'lavamanos', 'sanitario', 'rejilla', 'rejillas'].includes(k))) score -= 50;
               
-              const buscaAccesorio = expandedKeywords.some(k => ['griferia', 'ducha', 'accesorio', 'sanitario'].includes(k));
+              const buscaAccesorio = expandedKeywords.some(k => ['griferia', 'ducha', 'accesorio', 'sanitario', 'rejilla', 'rejillas'].includes(k));
               const esRevestimiento = targetStr.match(/\b(piso|pisos|pared|paredes|porcelanato|ceramica|cerámica|madera)\b/);
               if (esRevestimiento && buscaAccesorio && !buscaRevestimiento) score -= 20;
 
