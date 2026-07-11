@@ -498,10 +498,30 @@ img {
 
 /* === Charts Grid === */
 .charts-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   margin-bottom: 24px;
+}
+
+.charts-row-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .charts-row-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.flex-col {
+  flex-direction: column !important;
+}
+
+.w-full {
+  width: 100% !important;
 }
 
 .chart-card {

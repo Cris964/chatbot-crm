@@ -156,31 +156,31 @@ export default function Dashboard() {
 
       <div className="stats-grid animate-slideUp">
         <div className="stat-card animate-slideUp" style={{ animationDelay: '0.1s' }}>
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-4 relative z-10">
              <div className="ai-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><DollarSign size={18} /></div>
              <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800 }}>+15%</span>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Ventas Totales</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>
+          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Ventas Totales</div>
+          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>
             ${stats.revenue >= 1000000 ? `${(stats.revenue / 1000000).toFixed(1)}M` : `${(stats.revenue / 1000).toFixed(1)}k`}
           </div>
-          <div style={{ height: 40 }}>
+          <div className="sparkline-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
-                <Area type="monotone" dataKey="pv" stroke="#8b5cf6" fill="rgba(16, 185, 129, 0.1)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="pv" stroke="#10b981" fill="rgba(16, 185, 129, 0.1)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="stat-card animate-slideUp" style={{ animationDelay: '0.2s' }}>
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-4 relative z-10">
              <div className="ai-icon-wrapper" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}><Activity size={18} /></div>
              <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats.salesCount} ord.</span>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Tasa de Conversión</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.conversion}</div>
-          <div style={{ height: 40 }}>
+          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Tasa de Conversión</div>
+          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.conversion}</div>
+          <div className="sparkline-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
                 <Area type="monotone" dataKey="pv" stroke="#6366f1" fill="rgba(99, 102, 241, 0.1)" strokeWidth={2} dot={false} />
@@ -209,7 +209,7 @@ export default function Dashboard() {
       </div>
 
       <div className="charts-grid">
-        <div className="card animate-slideUp" style={{ animationDelay: '0.5s', padding: '32px' }}>
+        <div className="card animate-slideUp w-full" style={{ animationDelay: '0.5s', padding: '32px' }}>
           <div className="flex justify-between items-center mb-8">
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>
             <div className="flex gap-2">
@@ -237,22 +237,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="charts-row-split">
           <div className="card animate-slideUp" style={{ animationDelay: '0.6s' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Últimos Negocios</h3>
             <div className="flex flex-col gap-4">
               {recentDealsList.map((deal, i) => (
-                <div key={i} className="flex justify-between items-center p-3 rounded-xl  transition-all">
+                <div key={i} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 transition-all">
                   <div className="flex items-center gap-3">
                     <div className="avatar sm" style={{ background: `${deal.color}20`, color: deal.color }}>{deal.lead.substring(0,1)}</div>
                     <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{deal.lead}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{deal.lead}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.stage}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{deal.value}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800 }}>{deal.value}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
                   </div>
                 </div>
               ))}
@@ -261,12 +261,13 @@ export default function Dashboard() {
 
           <div className="card animate-slideUp" style={{ animationDelay: '0.7s' }}>
              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Estado del Pipeline</h3>
-             <div style={{ height: 180 }}>
+             <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pipelineState} layout="vertical">
+                  <BarChart data={pipelineState} layout="vertical" margin={{ left: 10, right: 10 }}>
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} width={80} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={16}>
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }} width={90} />
+                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
                       {pipelineState.map((entry, index) => (
                         <cell key={`cell-${index}`} fill={entry.color} />
                       ))}
