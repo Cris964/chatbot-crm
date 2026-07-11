@@ -134,6 +134,18 @@ export default async function handler(req, res) {
         clientId = clients[0].id;
         userId = clients[0].user_id;
         console.log(`[DEBUG] clientId: ${clientId}`);
+        
+        if (channel === 'messenger' && clients[0].facebook_access_token && senderName === 'Cliente (Redes)') {
+            try {
+                const fbRes = await fetch(`https://graph.facebook.com/${senderPhone}?fields=first_name,last_name&access_token=${clients[0].facebook_access_token}`);
+                const fbData = await fbRes.json();
+                if (fbData && fbData.first_name) {
+                    senderName = `${fbData.first_name} ${fbData.last_name || ''}`.trim();
+                }
+            } catch (e) {
+                console.error('[FB GRAPH API ERROR]', e);
+            }
+        }
       } else {
         // Fallback: si no hay match por phone_number_id, listar todos los clientes para debug
         const { data: allClients } = await supabase.from('clients').select('id, name, phone_number_id').limit(10);
@@ -157,17 +169,34 @@ export default async function handler(req, res) {
 
       if (chatErr) throw chatErr;
 
+      let finalMessages = [];
+      let conversationId = null;
+
+      // Detectar si es una respuesta (Reply)
+      let quotedText = '';
+      if (messageObj.context && messageObj.context.id && existingChats && existingChats.length > 0) {
+        const chat = existingChats[0];
+        const quotedMsg = (chat.messages || []).find(m => m.meta_id === messageObj.context.id);
+        if (quotedMsg) {
+          if (quotedMsg.media_url && quotedMsg.media_type === 'image') {
+            quotedText = `\n\n> ↩️ *Respondiendo a imagen:*\n[SEND_IMAGE: ${quotedMsg.media_url}]`;
+          } else {
+            const shortText = (quotedMsg.content || quotedMsg.text || '').substring(0, 30).replace(/\n/g, ' ');
+            quotedText = `\n\n> ↩️ *Respondiendo a:* "${shortText}..."`;
+          }
+        } else {
+          quotedText = `\n\n> ↩️ *Respondiendo a un mensaje anterior*`;
+        }
+      }
+
       const newMsgNode = {
         role: 'user',
-        content: textResponse,
+        content: (textResponse || '') + quotedText,
         timestamp: new Date().toISOString(),
         meta_id: messageId,
         ...(messageObj._mediaUrl && { media_url: messageObj._mediaUrl }),
         ...(messageObj._mediaType && { media_type: messageObj._mediaType })
       };
-
-      let finalMessages = [];
-      let conversationId = null;
 
       if (existingChats && existingChats.length > 0) {
         const chat = existingChats[0];
@@ -189,7 +218,8 @@ export default async function handler(req, res) {
           user_name: senderName,
           messages: finalMessages,
           client_id: clientId,
-          user_id: userId
+          user_id: userId,
+          channel: channel
         }]).select('id').single();
         conversationId = insertedChat?.id;
       }

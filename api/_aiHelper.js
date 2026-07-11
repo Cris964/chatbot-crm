@@ -20,8 +20,9 @@ export async function dispatchToAI({
 
   if (companyProducts && companyProducts.length > 50) {
       const recentUserMsgs = finalMessages.filter(m => m.role === 'user').slice(-5).map(m => (m.content || '').toLowerCase()).join(' ');
+      const sanitizedMsgs = recentUserMsgs.replace(/(\d+)\s*[*xX]\s*(\d+)/g, '$1x$2'); // Convert 60*120 or 60 X 120 to 60x120
       const stopWords = ['para', 'como', 'este', 'esta', 'pero', 'quiero', 'necesito', 'busco', 'tienen', 'tiene', 'del', 'las', 'los', 'que', 'por', 'con', 'sin', 'una', 'uno', 'mas', 'muy', 'son', 'color'];
-      let keywords = recentUserMsgs.split(/[^a-záéíóúñ0-9x]+/).filter(w => w.length >= 2 && !stopWords.includes(w));
+      let keywords = sanitizedMsgs.split(/[^a-záéíóúñ0-9x]+/).filter(w => w.length >= 2 && !stopWords.includes(w));
       
       const synonyms = { 
           'plateada': ['cromada', 'satinada', 'cromo'], 
@@ -95,10 +96,10 @@ export async function dispatchToAI({
   let inventoryContext = '';
   
   if (companyProducts && companyProducts.length > 0) {
-    const productLines = companyProducts.map(p => {
+    const productLines = companyProducts.map((p, index) => {
       let line = `---
-PRODUCTO: ${p.name}
-DESCRIPCIÓN: ${p.description || 'Sin descripción'}
+OPCIÓN ${index + 1}:
+CARACTERÍSTICAS: ${p.name}. ${p.description || 'Sin descripción'}
 PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
       if (p.promo_text) line += `\nPROMOCIÓN: ${p.promo_text}`;
       if (p.image_url) {
@@ -299,7 +300,7 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
   } catch(e) { console.error('Lead error', e) }
 
   let assignedUserId = null;
-  if (humanDept === 'CREARTE') assignedUserId = '096b5cb3-9754-4581-be3c-d6c2a64caead';
+  if (humanDept === 'TREARQ') assignedUserId = '096b5cb3-9754-4581-be3c-d6c2a64caead';
   else if (humanDept === 'ASESOR') assignedUserId = '2db217bc-c72e-448a-9a8d-4b2469c93661';
   else if (saleMatch) {
        const { data: vends } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('role', 'vendedor').eq('status', 'activo').limit(1);
@@ -353,7 +354,7 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
                time: parsedDate.toISOString().split('T')[1].slice(0,5),
                contact_name: senderName,
                contact_phone: senderPhone,
-               department: humanDept === 'CREARTE' ? 'Crearte' : 'Trazzos',
+               department: humanDept === 'TREARQ' ? 'Trearq' : 'Trazzos',
                status: 'Confirmed'
             }]);
           }

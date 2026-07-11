@@ -513,7 +513,8 @@ export default function Inbox() {
                client_id: tenant.clientId,
                phone: selectedConv.phone,
                message: textMsg,
-               type: 'text'
+               type: 'text',
+               channel: selectedConv.channel
              })
            });
          } catch (apiErr) {
@@ -617,7 +618,8 @@ export default function Inbox() {
               client_id: tenant.clientId,
               phone: selectedConv.phone,
               message: audioUrl,
-              type: 'audio'
+              type: 'audio',
+              channel: selectedConv.channel
             })
           });
         } catch (apiErr) {
@@ -635,23 +637,37 @@ export default function Inbox() {
       setIsLoading(false)
     }
   }
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0]
+  const handleFileUpload = async (eOrFile) => {
+    let file;
+    if (eOrFile?.target?.files) file = eOrFile.target.files[0];
+    else if (eOrFile instanceof File) file = eOrFile;
+    
     if (!file || !selectedConv) return
     setIsLoading(true)
     try {
-      const fileName = `${Date.now()}_${file.name}`
-      const { data, error } = await supabase.storage
-        .from('whatsapp_media')
-        .upload(fileName, file)
+      // Read file as base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
       
-      if (error) throw error
-
-      const { data: publicUrlData } = supabase.storage
-        .from('whatsapp_media')
-        .getPublicUrl(fileName)
-
-      const fileUrl = publicUrlData.publicUrl
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64,
+          fileName,
+          contentType: file.type
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      const fileUrl = data.url;
       
       const messageObj = {
         role: 'agent',
@@ -679,7 +695,8 @@ export default function Inbox() {
               client_id: tenant.clientId,
               phone: selectedConv.phone,
               message: fileUrl,
-              type: file.type.startsWith('image/') ? 'image' : 'document'
+              type: file.type.startsWith('image/') ? 'image' : 'document',
+              channel: selectedConv.channel
             })
           });
         } catch (apiErr) {
@@ -978,6 +995,33 @@ export default function Inbox() {
                     </p>
                  </div>
                   <div className="ml-auto flex items-center gap-3">
+                     <div className="hidden sm:flex" style={{ alignItems: 'center' }}>
+                         <select 
+                             className="badge-select"
+                             value={selectedConv.assigned_to || ''} 
+                             onChange={async (e) => {
+                                 const val = e.target.value || null;
+                                 setSelectedConv({...selectedConv, assigned_to: val});
+                                 await supabase.from('conversations').update({ assigned_to: val }).eq('id', selectedConv.id);
+                                 fetchConversations();
+                             }}
+                             style={{ 
+                                 background: 'rgba(var(--overlay-rgb), 0.05)', 
+                                 border: '1px solid var(--glass-border)',
+                                 color: "var(--text-secondary)",
+                                 borderRadius: 8,
+                                 fontSize: '0.75rem',
+                                 padding: '4px 8px',
+                                 fontWeight: 600,
+                                 marginRight: '8px'
+                             }}
+                         >
+                             <option value="" style={{ background: '#111' }}>Asignar Asesor...</option>
+                             {teamMembers.map(m => (
+                                 <option key={m.user_id} value={m.user_id} style={{ background: '#111' }}>{m.full_name}</option>
+                             ))}
+                         </select>
+                     </div>
                      <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
                         <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>AI</span>
@@ -1110,8 +1154,21 @@ export default function Inbox() {
                         </div>
                      ) : (
                         <input 
-                          type="text" placeholder="Escribe un mensaje..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem' }} 
+                          type="text" placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem' }} 
                           value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                          onPaste={(e) => {
+                            const items = e.clipboardData?.items;
+                            if (items) {
+                              for (let i = 0; i < items.length; i++) {
+                                if (items[i].type.indexOf('image') !== -1) {
+                                  e.preventDefault();
+                                  const file = items[i].getAsFile();
+                                  if (file) handleFileUpload(file);
+                                  break;
+                                }
+                              }
+                            }
+                          }}
                         />
                      )}
                      <div className="flex gap-1">

@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     // Fetch the client's WhatsApp credentials from the database
     const { data: clients, error: clientErr } = await supabase
       .from('clients')
-      .select('whatsapp_token, phone_number_id')
+      .select('whatsapp_token, phone_number_id, facebook_access_token')
       .eq('id', clientId)
       .limit(1);
 
@@ -53,47 +53,83 @@ export default async function handler(req, res) {
     }
 
     const client = clients[0];
-    const WHATSAPP_TOKEN = client.whatsapp_token || process.env.WHATSAPP_TOKEN;
-    const PHONE_NUMBER_ID = client.phone_number_id || process.env.PHONE_NUMBER_ID;
-
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
-      console.error(`Missing WHATSAPP_TOKEN or PHONE_NUMBER_ID for client ${clientId}`);
-      return res.status(500).json({ error: 'Client misconfiguration: missing WhatsApp credentials' });
-    }
-
-    // Format Meta Graph API request
-    const metaUrl = `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`;
+    const channel = record.channel || 'whatsapp';
     
-    console.log(`Sending message to ${phone} via Meta API for client ${clientId}...`);
+    let metaUrl, metaPayload, headers;
 
-    let metaPayload = {
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: phone,
-    };
+    if (channel === 'whatsapp') {
+        const WHATSAPP_TOKEN = client.whatsapp_token || process.env.WHATSAPP_TOKEN;
+        const PHONE_NUMBER_ID = client.phone_number_id || process.env.PHONE_NUMBER_ID;
 
-    const msgType = record.type || 'text';
+        if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+          console.error(`Missing WHATSAPP_TOKEN or PHONE_NUMBER_ID for client ${clientId}`);
+          return res.status(500).json({ error: 'Client misconfiguration: missing WhatsApp credentials' });
+        }
 
-    if (msgType === 'image') {
-      metaPayload.type = 'image';
-      metaPayload.image = { link: message };
-    } else if (msgType === 'audio') {
-      metaPayload.type = 'audio';
-      metaPayload.audio = { link: message };
-    } else if (msgType === 'document' || msgType === 'file') {
-      metaPayload.type = 'document';
-      metaPayload.document = { link: message };
+        metaUrl = `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`;
+        
+        metaPayload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: phone,
+        };
+
+        const msgType = record.type || 'text';
+
+        if (msgType === 'image') {
+          metaPayload.type = 'image';
+          metaPayload.image = { link: message };
+        } else if (msgType === 'audio') {
+          metaPayload.type = 'audio';
+          metaPayload.audio = { link: message };
+        } else if (msgType === 'document' || msgType === 'file') {
+          metaPayload.type = 'document';
+          metaPayload.document = { link: message };
+        } else {
+          metaPayload.type = 'text';
+          metaPayload.text = { preview_url: false, body: message };
+        }
+
+        headers = {
+          'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json'
+        };
+    } else if (channel === 'messenger' || channel === 'instagram') {
+        const FB_TOKEN = client.facebook_access_token;
+        if (!FB_TOKEN) {
+            console.error(`Missing facebook_access_token for client ${clientId}`);
+            return res.status(500).json({ error: 'Client misconfiguration: missing facebook_access_token' });
+        }
+
+        metaUrl = `https://graph.facebook.com/v21.0/me/messages?access_token=${FB_TOKEN}`;
+        
+        metaPayload = {
+            recipient: { id: phone },
+            message: {}
+        };
+        
+        const msgType = record.type || 'text';
+        if (msgType === 'text') {
+            metaPayload.message.text = message;
+        } else if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'document') {
+            metaPayload.message.attachment = {
+                type: msgType === 'document' ? 'file' : msgType,
+                payload: { url: message, is_reusable: true }
+            };
+        }
+
+        headers = {
+          'Content-Type': 'application/json'
+        };
     } else {
-      metaPayload.type = 'text';
-      metaPayload.text = { preview_url: false, body: message };
+        return res.status(400).json({ error: `Unsupported channel: ${channel}` });
     }
+
+    console.log(`Sending message to ${phone} via ${channel} for client ${clientId}...`);
 
     const metaResponse = await fetch(metaUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify(metaPayload)
     });
 

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useNavigate } from 'react-router-dom'
 import {
   Search, Filter, Plus, MoreHorizontal, ArrowUpDown, Download, Upload,
   Mail, Phone, MapPin, Calendar, Tag, Star, Eye, Trash2, UserPlus,
-  ChevronDown, CheckSquare, Square, X
+  ChevronDown, CheckSquare, Square, X, MessageSquare
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -43,6 +43,7 @@ function ScoreBadge({ score, onScoreChange }) {
 export default function Leads() {
   const { session } = useOutletContext()
   const tenant = useTenant()
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('Todos')
   const [leads, setLeads] = useState([])
@@ -311,8 +312,14 @@ export default function Leads() {
                      <td style={{ fontWeight: 800, color: 'var(--accent-emerald)' }}>{l.value || '$0'}</td>
                      <td>
                         <div className="flex gap-2">
-                           <button className="btn btn-ghost btn-sm" title="Send Email"><Mail size={16} /></button>
-                           <button className="btn btn-ghost btn-sm"><MoreHorizontal size={16} /></button>
+                           <button 
+                             className="btn btn-ghost btn-sm" 
+                             title="Ir a Mensajes" 
+                             onClick={() => navigate('/inbox')}
+                           >
+                             <MessageSquare size={16} color="var(--accent-emerald)" /> 
+                             <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>Chat</span>
+                           </button>
                         </div>
                      </td>
                    </tr>
