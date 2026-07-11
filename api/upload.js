@@ -15,7 +15,14 @@ export default async function handler(req, res) {
     const { base64, fileName, contentType } = req.body;
     if (!base64 || !fileName) return res.status(400).json({ error: 'Missing file data' });
 
-    const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase credentials in Vercel environment');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Convert base64 back to buffer
     const base64Data = base64.replace(/^data:([A-Za-z-+/]+);base64,/, '');
