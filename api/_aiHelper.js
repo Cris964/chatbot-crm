@@ -321,6 +321,17 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
 
   await supabase.from('conversations').update(updatePayload).eq('id', conversationId);
 
+  if (leadStateMatch) {
+    const newStage = leadStateMatch[1].trim();
+    const newScore = parseInt(leadStateMatch[2], 10);
+    try {
+      const { data: existingLead } = await supabase.from('leads').select('id').eq('client_id', clientId).eq('phone', senderPhone).limit(1).single();
+      if (existingLead) {
+        await supabase.from('leads').update({ stage: newStage, score: newScore }).eq('id', existingLead.id);
+      }
+    } catch(err) { console.error('Error updating lead pipeline', err) }
+  }
+
   if (needsHuman) {
     let notifMsg = `Intervención requerida para ${senderName}`;
     if (humanDept) notifMsg += ` (Área: ${humanDept})`;

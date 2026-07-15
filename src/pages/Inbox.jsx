@@ -111,6 +111,7 @@ export default function Inbox() {
   const [showSimModal, setShowSimModal] = useState(false)
   const [simMessage, setSimMessage] = useState('')
   const [isSimulating, setIsSimulating] = useState(false)
+  const [selectedChats, setSelectedChats] = useState([])
   const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
@@ -740,6 +741,55 @@ export default function Inbox() {
     }
   };
 
+  const handleExportChats = () => {
+    if (selectedChats.length === 0) return;
+    
+    const chatsToExport = conversationsList.filter(c => selectedChats.includes(c.id));
+    let exportText = `=== EXPORTACIÓN DE CHATS (${new Date().toLocaleString()}) ===\n\n`;
+    
+    chatsToExport.forEach(chat => {
+       exportText += `--- CHAT CON: ${chat.name} (${chat.phone}) ---\n`;
+       exportText += `Plataforma: ${chat.channel} | Último mensaje: ${chat.time}\n\n`;
+       if (chat.rawMessages) {
+          chat.rawMessages.forEach(m => {
+             const sender = m.role === 'user' ? 'Cliente' : 'Agente/IA';
+             exportText += `[${sender}]: ${m.content || m.text || (m.media_url ? '[MULTIMEDIA]' : '')}\n`;
+          });
+       }
+       exportText += `\n-------------------------------------------------\n\n`;
+    });
+
+    const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Exportacion_Chats_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setSelectedChats([]);
+  };
+
+  const handleMoveToRemarketing = async () => {
+    if (selectedChats.length === 0) return;
+    
+    const chatsToMove = conversationsList.filter(c => selectedChats.includes(c.id));
+    const inserts = chatsToMove.map(c => ({
+       client_id: tenant.clientId,
+       full_name: c.name,
+       phone: c.phone,
+       last_purchase_date: new Date().toISOString(),
+       status: 'pending'
+    }));
+
+    const { error } = await supabase.from('remarketing_leads').insert(inserts);
+    if (error) {
+       alert("Error al mover a re-marketing: " + error.message);
+    } else {
+       alert(`${selectedChats.length} chat(s) movidos exitosamente a Re-marketing.`);
+       setSelectedChats([]);
+    }
+  };
+
   const handleEditMessage = async (msgIndex, currentText) => {
     if (!selectedConv) return;
     const newText = window.prompt("Edita el texto del mensaje:", currentText);
@@ -893,6 +943,22 @@ export default function Inbox() {
                    </button>
                 ))}
              </div>
+              
+              {selectedChats.length > 0 && (
+                 <div style={{ marginTop: 12, padding: '8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-400)', textAlign: 'center' }}>
+                       {selectedChats.length} chat(s) seleccionados
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                       <button className="btn btn-secondary btn-sm" style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }} onClick={handleExportChats}>
+                          <Download size={14} style={{ marginRight: 4 }} /> Exportar
+                       </button>
+                       <button className="btn btn-primary btn-sm" style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }} onClick={handleMoveToRemarketing}>
+                          <Megaphone size={14} style={{ marginRight: 4 }} /> Re-marketing
+                       </button>
+                    </div>
+                 </div>
+              )}
              <button 
                className="btn btn-primary btn-sm" 
                style={{ 
@@ -931,6 +997,19 @@ export default function Inbox() {
                 onClick={() => { setSelectedConv(c); setMobileView('chat'); }}
                 style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
               >
+                 <div style={{ marginRight: 10, display: 'flex', alignItems: 'center' }}>
+                    <input 
+                       type="checkbox" 
+                       style={{ width: 16, height: 16, cursor: 'pointer' }}
+                       checked={selectedChats.includes(c.id)}
+                       onChange={(e) => {
+                          e.stopPropagation();
+                          if (e.target.checked) setSelectedChats([...selectedChats, c.id]);
+                          else setSelectedChats(selectedChats.filter(id => id !== c.id));
+                       }}
+                       onClick={(e) => e.stopPropagation()}
+                    />
+                 </div>
                  <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
                     {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}
                     {c.assigned_to && (
