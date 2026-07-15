@@ -104,7 +104,7 @@ PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
       if (p.promo_text) line += `\nPROMOCIÓN: ${p.promo_text}`;
       if (p.image_url) {
           const urls = p.image_url.split(',').map(u => u.trim()).filter(Boolean);
-          line += `\nFOTOS DEL PRODUCTO:\n` + urls.map((u, i) => `Foto ${i+1}: ${u}`).join('\n');
+          line += `\nFOTOS DEL PRODUCTO (COPIA Y PEGA ESTAS ETIQUETAS EXACTAS PARA MOSTRARLAS AL CLIENTE):\n` + urls.map(u => `[SEND_IMAGE: ${u}]`).join('\n');
       }
       line += `\n---`;
       return line;
@@ -117,16 +117,14 @@ PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
 
     inventoryContext = `\nPRODUCTOS DISPONIBLES DE ${clientSetup.name || 'LA EMPRESA'}:\n${productLines}${promoSection}\n\nREGLAS: Solo recomienda estos productos reales. Aplica las promociones activas si aplican. Responde de forma amable, profesional y persuasiva.
 REGLAS DE FOTOS (MUY IMPORTANTE):
-1. SOLO puedes usar URLs que estén listadas en el catálogo de arriba, del MISMO PRODUCTO que estás mostrando. JAMÁS mezcles URLs de productos distintos.
-2. Si el producto tiene "Foto 1" Y "Foto 2", DEBES enviar AMBAS. Como no sabes cuál es la foto del producto y cuál es la del ambiente instalado, preséntalas juntas.
-3. Usa EXACTAMENTE esta etiqueta para cada imagen, poniendo la URL REAL (que empieza con https://) de la foto que está en el catálogo: [SEND_IMAGE: https://...]
+1. COPIA Y PEGA las etiquetas [SEND_IMAGE: https://...] exactamente como aparecen en el catálogo de arriba del producto correspondiente.
+2. Si el producto tiene varias etiquetas de fotos, DEBES enviarlas TODAS juntas, pegando una debajo de la otra.
+3. ¡NUNCA inventes URLs! ¡NUNCA uses "example.com"! Usa ÚNICAMENTE las etiquetas proporcionadas en las opciones de arriba.
 4. ❌ PROHIBIDO escribir títulos antes de la imagen como: *Foto del Producto*: | 1. Foto del producto: | Aquí la imagen:
-5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:), presentando ambas fotos a la vez:
+5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:):
 "Mira, aquí tienes las fotos de este producto, tanto en detalle como ya instalado en ambiente:"
-[SEND_IMAGE: https://url_real_de_la_foto_1.jpg]
-[SEND_IMAGE: https://url_real_de_la_foto_2.jpg]
+[SEND_IMAGE: https://url_real_de_supabase_aqui.jpg]
 "¿Qué te parece ese estilo?"
-6. Si el producto solo tiene una foto, manda solo esa con una frase natural.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
 REGLA SOBRE ASESORES: NUNCA uses la frase "asesor humano". Si vas a transferir el chat o alguien pide ayuda de un asesor, di EXACTAMENTE: "Te voy a dejar con un asesor para cotizar el envío." y nada más.
 EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
