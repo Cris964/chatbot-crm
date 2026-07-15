@@ -342,13 +342,22 @@ export default function Products() {
             ) : filtered.map((product, i) => (
               <tr key={product.id} style={{ opacity: product.active ? 1 : 0.5 }}>
                 <td>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{product.name}</div>
-                    {product.description && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2, maxWidth: 300 }}>
-                        {product.description.length > 80 ? product.description.slice(0, 80) + '...' : product.description}
-                      </div>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 8, background: 'rgba(255,255,255,0.05)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {product.image_url ? (
+                        <img src={product.image_url.split(',')[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Package size={20} style={{ color: 'var(--text-tertiary)' }} />
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{product.name}</div>
+                      {product.description && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 2, maxWidth: 300 }}>
+                          {product.description.length > 80 ? product.description.slice(0, 80) + '...' : product.description}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td>
