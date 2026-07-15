@@ -452,7 +452,10 @@ export default function Inbox() {
       .update({ assigned_to: userId })
       .eq('id', conversationId)
     
-    if (!error) {
+    if (error) {
+      console.error("Assign Error:", error);
+      alert("Error al asignar asesor: " + error.message);
+    } else {
       fetchConversations()
       setSelectedConv(prev => ({ ...prev, assigned_to: userId }))
     }
@@ -1001,9 +1004,7 @@ export default function Inbox() {
                              value={selectedConv.assigned_to || ''} 
                              onChange={async (e) => {
                                  const val = e.target.value || null;
-                                 setSelectedConv({...selectedConv, assigned_to: val});
-                                 await supabase.from('conversations').update({ assigned_to: val }).eq('id', selectedConv.id);
-                                 fetchConversations();
+                                 assignAdvisor(selectedConv.id, val);
                              }}
                              style={{ 
                                  background: 'rgba(var(--overlay-rgb), 0.05)', 

@@ -180,6 +180,14 @@ export default async function handler(req, res) {
         if (quotedMsg) {
           if (quotedMsg.media_url && quotedMsg.media_type === 'image') {
             quotedText = `\n\n> ↩️ *Respondiendo a imagen:*\n[SEND_IMAGE: ${quotedMsg.media_url}]`;
+          } else if ((quotedMsg.content || quotedMsg.text || '').includes('[SEND_IMAGE:')) {
+            const match = (quotedMsg.content || quotedMsg.text || '').match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+            if (match) {
+              quotedText = `\n\n> ↩️ *Respondiendo a imagen:*\n[SEND_IMAGE: ${match[1]}]`;
+            } else {
+              const shortText = (quotedMsg.content || quotedMsg.text || '').substring(0, 30).replace(/\n/g, ' ');
+              quotedText = `\n\n> ↩️ *Respondiendo a:* "${shortText}..."`;
+            }
           } else {
             const shortText = (quotedMsg.content || quotedMsg.text || '').substring(0, 30).replace(/\n/g, ' ');
             quotedText = `\n\n> ↩️ *Respondiendo a:* "${shortText}..."`;
