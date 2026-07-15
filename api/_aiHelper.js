@@ -127,11 +127,11 @@ REGLAS DE FOTOS (MUY IMPORTANTE):
 "¿Qué te parece ese estilo?"
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
 REGLA SOBRE ASESORES: NUNCA uses la frase "asesor humano". Si vas a transferir el chat o alguien pide ayuda de un asesor, di EXACTAMENTE: "Para finalizar con tu orden, el área encargada ya se pondrá en contacto contigo, ¡muchas gracias!" y nada más.
-EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
-(Sigue las reglas de Etapas definidas en tu prompt principal).
+INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBES INCLUIR LA ETIQUETA EXACTA: [LEAD_STATE: Etapa | Score]
+(Ejemplo: [LEAD_STATE: Negociación | 50]. Usa las etapas definidas en tu prompt principal).
 `;
   } else {
-    inventoryContext = '\n[INVENTARIO OCULTO/VACÍO]: No se encontraron productos que coincidan con la descripción del cliente en esta búsqueda. OBLIGATORIO: Hazle más preguntas para indagar exactamente qué busca (material, uso interior/exterior, formato, colores). NO ofrezcas productos ni fotos, porque no tienes el catálogo a la mano ahora mismo. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN:ASESOR]\n';
+    inventoryContext = '\n[INVENTARIO OCULTO/VACÍO]: No se encontraron productos que coincidan con la descripción del cliente en esta búsqueda. OBLIGATORIO: Hazle más preguntas para indagar exactamente qué busca (material, uso interior/exterior, formato, colores). NO ofrezcas productos ni fotos, porque no tienes el catálogo a la mano ahora mismo. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN:ASESOR]\nINSTRUCCIÓN FINAL CRÍTICA: SIEMPRE TERMINA TU MENSAJE CON [LEAD_STATE: Etapa | Score]\n';
   }
 
   const aiMessages = [
@@ -184,7 +184,7 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
   const needsHuman = !!needsHumanMatch;
   const humanDept = needsHumanMatch ? (needsHumanMatch[1] || '').trim().toUpperCase() : null;
 
-  const leadStateMatch = botReplyText.match(/\[LEAD_STATE:\s*(.*?)\s*\|\s*(\d+)\]/i);
+  const leadStateMatch = botReplyText.match(/\[\s*LEAD_STATE\s*:\s*([^|\]]+?)\s*(?:\||,|-)\s*(\d+)\s*\]/i);
   const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
   const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
   const nameMatch = botReplyText.match(/\[CLIENT_NAME:\s*(.+?)\]/i);
@@ -263,11 +263,16 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
       messageQueue.push(...introTexts, ...media, ...closingTexts);
   }
 
-  let stage = 'Contactado';
-  let score = 10;
+  let stage = null;
+  let score = null;
   if (leadStateMatch) {
        stage = leadStateMatch[1].trim();
-       score = parseInt(leadStateMatch[2]);
+       // Fix common casing issues to match Pipeline strictly
+       if (stage.toLowerCase().includes('negociaci')) stage = 'Negociación';
+       if (stage.toLowerCase().includes('interesado')) stage = 'Interesado';
+       if (stage.toLowerCase().includes('contactado')) stage = 'Contactado';
+       
+       score = parseInt(leadStateMatch[2], 10);
   }
   if (saleMatch) {
        stage = 'Venta Cerrada';
@@ -283,14 +288,17 @@ EVALÚA LA INTENCIÓN Y AÑADE AL FINAL: [LEAD_STATE: Etapa | Score]
   try {
        const { data: existingLead } = await supabase.from('leads').select('id').eq('client_id', clientId).eq('phone', senderPhone).single();
        if (existingLead) {
-            await supabase.from('leads').update({ stage, score, name: finalSenderName }).eq('id', existingLead.id);
+            const updatePayload = { name: finalSenderName };
+            if (stage) updatePayload.stage = stage;
+            if (score) updatePayload.score = score;
+            await supabase.from('leads').update(updatePayload).eq('id', existingLead.id);
        } else {
             await supabase.from('leads').insert([{
                  client_id: clientId,
                  phone: senderPhone,
                  name: finalSenderName,
-                 stage,
-                 score,
+                 stage: stage || 'Nuevo',
+                 score: score || 10,
                  source: channel === 'web' ? 'WebChat' : 'WhatsApp',
                  value: '$0'
             }]);
