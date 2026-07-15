@@ -5,7 +5,7 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight,
-  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive, Download, Megaphone
+  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -112,6 +112,7 @@ export default function Inbox() {
   const [simMessage, setSimMessage] = useState('')
   const [isSimulating, setIsSimulating] = useState(false)
   const [selectedChats, setSelectedChats] = useState([])
+  const [isSelectMode, setIsSelectMode] = useState(false)
   const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
@@ -964,12 +965,17 @@ export default function Inbox() {
                style={{ 
                  width: '100%', 
                  marginTop: 12, 
-                 background: 'linear-gradient(135deg, var(--primary-600), var(--primary-400))',
-                 fontWeight: 700
+                 background: isSelectMode ? 'rgba(var(--overlay-rgb), 0.1)' : 'var(--primary-600)',
+                 color: isSelectMode ? 'var(--text-secondary)' : 'white',
+                 fontWeight: 700,
+                 border: isSelectMode ? '1px solid var(--glass-border)' : 'none'
                }}
-               onClick={() => setShowSimModal(true)}
+               onClick={() => {
+                 setIsSelectMode(!isSelectMode);
+                 if (isSelectMode) setSelectedChats([]); // clear selection when canceling
+               }}
              >
-               <Sparkles size={14} /> Probar Agente IA
+               {isSelectMode ? <Close size={14} /> : <CheckSquare size={14} />} {isSelectMode ? 'Cancelar selección' : 'Seleccionar chats'}
              </button>
           </div>
           
@@ -997,19 +1003,31 @@ export default function Inbox() {
                 onClick={() => { setSelectedConv(c); setMobileView('chat'); }}
                 style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
               >
-                 <div style={{ marginRight: 10, display: 'flex', alignItems: 'center' }}>
-                    <input 
-                       type="checkbox" 
-                       style={{ width: 16, height: 16, cursor: 'pointer' }}
-                       checked={selectedChats.includes(c.id)}
-                       onChange={(e) => {
-                          e.stopPropagation();
-                          if (e.target.checked) setSelectedChats([...selectedChats, c.id]);
-                          else setSelectedChats(selectedChats.filter(id => id !== c.id));
-                       }}
-                       onClick={(e) => e.stopPropagation()}
-                    />
-                 </div>
+                 {isSelectMode && (
+                   <div 
+                     style={{ 
+                       marginRight: 10, 
+                       display: 'flex', 
+                       alignItems: 'center', 
+                       justifyContent: 'center',
+                       width: 20, 
+                       height: 20, 
+                       borderRadius: '50%',
+                       border: `2px solid ${selectedChats.includes(c.id) ? 'var(--primary-400)' : 'var(--glass-border)'}`,
+                       background: selectedChats.includes(c.id) ? 'var(--primary-400)' : 'transparent',
+                       cursor: 'pointer',
+                       flexShrink: 0,
+                       transition: 'all 0.2s ease'
+                     }}
+                     onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedChats.includes(c.id)) setSelectedChats(selectedChats.filter(id => id !== c.id));
+                        else setSelectedChats([...selectedChats, c.id]);
+                     }}
+                   >
+                     {selectedChats.includes(c.id) && <Check size={12} color="white" strokeWidth={3} />}
+                   </div>
+                 )}
                  <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
                     {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}
                     {c.assigned_to && (
