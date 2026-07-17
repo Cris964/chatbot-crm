@@ -315,7 +315,7 @@ export default function Leads() {
                            <button 
                              className="btn btn-ghost btn-sm" 
                              title="Ir a Mensajes" 
-                             onClick={() => navigate('/inbox')}
+                             onClick={() => navigate('/inbox', { state: { phone: l.phone } })}
                            >
                              <MessageSquare size={16} color="var(--accent-emerald)" /> 
                              <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>Chat</span>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useLocation } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
@@ -93,6 +93,7 @@ const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
 
 export default function Inbox() {
   const { session } = useOutletContext()
+  const location = useLocation()
   const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
   const [activeTab, setActiveTab] = useState('all')
@@ -248,6 +249,16 @@ export default function Inbox() {
       }
     }
   }, [tenant.clientId, tenant.isLoading])
+
+  useEffect(() => {
+    // If we have a target phone from the Router state (e.g., navigated from Leads page)
+    if (location.state?.phone && conversationsList.length > 0) {
+      const targetConv = conversationsList.find(c => c.phone === location.state.phone);
+      if (targetConv && (!selectedConv || selectedConv.id !== targetConv.id)) {
+        setSelectedConv(targetConv);
+      }
+    }
+  }, [location.state?.phone, conversationsList])
 
   useEffect(() => {
     if (selectedConv) {
