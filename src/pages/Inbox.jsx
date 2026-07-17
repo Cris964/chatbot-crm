@@ -742,11 +742,24 @@ export default function Inbox() {
     }
   };
 
-  const handleExportChats = () => {
+  const handleExportChats = async () => {
     if (selectedChats.length === 0) return;
     
-    const chatsToExport = conversationsList.filter(c => selectedChats.includes(c.id));
-    let exportText = `=== EXPORTACIÓN DE CHATS (${new Date().toLocaleString()}) ===\n\n`;
+    const chatsToExportTemp = conversationsList.filter(c => selectedChats.includes(c.id));
+    const phones = chatsToExportTemp.map(c => c.phone).filter(Boolean);
+    
+    const { data: leads } = await supabase.from('leads').select('phone, stage').eq('client_id', tenant.clientId).in('phone', phones);
+    const interesadoPhones = new Set(leads?.filter(l => l.stage === 'Interesado').map(l => l.phone) || []);
+    
+    const chatsToExport = chatsToExportTemp.filter(c => interesadoPhones.has(c.phone));
+    
+    if (chatsToExport.length === 0) {
+       alert('De los chats seleccionados, NINGUNO se encuentra en la etapa "Interesado" del Pipeline. No se exportó nada.');
+       setSelectedChats([]);
+       return;
+    }
+
+    let exportText = `=== EXPORTACIÓN DE CHATS "INTERESADOS" (${new Date().toLocaleString()}) ===\n\n`;
     
     chatsToExport.forEach(chat => {
        exportText += `--- CHAT CON: ${chat.name} (${chat.phone}) ---\n`;
@@ -764,16 +777,32 @@ export default function Inbox() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Exportacion_Chats_${Date.now()}.txt`;
+    a.download = `Exportacion_Chats_Interesados_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
     setSelectedChats([]);
+    if (chatsToExport.length < chatsToExportTemp.length) {
+       alert(`Se exportaron ${chatsToExport.length} chat(s) en etapa "Interesado". Se omitieron ${chatsToExportTemp.length - chatsToExport.length} chat(s) por no cumplir la condición.`);
+    }
   };
 
   const handleMoveToRemarketing = async () => {
     if (selectedChats.length === 0) return;
     
-    const chatsToMove = conversationsList.filter(c => selectedChats.includes(c.id));
+    const chatsToMoveTemp = conversationsList.filter(c => selectedChats.includes(c.id));
+    const phones = chatsToMoveTemp.map(c => c.phone).filter(Boolean);
+    
+    const { data: leads } = await supabase.from('leads').select('phone, stage').eq('client_id', tenant.clientId).in('phone', phones);
+    const interesadoPhones = new Set(leads?.filter(l => l.stage === 'Interesado').map(l => l.phone) || []);
+    
+    const chatsToMove = chatsToMoveTemp.filter(c => interesadoPhones.has(c.phone));
+    
+    if (chatsToMove.length === 0) {
+       alert('De los chats seleccionados, NINGUNO se encuentra en la etapa "Interesado" del Pipeline. Acción cancelada.');
+       setSelectedChats([]);
+       return;
+    }
+
     const inserts = chatsToMove.map(c => ({
        client_id: tenant.clientId,
        full_name: c.name,
@@ -786,7 +815,11 @@ export default function Inbox() {
     if (error) {
        alert("Error al mover a re-marketing: " + error.message);
     } else {
-       alert(`${selectedChats.length} chat(s) movidos exitosamente a Re-marketing.`);
+       if (chatsToMove.length < chatsToMoveTemp.length) {
+          alert(`Éxito: ${chatsToMove.length} chat(s) movidos a Re-marketing. Se omitieron ${chatsToMoveTemp.length - chatsToMove.length} chat(s) que no estaban en etapa "Interesado".`);
+       } else {
+          alert(`${chatsToMove.length} chat(s) movidos exitosamente a Re-marketing.`);
+       }
        setSelectedChats([]);
     }
   };

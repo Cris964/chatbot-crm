@@ -119,10 +119,9 @@ export default async function handler(req, res) {
       console.log(`[DEBUG] supabaseUrl: ${supabaseUrl ? 'SET' : 'MISSING'}`);
       console.log(`[DEBUG] supabaseKey type: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE' : 'ANON'}`);
 
-      let clientQuery = supabase.from('clients').select('id, user_id, active, prompt, model, whatsapp_token, name, phone_number_id, facebook_page_id, instagram_account_id, facebook_access_token');
-      if (channel === 'whatsapp') clientQuery = clientQuery.eq('phone_number_id', recipientId);
-      if (channel === 'messenger') clientQuery = clientQuery.eq('facebook_page_id', recipientId);
-      if (channel === 'instagram') clientQuery = clientQuery.eq('instagram_account_id', recipientId);
+      let clientQuery = supabase.from('clients')
+        .select('id, user_id, active, prompt, model, whatsapp_token, name, phone_number_id, facebook_page_id, instagram_account_id, facebook_access_token')
+        .or(`phone_number_id.eq.${recipientId},facebook_page_id.eq.${recipientId},instagram_account_id.eq.${recipientId}`);
       
       const { data: clients, error: clientErr } = await clientQuery.limit(1);
 
