@@ -1,18 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/remarketing",
-      "schedule": "0 */4 * * *"
-    },
-    {
-      "path": "/api/cron/reminders",
-      "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/campaign?action=cron_followup",
-      "schedule": "30 14 * * *"
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
