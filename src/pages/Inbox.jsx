@@ -1228,13 +1228,20 @@ export default function Inbox() {
                               <p style={{ margin: '4px 0 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>{m.text}</p>
                             )}
                           </div>
-                        ) : m.type === 'audio' || m.type === 'voice' || m.media_url ? (
+                        ) : m.type === 'audio' || m.type === 'voice' ? (
                           <div>
                             {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" avatar={m.sender === 'client' ? selectedConv?.avatar : null} />}
                             <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text?.startsWith('http') ? '' : m.text?.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
                           </div>
                         ) : m.type === 'video' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(mp4|webm|ogg)/i)) ? (
-                          <video controls src={m.media_url || m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                          <div>
+                            <video controls src={m.media_url || m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                            {m.text && m.text !== m.media_url && m.text.replace(/\[Video recibido:.*?\]/gi, '').trim() && (
+                              <p style={{ margin: '4px 0 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>
+                                {m.text.replace(/\[Video recibido:.*?\]/gi, '').trim()}
+                              </p>
+                            )}
+                          </div>
                         ) : m.type === 'document' ? (
                           <a href={m.media_url || m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
                         ) : (

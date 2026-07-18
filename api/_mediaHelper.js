@@ -120,7 +120,28 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
       };
 
     } else if (type === 'video') {
-      return '[Video recibido: Pídele al cliente que describa en texto o nota de voz lo que contiene.]';
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'mp4';
+      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+      let videoUrl = null;
+      try {
+        const { data: uploadData, error: uploadErr } = await supabase.storage.from('whatsapp_media').upload(fileName, buffer, {
+           contentType: mimeType,
+           upsert: true
+        });
+        if (!uploadErr && uploadData) {
+           const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+           videoUrl = publicUrlData.publicUrl;
+        }
+      } catch (err) {
+        console.error("Error uploading video to supabase storage:", err);
+      }
+      
+      const caption = messageObj.video?.caption || '';
+      return {
+          text: (caption ? caption + '\n\n' : '') + '[Video recibido: Pídele al cliente que describa en texto o nota de voz lo que contiene.]',
+          mediaUrl: videoUrl,
+          mediaType: 'video'
+      };
     }
 
     return `[Archivo Multimedia tipo ${type}]`;
