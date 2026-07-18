@@ -57,6 +57,7 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState([])
   const [recentDealsList, setRecentDealsList] = useState([])
   const [pipelineState, setPipelineState] = useState([])
+  const [agentMetrics, setAgentMetrics] = useState([])
 
   useEffect(() => {
     if (tenant.clientId && !tenant.isLoading) {
@@ -80,6 +81,12 @@ export default function Dashboard() {
         .select('*')
         .eq('client_id', tenant.clientId)
         .order('created_at', { ascending: false })
+
+      // 3. Fetch Team Members
+      const { data: teamMembers } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('client_id', tenant.clientId)
 
       if (orders) {
         const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
@@ -131,6 +138,23 @@ export default function Dashboard() {
         }))
         setRecentDealsList(recent)
         setPipelineState(pData)
+
+        if (teamMembers && teamMembers.length > 0) {
+           const metrics = teamMembers.map(member => {
+              const mLeads = leads.filter(l => l.assigned_to === member.user_id)
+              const won = mLeads.filter(l => l.stage === 'Gano')
+              return {
+                 id: member.id,
+                 name: member.full_name || 'Desconocido',
+                 totalAssigned: mLeads.length,
+                 newLeads: mLeads.filter(l => l.stage === 'Nuevo').length,
+                 won: won.length,
+                 lost: mLeads.filter(l => l.stage === 'Perdio').length,
+                 revenue: won.reduce((sum, l) => sum + (Number(l.amount) || 0), 0)
+              }
+           }).sort((a, b) => b.revenue - a.revenue)
+           setAgentMetrics(metrics)
+        }
       }
 
     } catch (err) {
@@ -281,6 +305,63 @@ export default function Dashboard() {
                   </BarChart>
                 </ResponsiveContainer>
              </div>
+          </div>
+        </div>
+
+        {/* Agent Metrics Leaderboard */}
+        <div className="card animate-slideUp w-full" style={{ animationDelay: '0.8s', padding: '32px', marginTop: '24px' }}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Rendimiento por Asesor</h3>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Basado en historial de Leads</div>
+          </div>
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
+            <table className="w-full" style={{ borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '16px 8px', fontWeight: 600 }}>Asesor</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Asignados</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Nuevos (Sin tocar)</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Ganados</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Perdidos</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'right' }}>Ventas Generadas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agentMetrics.length > 0 ? agentMetrics.map((agent, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-default)', transition: 'background 0.2s' }} className="hover:bg-white/5">
+                    <td style={{ padding: '16px 8px' }}>
+                      <div className="flex items-center gap-3">
+                         <div className="avatar sm" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>{agent.name.substring(0, 1).toUpperCase()}</div>
+                         <div style={{ fontWeight: 600 }}>{agent.name}</div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center', fontWeight: 600 }}>{agent.totalAssigned}</td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                       {agent.newLeads > 0 ? (
+                         <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>{agent.newLeads}</span>
+                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                       {agent.won > 0 ? (
+                         <span className="badge emerald">{agent.won}</span>
+                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                       {agent.lost > 0 ? (
+                         <span className="badge rose">{agent.lost}</span>
+                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 800, color: agent.revenue > 0 ? '#10b981' : 'var(--text-primary)' }}>
+                       ${agent.revenue.toLocaleString('es-CO')}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No hay datos de asesores para este periodo</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
