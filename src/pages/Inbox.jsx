@@ -112,6 +112,8 @@ export default function Inbox() {
   const [showSimModal, setShowSimModal] = useState(false)
   const [simMessage, setSimMessage] = useState('')
   const [isSimulating, setIsSimulating] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [chatToDelete, setChatToDelete] = useState(null)
   const [selectedChats, setSelectedChats] = useState([])
   const [isSelectMode, setIsSelectMode] = useState(false)
   const fileInputRef = useRef(null)
@@ -1199,17 +1201,9 @@ export default function Inbox() {
                            className="btn btn-secondary btn-sm"
                            title="Eliminar Chat Completo"
                            style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
-                           onClick={async () => {
-                              if (window.confirm('¿Estás seguro de que quieres eliminar todo el historial de este chat? Esta acción no se puede deshacer.')) {
-                                  const { error } = await supabase.from('conversations').update({ status: 'deleted' }).eq('id', selectedConv.id);
-                                  if (!error) {
-                                      alert('Chat eliminado correctamente.');
-                                      setSelectedConv(null);
-                                      fetchConversations();
-                                  } else {
-                                      alert('Error al eliminar el chat: ' + error.message);
-                                  }
-                              }
+                           onClick={() => {
+                              setChatToDelete(selectedConv);
+                              setShowDeleteModal(true);
                            }}
                         >
                            <Trash2 size={14} />
@@ -1471,6 +1465,41 @@ export default function Inbox() {
                       </button>
                    </div>
                  </form>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+           <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 420, padding: 0, overflow: 'hidden' }}>
+              <div className="card-header" style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <div className="flex items-center gap-3">
+                   <Trash2 size={20} style={{ color: 'var(--accent-rose)' }} />
+                   <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>Eliminar Chat</h3>
+                 </div>
+                 <button className="btn btn-ghost btn-sm" onClick={() => setShowDeleteModal(false)}><X size={20} /></button>
+              </div>
+              <div style={{ padding: '20px' }}>
+                 <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
+                   ¿Estás seguro de que quieres eliminar todo el historial de este chat? Esta acción no se puede deshacer.
+                 </p>
+                 <div className="flex justify-end gap-2" style={{ marginTop: 20 }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+                    <button type="button" className="btn btn-primary" style={{ background: 'var(--accent-rose)', color: 'white' }} onClick={async () => {
+                       const { error } = await supabase.from('conversations').update({ status: 'deleted' }).eq('id', chatToDelete.id);
+                       if (!error) {
+                           setSelectedConv(null);
+                           fetchConversations();
+                       } else {
+                           alert('Error al eliminar el chat: ' + error.message);
+                       }
+                       setShowDeleteModal(false);
+                    }}>
+                       Sí, Eliminar
+                    </button>
+                 </div>
               </div>
            </div>
         </div>

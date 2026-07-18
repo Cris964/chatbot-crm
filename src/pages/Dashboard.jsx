@@ -140,7 +140,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="page-content" style={{ padding: '32px' }}>
+    <div className="page-content" style={{ padding: '32px', position: 'relative' }}>
+      {isLoading && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg-primary)', zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+          <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }}></div>
+          <p style={{ marginTop: 16, color: 'var(--text-secondary)' }}>Cargando métricas...</p>
+        </div>
+      )}
       <div className="flex justify-between items-end mb-8 animate-slideUp">
         <div>
           <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(to right, white, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
