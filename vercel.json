@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/remarketing",
-      "schedule": "0 17 * * *"
+      "schedule": "0 */4 * * *"
     },
     {
       "path": "/api/cron/reminders",

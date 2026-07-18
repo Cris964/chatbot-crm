@@ -171,13 +171,26 @@ export default async function handler(req, res) {
       let finalMessages = [];
       let conversationId = null;
 
-      // Detectar si es una respuesta (Reply)
       let quotedText = '';
       if (messageObj.context && messageObj.context.id && existingChats && existingChats.length > 0) {
         const chat = existingChats[0];
-        const quotedMsg = (chat.messages || []).find(m => m.meta_id === messageObj.context.id);
+        const quotedMsg = (chat.messages || []).find(m => 
+            m.meta_id === messageObj.context.id || 
+            (m.sent_meta && m.sent_meta.some(sm => sm.id === messageObj.context.id))
+        );
         if (quotedMsg) {
-          if (quotedMsg.media_url && quotedMsg.media_type === 'image') {
+          let specificMeta = quotedMsg.sent_meta ? quotedMsg.sent_meta.find(sm => sm.id === messageObj.context.id) : null;
+          
+          if (specificMeta) {
+              if (specificMeta.type === 'image') {
+                  quotedText = `\n\n> ↩️ *Respondiendo a imagen:*\n[SEND_IMAGE: ${specificMeta.content}]`;
+              } else if (specificMeta.type === 'video') {
+                  quotedText = `\n\n> ↩️ *Respondiendo a video:*\n[SEND_VIDEO: ${specificMeta.content}]`;
+              } else if (specificMeta.type === 'text') {
+                  const shortText = specificMeta.content.substring(0, 30).replace(/\n/g, ' ');
+                  quotedText = `\n\n> ↩️ *Respondiendo a:* "${shortText}..."`;
+              }
+          } else if (quotedMsg.media_url && quotedMsg.media_type === 'image') {
             quotedText = `\n\n> ↩️ *Respondiendo a imagen:*\n[SEND_IMAGE: ${quotedMsg.media_url}]`;
           } else if ((quotedMsg.content || quotedMsg.text || '').includes('[SEND_IMAGE:')) {
             const match = (quotedMsg.content || quotedMsg.text || '').match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
@@ -295,6 +308,7 @@ export default async function handler(req, res) {
       const WHATSAPP_TOKEN = clients[0]?.whatsapp_token || process.env.WHATSAPP_TOKEN;
       const PHONE_NUMBER_ID = clients[0]?.phone_number_id || process.env.PHONE_NUMBER_ID;
       const FB_TOKEN = clients[0]?.facebook_access_token;
+      let sentWamids = [];
 
       for (const msg of messageQueue) {
           if (channel === 'whatsapp' && WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
@@ -304,9 +318,11 @@ export default async function handler(req, res) {
                     headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: msg.content } })
                   }).then(async r => {
+                      const data = await r.json();
                       if (!r.ok) {
-                          const errData = await r.json();
-                          console.error('[WHATSAPP TEXT ERROR]', errData);
+                          console.error('[WHATSAPP TEXT ERROR]', data);
+                      } else if (data.messages && data.messages[0]) {
+                          sentWamids.push({ id: data.messages[0].id, type: msg.type, content: msg.content });
                       }
                   });
               } else if (msg.type === 'image' || msg.type === 'video') {
@@ -318,14 +334,16 @@ export default async function handler(req, res) {
                     headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                   }).then(async res => {
+                    const data = await res.json();
                     if (!res.ok) {
-                        const errData = await res.json();
-                        console.error(`[WHATSAPP ${msg.type.toUpperCase()} ERROR]`, errData);
+                        console.error(`[WHATSAPP ${msg.type.toUpperCase()} ERROR]`, data);
                         await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: `*(Error de sistema: No se pudo cargar el archivo multimedia)*` } })
                         });
+                    } else if (data.messages && data.messages[0]) {
+                        sentWamids.push({ id: data.messages[0].id, type: msg.type, content: msg.content });
                     }
                   }).catch(e => console.error('Media send error', e));
               }
@@ -355,6 +373,19 @@ export default async function handler(req, res) {
           const delay = msg.type === 'text' ? Math.max(2000, Math.min(3500, msg.content.length * 15)) : 1500;
           await new Promise(r => setTimeout(r, delay));
       } // closes for (const msg)
+
+      if (sentWamids.length > 0 && conversationId) {
+          try {
+              const { data: latestChat } = await supabase.from('conversations').select('messages').eq('id', conversationId).single();
+              if (latestChat && latestChat.messages && latestChat.messages.length > 0) {
+                  const msgs = latestChat.messages;
+                  msgs[msgs.length - 1].sent_meta = sentWamids;
+                  await supabase.from('conversations').update({ messages: msgs }).eq('id', conversationId);
+              }
+          } catch (e) {
+              console.error('Error saving sent_meta', e);
+          }
+      }
 
       return res.status(200).send('EVENT_RECEIVED');
 

@@ -181,8 +181,8 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   if (!botReplyText) return [];
 
   const needsHumanMatch = botReplyText.match(/\[NEEDS_HUMAN(?::(.*?))?\]/i);
-  const needsHuman = !!needsHumanMatch;
   const humanDept = needsHumanMatch ? (needsHumanMatch[1] || '').trim().toUpperCase() : null;
+  const needsHuman = needsHumanMatch && humanDept !== 'TREARQ';
 
   const leadStateMatch = botReplyText.match(/\[\s*LEAD_STATE\s*:\s*([^|\]]+?)\s*(?:\||,|-)\s*(\d+)\s*\]/i);
   const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);

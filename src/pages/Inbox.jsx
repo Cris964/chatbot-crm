@@ -365,6 +365,7 @@ export default function Inbox() {
         .from('conversations')
         .select('*, clients(*)')
         .eq('client_id', tenant.clientId)
+        .neq('status', 'deleted')
         
       if (!tenant.isAdmin && tenant.session?.user?.id) {
          query = query.eq('assigned_to', tenant.session.user.id)
@@ -1200,8 +1201,9 @@ export default function Inbox() {
                            style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
                            onClick={async () => {
                               if (window.confirm('¿Estás seguro de que quieres eliminar todo el historial de este chat? Esta acción no se puede deshacer.')) {
-                                  const { error } = await supabase.from('conversations').delete().eq('id', selectedConv.id);
+                                  const { error } = await supabase.from('conversations').update({ status: 'deleted' }).eq('id', selectedConv.id);
                                   if (!error) {
+                                      alert('Chat eliminado correctamente.');
                                       setSelectedConv(null);
                                       fetchConversations();
                                   } else {
