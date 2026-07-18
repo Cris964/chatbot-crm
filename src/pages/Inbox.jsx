@@ -367,7 +367,7 @@ export default function Inbox() {
         .from('conversations')
         .select('*, clients(*)')
         .eq('client_id', tenant.clientId)
-        .neq('status', 'deleted')
+        .or('archived.eq.false,archived.is.null')
         
       if (!tenant.isAdmin && tenant.session?.user?.id) {
          query = query.eq('assigned_to', tenant.session.user.id)
@@ -1488,7 +1488,7 @@ export default function Inbox() {
                  <div className="flex justify-end gap-2" style={{ marginTop: 20 }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
                     <button type="button" className="btn btn-primary" style={{ background: 'var(--accent-rose)', color: 'white' }} onClick={async () => {
-                       const { error } = await supabase.from('conversations').update({ status: 'deleted' }).eq('id', chatToDelete.id);
+                       const { error } = await supabase.from('conversations').update({ archived: true }).eq('id', chatToDelete.id);
                        if (!error) {
                            setSelectedConv(null);
                            fetchConversations();
