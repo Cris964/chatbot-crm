@@ -1610,8 +1610,7 @@ img {
   
   .header-search input {
     width: 100%;
-  }/* Hide search on mobile to save space */
-  }
+  } /* Hide search on mobile to save space */
   .page-content {
     padding: 16px;
   }
