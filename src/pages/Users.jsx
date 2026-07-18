@@ -114,8 +114,12 @@ export default function UsersPage() {
                     {tenant.isAdmin && user.user_id !== session.user.id && (
                       <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-rose)' }} onClick={async () => {
                         if (confirm('¿Eliminar este miembro?')) {
-                          await supabase.from('team_members').delete().eq('id', user.id)
-                          fetchUsers()
+                          const { error } = await supabase.from('team_members').delete().eq('id', user.id)
+                          if (error) {
+                            alert('No se pudo eliminar al usuario. Si tiene chats asignados, pide al soporte que lo desactive.')
+                          } else {
+                            fetchUsers()
+                          }
                         }
                       }}>
                         <Trash2 size={16} />

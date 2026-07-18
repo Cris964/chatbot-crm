@@ -580,9 +580,23 @@ img {
 
 .badge.purple { background: rgba(99, 102, 241, 0.15); color: var(--primary-300); }
 .badge.cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
-.badge.emerald { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
-.badge.amber { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
-.badge.rose { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); }
+.badge.emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.badge.amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.badge.rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
+
+/* Spinner Animation */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-default);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 .badge.violet { background: rgba(139, 92, 246, 0.15); color: var(--accent-violet); }
 .badge.pink { background: rgba(236, 72, 153, 0.15); color: var(--accent-pink); }
 .badge.neutral { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); }
@@ -1589,7 +1603,14 @@ img {
     padding: 0 16px;
   }
   .header-search {
-    display: none; /* Hide search on mobile to save space */
+    display: flex;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .header-search input {
+    width: 100%;
+  }/* Hide search on mobile to save space */
   }
   .page-content {
     padding: 16px;

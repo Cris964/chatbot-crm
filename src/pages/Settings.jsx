@@ -238,7 +238,11 @@ export default function Settings() {
       .delete()
       .eq('id', memberId)
 
-    if (!error) fetchTeamMembers()
+    if (error) {
+      alert('Error al eliminar: Verifica que este usuario no tenga chats asignados, o pide a soporte que lo desactive.')
+    } else {
+      fetchTeamMembers()
+    }
   }
 
   return (

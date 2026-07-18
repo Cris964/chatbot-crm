@@ -192,8 +192,12 @@ export default function Products() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este producto del catálogo?')) return
-    await supabase.from('products').delete().eq('id', id)
-    fetchProducts()
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) {
+      alert('No se puede eliminar: Este producto probablemente está vinculado a cotizaciones o ventas existentes. En su lugar, desactívalo.')
+    } else {
+      fetchProducts()
+    }
   }
 
   const toggleActive = async (product) => {
