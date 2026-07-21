@@ -107,7 +107,7 @@ export default function Layout({ session }) {
       { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
       { to: '/productos', icon: Package, label: 'Productos' },
       { to: '/remarketing', icon: Megaphone, label: 'Re-marketing' },
-      ...(tenant.clientName === 'Activo Morrales' ? [{ to: '/lists', icon: ListTodo, label: 'Listas' }] : []),
+      ...(tenant.clientId === 'c91119cc-5451-4a64-b0e8-6b53d33d5563' ? [{ to: '/lists', icon: ListTodo, label: 'Listas' }] : []),
       { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
     ]},
     { label: 'OPERACIONES', items: [
