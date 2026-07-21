@@ -4,7 +4,7 @@ import {
   LayoutDashboard, MessageSquare, Users, UserCircle, Kanban,
   DollarSign, Truck, Zap, Settings, Search,
   Bell, Menu, Sparkles, LogOut, Calendar,
-  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard, Sun, Moon
+  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard, Sun, Moon, ListTodo
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -107,6 +107,7 @@ export default function Layout({ session }) {
       { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
       { to: '/productos', icon: Package, label: 'Productos' },
       { to: '/remarketing', icon: Megaphone, label: 'Re-marketing' },
+      ...(tenant.clientName === 'Activo Morrales' ? [{ to: '/lists', icon: ListTodo, label: 'Listas' }] : []),
       { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
     ]},
     { label: 'OPERACIONES', items: [

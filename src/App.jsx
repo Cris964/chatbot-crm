@@ -11,6 +11,7 @@ import Clients from './pages/Clients'
 import Sales from './pages/Sales'
 import Dispatches from './pages/Dispatches'
 import Remarketing from './pages/Remarketing'
+import Lists from './pages/Lists'
 import Automations from './pages/Automations'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
@@ -84,6 +85,7 @@ function App() {
         <Route path="sales" element={<Navigate to="/ventas" replace />} />
         
         <Route path="remarketing" element={<Remarketing />} />
+        <Route path="lists" element={<Lists />} />
 
         <Route path="despachos" element={<Dispatches />} />
         <Route path="dispatches" element={<Navigate to="/despachos" replace />} />

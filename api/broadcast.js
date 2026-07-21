@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion' } = req.body;
+  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false } = req.body;
 
   if (!clientId || !leadIds || leadIds.length === 0) {
     return res.status(400).json({ error: 'Faltan parámetros requeridos (clientId o leadIds).' });
@@ -35,8 +35,9 @@ export default async function handler(req, res) {
     const { whatsapp_token: token, phone_number_id: phoneId } = clientData;
 
     // 2. Obtener los teléfonos de los leads seleccionados
+    const tableName = isListMode ? 'broadcast_contacts' : 'remarketing_leads';
     const { data: leads, error: leadsErr } = await supabase
-      .from('remarketing_leads')
+      .from(tableName)
       .select('id, phone')
       .in('id', leadIds);
 
@@ -93,7 +94,7 @@ export default async function handler(req, res) {
         
         if (response.ok) {
           successes++;
-          await supabase.from('remarketing_leads').update({ status: 'messaged' }).eq('id', lead.id);
+          await supabase.from(tableName).update({ status: 'messaged' }).eq('id', lead.id);
         } else {
           console.error(`Error enviando a ${cleanPhone}:`, data);
           failures++;
