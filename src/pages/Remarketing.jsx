@@ -53,24 +53,39 @@ export default function Remarketing() {
     if (!campaignText.trim()) return
     setIsSending(true)
     
-    // Simulating sending via AI Agent (Cami)
-    // In a real scenario, this would call an API that triggers the WhatsApp bot
-    console.log(`Sending to ${selectedLeads.length} leads: ${campaignText}`)
-    
-    // Update status in DB
-    const { error } = await supabase
-      .from('remarketing_leads')
-      .update({ status: 'messaged' })
-      .in('id', selectedLeads)
+    try {
+      const response = await fetch('/api/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: tenant.clientId,
+          leadIds: selectedLeads,
+          campaignText: campaignText,
+          templateName: 'hello_world' // Default testing template, can be changed later
+        })
+      });
 
-    if (!error) {
-      setTimeout(() => {
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Success
+        console.log("Broadcast success:", data);
+        setTimeout(() => {
+          setIsSending(false)
+          setShowCampaignModal(false)
+          setCampaignText('')
+          setSelectedLeads([])
+          fetchRemarketingLeads()
+          alert(`¡Campaña enviada con éxito!\nÉxitos: ${data.stats?.successes || 0}\nFallos: ${data.stats?.failures || 0}`);
+        }, 1000)
+      } else {
         setIsSending(false)
-        setShowCampaignModal(false)
-        setCampaignText('')
-        setSelectedLeads([])
-        fetchRemarketingLeads()
-      }, 2000)
+        alert(`Error al enviar la campaña: ${data.error || 'Desconocido'}`);
+      }
+    } catch (err) {
+      setIsSending(false)
+      alert('Error de conexión al servidor.');
+      console.error(err);
     }
   }
 
