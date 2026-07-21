@@ -61,7 +61,7 @@ export default function Remarketing() {
           clientId: tenant.clientId,
           leadIds: selectedLeads,
           campaignText: campaignText,
-          templateName: 'hello_world' // Default testing template, can be changed later
+          templateName: 'alerta_promocion'
         })
       });
 
