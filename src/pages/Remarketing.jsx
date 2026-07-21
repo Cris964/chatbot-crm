@@ -5,7 +5,8 @@ import { useTenant } from '../lib/useTenant'
 import {
   Users, Search, Filter, Mail, Phone, Calendar, 
   MessageSquare, Send, MoreHorizontal, Download, 
-  Plus, CheckCircle2, AlertCircle, Clock, Megaphone
+  Plus, CheckCircle2, AlertCircle, Clock, Megaphone,
+  Circle
 } from 'lucide-react'
 
 export default function Remarketing() {
@@ -161,12 +162,13 @@ export default function Remarketing() {
                 if (selectedLeads.length === filteredLeads.length && filteredLeads.length > 0) setSelectedLeads([])
                 else setSelectedLeads(filteredLeads.map(l => l.id))
               }}>
-                <input 
-                  type="checkbox" 
-                  checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
-                  onChange={() => {}}
-                  style={{ width: 16, height: 16, accentColor: 'var(--primary-500)', cursor: 'pointer' }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', transition: 'all 0.2s ease', color: selectedLeads.length === filteredLeads.length && filteredLeads.length > 0 ? 'var(--primary-500)' : 'var(--text-tertiary)' }}>
+                  {selectedLeads.length === filteredLeads.length && filteredLeads.length > 0 ? (
+                    <CheckCircle2 size={20} fill="currentColor" color="var(--bg-primary)" />
+                  ) : (
+                    <Circle size={20} />
+                  )}
+                </div>
               </th>
               <th>Cliente</th>
               <th>Última Compra</th>
@@ -192,12 +194,13 @@ export default function Remarketing() {
                   style={{ cursor: 'pointer' }}
                 >
                   <td onClick={(e) => e.stopPropagation()}>
-                    <input 
-                      type="checkbox" 
-                      checked={selectedLeads.includes(lead.id)}
-                      onChange={() => toggleSelectLead(lead.id)}
-                      style={{ width: 16, height: 16, accentColor: 'var(--primary-500)', cursor: 'pointer' }}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', transition: 'all 0.2s ease', color: selectedLeads.includes(lead.id) ? 'var(--primary-500)' : 'var(--text-tertiary)' }}>
+                      {selectedLeads.includes(lead.id) ? (
+                        <CheckCircle2 size={20} fill="currentColor" color="var(--bg-primary)" />
+                      ) : (
+                        <Circle size={20} />
+                      )}
+                    </div>
                   </td>
                   <td>
                     <div className="flex flex-col">
