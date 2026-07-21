@@ -157,14 +157,15 @@ export default function Remarketing() {
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ width: 40 }}>
+              <th style={{ width: 40, cursor: 'pointer' }} onClick={() => {
+                if (selectedLeads.length === filteredLeads.length && filteredLeads.length > 0) setSelectedLeads([])
+                else setSelectedLeads(filteredLeads.map(l => l.id))
+              }}>
                 <input 
                   type="checkbox" 
                   checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
-                  onChange={() => {
-                    if (selectedLeads.length === filteredLeads.length) setSelectedLeads([])
-                    else setSelectedLeads(filteredLeads.map(l => l.id))
-                  }}
+                  onChange={() => {}}
+                  style={{ width: 16, height: 16, accentColor: 'var(--primary-500)', cursor: 'pointer' }}
                 />
               </th>
               <th>Cliente</th>
@@ -184,12 +185,18 @@ export default function Remarketing() {
               const diffDays = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24))
               
               return (
-                <tr key={lead.id} className={selectedLeads.includes(lead.id) ? 'active' : ''}>
-                  <td>
+                <tr 
+                  key={lead.id} 
+                  className={selectedLeads.includes(lead.id) ? 'active' : ''}
+                  onClick={() => toggleSelectLead(lead.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox" 
                       checked={selectedLeads.includes(lead.id)}
                       onChange={() => toggleSelectLead(lead.id)}
+                      style={{ width: 16, height: 16, accentColor: 'var(--primary-500)', cursor: 'pointer' }}
                     />
                   </td>
                   <td>
