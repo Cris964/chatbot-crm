@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 import { Users, Plus, Trash2, ArrowLeft, Megaphone, CheckCircle2, Circle } from 'lucide-react'
 
