@@ -22,6 +22,13 @@ import Marketing from './pages/Marketing'
 import Products from './pages/Products'
 import SuperAdmin from './pages/SuperAdmin'
 
+// Protected Route Wrapper
+const ProtectedRoute = ({ children, isLoading, session }) => {
+  if (isLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando...</div>
+  if (!session) return <Navigate to="/login" replace />
+  return children
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -47,13 +54,6 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Protected Route Wrapper
-  const ProtectedRoute = ({ children }) => {
-    if (isLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando...</div>
-    if (!session) return <Navigate to="/login" replace />
-    return children
-  }
-
   return (
     <Routes>
       <Route 
@@ -64,7 +64,7 @@ function App() {
       />
       
       <Route path="/" element={
-        <ProtectedRoute>
+        <ProtectedRoute isLoading={isLoading} session={session}>
           <TenantProvider session={session}>
             <Layout session={session} />
           </TenantProvider>

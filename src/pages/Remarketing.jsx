@@ -17,6 +17,8 @@ export default function Remarketing() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLeads, setSelectedLeads] = useState([])
+  const [stageFilter, setStageFilter] = useState('All')
+  const [sourceFilter, setSourceFilter] = useState('All')
   
   // Campaign Modal
   const [showCampaignModal, setShowCampaignModal] = useState(false)
@@ -32,12 +34,20 @@ export default function Remarketing() {
   const fetchRemarketingLeads = async () => {
     setIsLoading(true)
     const { data, error } = await supabase
-      .from('remarketing_leads')
+      .from('leads')
       .select('*')
       .eq('client_id', tenant.clientId)
-      .order('last_purchase_date', { ascending: true })
+      .order('updated_at', { ascending: false })
 
-    if (!error && data) setLeads(data)
+    if (!error && data) {
+      const mapped = data.map(l => ({
+        ...l,
+        full_name: l.name || 'Sin Nombre',
+        last_purchase_date: l.updated_at || l.created_at || new Date().toISOString(),
+        status: l.status === 'messaged' ? 'messaged' : 'pending' // En caso de que se use para tracking
+      }))
+      setLeads(mapped)
+    }
     setIsLoading(false)
   }
 
@@ -89,24 +99,27 @@ export default function Remarketing() {
     }
   }
 
-  const filteredLeads = leads.filter(l => 
-    l.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.phone.includes(searchQuery)
-  )
+  const filteredLeads = leads.filter(l => {
+    const matchesSearch = l.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || (l.phone && l.phone.includes(searchQuery))
+    const matchesStage = stageFilter === 'All' || l.stage === stageFilter
+    const matchesSource = sourceFilter === 'All' || l.source === sourceFilter
+    return matchesSearch && matchesStage && matchesSource
+  })
 
   const handleExport = () => {
     if (filteredLeads.length === 0) return;
     
     // Create CSV content
-    const headers = ['Nombre', 'Telefono', 'Ultima Compra', 'Dias Inactivo', 'Estado'];
+    const headers = ['Nombre', 'Telefono', 'Etapa', 'Origen', 'Ultima Actividad', 'Dias Inactivo'];
     const rows = filteredLeads.map(lead => {
       const diffDays = Math.floor((new Date() - new Date(lead.last_purchase_date)) / (1000 * 60 * 60 * 24));
       return [
         `"${lead.full_name}"`,
-        `"${lead.phone}"`,
+        `"${lead.phone || ''}"`,
+        `"${lead.stage || 'N/A'}"`,
+        `"${lead.source || 'N/A'}"`,
         `"${new Date(lead.last_purchase_date).toLocaleDateString()}"`,
-        diffDays,
-        `"${lead.status === 'messaged' ? 'Contactado' : 'Pendiente'}"`
+        diffDays
       ].join(',');
     });
     
@@ -155,7 +168,7 @@ export default function Remarketing() {
 
       {/* Search & Filter */}
       <div className="flex items-center gap-4 mb-6">
-        <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
           <input 
             className="form-input" 
@@ -165,7 +178,34 @@ export default function Remarketing() {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="filter-btn"><Filter size={16} /> Filtrar por fecha</button>
+        
+        <select 
+          className="form-input" 
+          style={{ width: 'auto', background: 'rgba(var(--overlay-rgb), 0.02)' }}
+          value={stageFilter}
+          onChange={e => setStageFilter(e.target.value)}
+        >
+          <option value="All">Todas las Etapas</option>
+          <option value="Nuevo">Nuevo</option>
+          <option value="Contactado">Contactado</option>
+          <option value="Interesado">Interesado</option>
+          <option value="Negociación">Negociación</option>
+          <option value="Venta Cerrada">Venta Cerrada</option>
+          <option value="Venta Perdida">Venta Perdida</option>
+        </select>
+
+        <select 
+          className="form-input" 
+          style={{ width: 'auto', background: 'rgba(var(--overlay-rgb), 0.02)' }}
+          value={sourceFilter}
+          onChange={e => setSourceFilter(e.target.value)}
+        >
+          <option value="All">Todos los Orígenes</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Messenger">Messenger</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Formulario">Formulario</option>
+        </select>
       </div>
 
       {/* Leads Table */}
@@ -186,9 +226,10 @@ export default function Remarketing() {
                 </div>
               </th>
               <th>Cliente</th>
-              <th>Última Compra</th>
+              <th>Etapa</th>
+              <th>Origen</th>
+              <th>Última Actividad</th>
               <th>Días Inactivo</th>
-              <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -223,15 +264,18 @@ export default function Remarketing() {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{lead.phone}</span>
                     </div>
                   </td>
+                  <td>
+                    <span className={`badge ${lead.stage === 'Venta Cerrada' ? 'emerald' : lead.stage === 'Venta Perdida' ? 'rose' : lead.stage === 'Interesado' ? 'violet' : 'amber'}`}>
+                      {lead.stage || 'Nuevo'}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{lead.source || 'N/A'}</span>
+                  </td>
                   <td>{lastDate.toLocaleDateString()}</td>
                   <td>
                     <span style={{ color: diffDays > 180 ? 'var(--accent-rose)' : 'var(--accent-amber)', fontWeight: 600 }}>
                       {diffDays} días
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge ${lead.status === 'messaged' ? 'emerald' : 'neutral'}`}>
-                      {lead.status === 'messaged' ? 'Contactado' : 'Pendiente'}
                     </span>
                   </td>
                   <td>

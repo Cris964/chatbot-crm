@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     const { whatsapp_token: token, phone_number_id: phoneId } = clientData;
 
     // 2. Obtener los teléfonos de los leads seleccionados
-    const tableName = isListMode ? 'broadcast_contacts' : 'remarketing_leads';
+    const tableName = isListMode ? 'broadcast_contacts' : 'leads';
     const { data: leads, error: leadsErr } = await supabase
       .from(tableName)
       .select('id, phone')
@@ -94,7 +94,12 @@ export default async function handler(req, res) {
         
         if (response.ok) {
           successes++;
-          await supabase.from(tableName).update({ status: 'messaged' }).eq('id', lead.id);
+          if (isListMode) {
+            await supabase.from('broadcast_contacts').update({ status: 'messaged' }).eq('id', lead.id);
+          } else {
+             // Do not set status in 'leads' table to avoid overriding 'active' with 'messaged'.
+             // You can add a 'remarketing_status' column in the future if needed.
+          }
         } else {
           console.error(`Error enviando a ${cleanPhone}:`, data);
           failures++;
