@@ -525,7 +525,7 @@ export default function Inbox() {
 
          // Call Vercel API to actually send the WhatsApp message
          try {
-           await fetch('/api/send', {
+           const res = await fetch('/api/send', {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
@@ -536,6 +536,12 @@ export default function Inbox() {
                channel: selectedConv.channel
              })
            });
+           const apiData = await res.json();
+           if (apiData.meta_message_id) {
+               const updatedMsgs = [...selectedConv.rawMessages, messageObj];
+               updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: 'text', content: textMsg }];
+               await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+           }
          } catch (apiErr) {
            console.error('Error sending message via API:', apiErr);
          }
@@ -630,7 +636,7 @@ export default function Inbox() {
       if (!dbError) {
         // Enviar a la API de WhatsApp
         try {
-          await fetch('/api/send', {
+          const apiRes = await fetch('/api/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -641,6 +647,12 @@ export default function Inbox() {
               channel: selectedConv.channel
             })
           });
+          const apiData = await apiRes.json();
+          if (apiData.meta_message_id) {
+              const updatedMsgs = [...selectedConv.rawMessages, messageObj];
+              updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: 'audio', content: audioUrl }];
+              await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+          }
         } catch (apiErr) {
           console.error('Error sending audio via API:', apiErr);
         }
@@ -707,7 +719,7 @@ export default function Inbox() {
       if (!dbError) {
         // Enviar a la API de WhatsApp
         try {
-          await fetch('/api/send', {
+          const apiRes = await fetch('/api/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -718,6 +730,12 @@ export default function Inbox() {
               channel: selectedConv.channel
             })
           });
+          const apiData = await apiRes.json();
+          if (apiData.meta_message_id) {
+              const updatedMsgs = [...selectedConv.rawMessages, messageObj];
+              updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: file.type.startsWith('image/') ? 'image' : 'document', content: fileUrl }];
+              await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+          }
         } catch (apiErr) {
           console.error('Error sending file via API:', apiErr);
         }
