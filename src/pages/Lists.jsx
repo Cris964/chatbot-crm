@@ -140,13 +140,6 @@ export default function Lists() {
       {/* VISTA DE LISTAS (TARJETAS) */}
       {!selectedList && (
         <div style={{ marginTop: '2rem' }}>
-          <div style={{ padding: '1rem', background: '#f0f0f0', color: '#333', fontSize: '0.8rem', fontFamily: 'monospace', marginBottom: '1rem' }}>
-            DEBUG INFO:<br/>
-            clientId: {tenant?.clientId}<br/>
-            isLoading: {isLoading ? 'true' : 'false'}<br/>
-            lists length: {lists?.length}<br/>
-            errorMsg: {errorMsg || 'null'}
-          </div>
           {errorMsg && (
             <div style={{ padding: '1rem', background: 'rgba(255, 59, 48, 0.1)', color: 'var(--accent-rose)', borderRadius: '12px', marginBottom: '1rem', border: '1px solid rgba(255, 59, 48, 0.2)' }}>
               Error: {errorMsg}
