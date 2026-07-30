@@ -13,6 +13,7 @@ export default function Lists() {
   
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignText, setCampaignText] = useState('')
+  const [errorMsg, setErrorMsg] = useState(null)
   const [selectedContacts, setSelectedContacts] = useState([])
 
   useEffect(() => {
@@ -23,14 +24,18 @@ export default function Lists() {
 
   const fetchLists = async () => {
     setIsLoading(true)
+    setErrorMsg(null)
     try {
       const response = await fetch('/api/broadcast?action=get_lists&clientId=' + tenant.clientId)
       const data = await response.json()
       if (response.ok && data.lists) {
         setLists(data.lists)
+      } else {
+        setErrorMsg(data.error || 'Unknown error fetching lists')
       }
     } catch (err) {
       console.error('Error fetching lists:', err)
+      setErrorMsg(err.message)
     }
     setIsLoading(false)
   }
@@ -134,8 +139,15 @@ export default function Lists() {
 
       {/* VISTA DE LISTAS (TARJETAS) */}
       {!selectedList && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
-          {isLoading ? <p>Cargando listas...</p> : lists.map(list => (
+        <div style={{ marginTop: '2rem' }}>
+          {errorMsg && (
+            <div style={{ padding: '1rem', background: 'rgba(255, 59, 48, 0.1)', color: 'var(--accent-rose)', borderRadius: '12px', marginBottom: '1rem', border: '1px solid rgba(255, 59, 48, 0.2)' }}>
+              Error: {errorMsg}
+              <button className="btn btn-secondary btn-sm" style={{ marginLeft: '1rem' }} onClick={fetchLists}>Reintentar</button>
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+            {isLoading ? <p>Cargando listas...</p> : lists.map(list => (
             <div 
               key={list.id} 
               className="card glass-panel" 
@@ -172,6 +184,7 @@ export default function Lists() {
             </div>
             <p style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Crear nueva lista</p>
           </div>
+        </div>
         </div>
       )}
 
