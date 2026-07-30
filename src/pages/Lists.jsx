@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
-import { Users, Plus, Trash2, ArrowLeft, Megaphone, CheckCircle2, Circle } from 'lucide-react'
+import { Users, Plus, Trash2, ArrowLeft, Megaphone, CheckCircle2, Circle, Paperclip, Mic } from 'lucide-react'
 
 export default function Lists() {
   const tenant = useTenant()
@@ -15,6 +15,17 @@ export default function Lists() {
   const [campaignText, setCampaignText] = useState('')
   const [errorMsg, setErrorMsg] = useState(null)
   const [selectedContacts, setSelectedContacts] = useState([])
+
+  // Nuevos estados para multimedia y modos de campaña
+  const [campaignMode, setCampaignMode] = useState('template') // 'template' o 'free'
+  const [pendingMedia, setPendingMedia] = useState(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+
+  const fileInputRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const recordingTimerRef = useRef(null)
 
   useEffect(() => {
     if (tenant?.clientId) {
@@ -69,11 +80,102 @@ export default function Lists() {
     }
   }
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        stream.getTracks().forEach(track => track.stop())
+        setPendingMedia({ blob: audioBlob, type: 'audio/ogg', name: `voice_${Date.now()}.ogg`, isAudio: true })
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+      setRecordingTime(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+    } catch (err) {
+      console.error('Microphone access denied:', err)
+      alert('Para grabar audios, por favor permite el acceso al micrófono en tu navegador.')
+    }
+  }
+
+  const stopRecording = (cancel = false) => {
+    if (mediaRecorderRef.current && isRecording) {
+      if (cancel) {
+        mediaRecorderRef.current.onstop = () => {
+          mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop())
+        }
+      }
+      mediaRecorderRef.current.stop()
+      clearInterval(recordingTimerRef.current)
+      setIsRecording(false)
+      setRecordingTime(0)
+    }
+  }
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    const getMediaType = (mimeType, fName) => {
+      if (!mimeType) mimeType = '';
+      const m = mimeType.toLowerCase();
+      if (m.startsWith('image/')) return 'image';
+      if (m.startsWith('video/')) return 'video';
+      if (m.startsWith('audio/')) return 'audio';
+      
+      if (fName) {
+        const ext = fName.split('.').pop().toLowerCase();
+        if (['jpeg','jpg','gif','png','webp'].includes(ext)) return 'image';
+        if (['mp4','webm','ogg','avi','mov'].includes(ext)) return 'video';
+        if (['mp3','wav','oga','aac','m4a','amr'].includes(ext)) return 'audio';
+      }
+      return 'document';
+    };
+    
+    setPendingMedia({
+      blob: file,
+      type: file.type || 'application/octet-stream',
+      name: file.name,
+      mediaType: getMediaType(file.type, file.name)
+    })
+    
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleSendCampaign = async () => {
-    if (!campaignText.trim()) return
+    if (!campaignText.trim() && !pendingMedia) return
     setIsSending(true)
     
     try {
+      let mediaUrl = null;
+      let finalMediaType = null;
+      
+      if (pendingMedia) {
+        const fileName = `${Date.now()}_${pendingMedia.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+        const { data, error } = await supabase.storage
+          .from('whatsapp_media')
+          .upload(fileName, pendingMedia.blob, { contentType: pendingMedia.type })
+          
+        if (error) throw new Error(error.message);
+        
+        const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+        mediaUrl = publicUrlData.publicUrl;
+        finalMediaType = pendingMedia.isAudio ? 'audio' : pendingMedia.mediaType;
+      }
+
       const response = await fetch('/api/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,7 +184,10 @@ export default function Lists() {
           leadIds: selectedContacts, 
           campaignText: campaignText,
           templateName: 'alerta_promocion',
-          isListMode: true 
+          isListMode: true,
+          isFreeMessage: campaignMode === 'free',
+          mediaUrl,
+          mediaType: finalMediaType
         })
       });
 
@@ -94,6 +199,7 @@ export default function Lists() {
           setShowCampaignModal(false)
           setCampaignText('')
           setSelectedContacts([])
+          setPendingMedia(null)
           handleOpenList(selectedList) 
           alert(`¡Campaña enviada con éxito a la lista!\nÉxitos: ${data.stats?.successes || 0}\nFallos: ${data.stats?.failures || 0}`);
         }, 1000)
@@ -102,8 +208,9 @@ export default function Lists() {
         alert(`Error al enviar la campaña: ${data.error || 'Desconocido'}`);
       }
     } catch (err) {
+      console.error(err)
       setIsSending(false)
-      alert('Error de conexión al servidor.');
+      alert('Error: ' + err.message);
     }
   }
 
@@ -252,30 +359,97 @@ export default function Lists() {
       {/* CAMPAIGN MODAL */}
       {showCampaignModal && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card glass-panel fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Lanzar Campaña (Plantilla)</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-              Se enviará la plantilla <strong>alerta_promocion</strong> a {selectedContacts.length} contactos de la lista "{selectedList?.name}".
-            </p>
+          <div className="card glass-panel fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Lanzar Campaña</h2>
             
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '8px' }}>
+              <button 
+                type="button"
+                className={`btn ${campaignMode === 'template' ? 'btn-primary' : 'btn-ghost'}`} 
+                style={{ flex: 1 }} 
+                onClick={() => setCampaignMode('template')}
+              >
+                Plantilla Oficial
+              </button>
+              <button 
+                type="button"
+                className={`btn ${campaignMode === 'free' ? 'btn-primary' : 'btn-ghost'}`} 
+                style={{ flex: 1 }}
+                onClick={() => setCampaignMode('free')}
+              >
+                Mensaje Libre
+              </button>
+            </div>
+
+            {campaignMode === 'template' ? (
+              <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                <strong>Modo Plantilla:</strong> Se usará la plantilla <code>alerta_promocion</code>. Ideal para contactar masivamente (Re-marketing). Si adjuntas multimedia, tu plantilla debe soportarlo en Meta.
+              </div>
+            ) : (
+              <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px', fontSize: '0.85rem' }}>
+                <strong>Modo Libre:</strong> Envía texto, fotos o audios libremente. <strong>⚠️ Solo llegará a los clientes que te hayan escrito en las últimas 24 horas.</strong>
+              </div>
+            )}
+
             <div className="form-group">
-              <label className="form-label">Texto de la variable {'{{1}}'}</label>
+              <label className="form-label">{campaignMode === 'template' ? "Texto de la variable {{1}} (Opcional)" : "Texto del mensaje (Opcional si hay adjunto)"}</label>
               <textarea 
                 className="form-input" 
                 rows="4" 
-                placeholder="Ej: Tenemos 20% de descuento en todos los morrales hoy."
+                placeholder={campaignMode === 'template' ? "Ej: Tenemos 20% de descuento en todos los morrales hoy." : "Escribe tu mensaje libre aquí..."}
                 value={campaignText}
                 onChange={(e) => setCampaignText(e.target.value)}
                 style={{ resize: 'none' }}
               />
             </div>
             
+            {/* Adjuntos */}
+            <div style={{ marginTop: '1rem', padding: '1rem', border: '1px dashed var(--border-light)', borderRadius: '8px', background: 'var(--bg-secondary)' }}>
+              {pendingMedia ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {pendingMedia.isAudio ? <Mic size={20} className="text-primary-500" /> : <Paperclip size={20} className="text-primary-500" />}
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pendingMedia.name}</span>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setPendingMedia(null)}><Trash2 size={16} className="text-danger" /></button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {!isRecording ? (
+                    <>
+                      <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()}>
+                        <Paperclip size={16} /> Adjuntar
+                      </button>
+                      <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" />
+                      
+                      <button className="btn btn-secondary btn-sm" onClick={startRecording}>
+                        <Mic size={16} /> Audio
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite' }}></div>
+                        <span style={{ fontFamily: 'monospace', fontSize: '1.1rem' }}>
+                          {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => stopRecording(true)}><Trash2 size={18} /></button>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => stopRecording(false)} style={{ background: '#ef4444' }}>Guardar</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
-              <button className="btn btn-ghost" onClick={() => setShowCampaignModal(false)} disabled={isSending}>
+              <button className="btn btn-ghost" onClick={() => { setShowCampaignModal(false); setPendingMedia(null); stopRecording(true); }} disabled={isSending}>
                 Cancelar
               </button>
-              <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || !campaignText.trim()}>
-                {isSending ? 'Enviando...' : 'Enviar a Meta API'}
+              <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || (!campaignText.trim() && !pendingMedia)}>
+                {isSending ? 'Enviando...' : `Lanzar a ${selectedContacts.length} contactos`}
               </button>
             </div>
           </div>

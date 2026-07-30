@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   // --- POST Handler for Sending Broadcasts ---
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false } = req.body;
+  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, isFreeMessage = false, mediaUrl, mediaType } = req.body;
 
   if (!clientId || !leadIds || leadIds.length === 0) {
     return res.status(400).json({ error: 'Faltan parámetros requeridos (clientId o leadIds).' });
@@ -88,35 +88,76 @@ export default async function handler(req, res) {
     const sendPromises = leads.map(async (lead) => {
       // Limpiar teléfono (solo números)
       let cleanPhone = lead.phone.replace(/\D/g, '');
+      let payload = {};
       
-      const payload = {
-        messaging_product: "whatsapp",
-        to: cleanPhone,
-        type: "template",
-        template: {
-          name: templateName,
-          language: { code: "es_CO" },
-          components: [
-            {
-              type: "body",
-              parameters: [
-                {
-                  type: "text",
-                  text: campaignText || "Promoción especial"
-                }
-              ]
-            }
-          ]
+      if (isFreeMessage) {
+        // PAYLOAD PARA MENSAJE LIBRE
+        payload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: cleanPhone
+        };
+        
+        if (mediaUrl) {
+          const finalType = mediaType === 'audio' ? 'audio' : (mediaType === 'video' ? 'video' : (mediaType === 'image' ? 'image' : 'document'));
+          payload.type = finalType;
+          payload[finalType] = { link: mediaUrl };
+          if (campaignText && finalType !== 'audio') {
+            payload[finalType].caption = campaignText;
+          }
+        } else {
+          payload.type = "text";
+          payload.text = { body: campaignText || "Promoción especial" };
         }
-      };
-
-      // Templates without variables: skip components array
-      if (templateName === 'hello_world') {
-          delete payload.template.components;
-          payload.template.language = { code: "en_US" };
-      } else if (templateName === 'iniciacion') {
-          // 'iniciacion' has a {{1}} variable with the campaign text
-          payload.template.language = { code: "es_CO" };
+      } else {
+        // PAYLOAD PARA PLANTILLA
+        payload = {
+          messaging_product: "whatsapp",
+          to: cleanPhone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: "es_CO" },
+            components: []
+          }
+        };
+        
+        // Agregar Header Multimedia si existe
+        if (mediaUrl) {
+           const finalType = mediaType === 'video' ? 'video' : (mediaType === 'image' ? 'image' : 'document');
+           payload.template.components.push({
+             type: "header",
+             parameters: [
+               {
+                 type: finalType,
+                 [finalType]: { link: mediaUrl }
+               }
+             ]
+           });
+        }
+        
+        // Agregar Body
+        if (templateName === 'hello_world') {
+            delete payload.template.components;
+            payload.template.language = { code: "en_US" };
+        } else {
+            if (campaignText) {
+              payload.template.components.push({
+                type: "body",
+                parameters: [
+                  {
+                    type: "text",
+                    text: campaignText
+                  }
+                ]
+              });
+            } else if (!mediaUrl) {
+              payload.template.components.push({
+                type: "body",
+                parameters: [{ type: "text", text: "Promoción especial" }]
+              });
+            }
+        }
       }
 
       try {
