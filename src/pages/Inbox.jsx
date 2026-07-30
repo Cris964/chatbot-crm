@@ -686,10 +686,10 @@ export default function Inbox() {
     if (!selectedConv) return
     setIsLoading(true)
     try {
-      const fileName = `voice_${Date.now()}.webm`
+      const fileName = `voice_${Date.now()}.ogg`
       const { data, error } = await supabase.storage
         .from('whatsapp_media')
-        .upload(fileName, audioBlob, { contentType: 'audio/webm' })
+        .upload(fileName, audioBlob, { contentType: 'audio/ogg' })
         
       if (error) throw error
 
@@ -782,13 +782,22 @@ export default function Inbox() {
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       const fileUrl = data.url;
       
-      const getMediaType = (mimeType) => {
-        if (mimeType.startsWith('image/')) return 'image';
-        if (mimeType.startsWith('video/')) return 'video';
-        if (mimeType.startsWith('audio/')) return 'audio';
+      const getMediaType = (mimeType, fName) => {
+        if (!mimeType) mimeType = '';
+        const m = mimeType.toLowerCase();
+        if (m.startsWith('image/')) return 'image';
+        if (m.startsWith('video/')) return 'video';
+        if (m.startsWith('audio/')) return 'audio';
+        
+        if (fName) {
+          const ext = fName.split('.').pop().toLowerCase();
+          if (['jpeg','jpg','gif','png','webp'].includes(ext)) return 'image';
+          if (['mp4','webm','ogg','avi','mov'].includes(ext)) return 'video';
+          if (['mp3','wav','oga','aac','m4a','amr'].includes(ext)) return 'audio';
+        }
         return 'document';
       };
-      const mediaType = getMediaType(file.type);
+      const mediaType = getMediaType(file.type, file.name);
 
       const messageObj = {
         role: 'agent',
@@ -1401,7 +1410,7 @@ export default function Inbox() {
                      <div className="flex gap-1">
                         {!isRecording ? (
                           <>
-                            {tenant.clientId === 'f920ca15-badb-4492-a344-e8d04f9f8c02' && selectedConv?.channel === 'whatsapp' && !selectedConv?.phone?.startsWith('SIM_') && (
+                            {selectedConv?.channel === 'whatsapp' && !selectedConv?.phone?.startsWith('SIM_') && (
                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(true)} title="Enviar Plantilla (Template)"><FileText size={18} /></button>
                             )}
                             <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
