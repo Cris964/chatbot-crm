@@ -2,10 +2,14 @@ require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-async function main() {
-  const { data, error } = await supabase.from('conversations').select('id, user_phone, updated_at').eq('client_id', 'c91119cc-5451-4a64-b0e8-6b53d33d5563');
-  if (error) console.error(error);
-  else console.log('Activos conversations:', JSON.stringify(data, null, 2));
+async function checkConvs() {
+  const { data: convs } = await supabase
+    .from('conversations')
+    .select('user_name, user_phone, updated_at')
+    .eq('client_id', 'f920ca15-badb-4492-a344-e8d04f9f8c02')
+    .order('updated_at', { ascending: false })
+    .limit(5);
+    
+  console.log(convs);
 }
-
-main();
+checkConvs();

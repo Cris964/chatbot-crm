@@ -939,12 +939,13 @@ img {
 }
 
 .chat-input-area {
-  padding: 16px 20px;
+  padding: 0;
   border-top: 1px solid var(--border-default);
   display: flex;
   gap: 12px;
   align-items: flex-end;
   flex-shrink: 0;
+  width: 100%;
 }
 
 .chat-input-area input {

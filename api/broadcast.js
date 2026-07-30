@@ -8,6 +8,46 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', '*');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+  
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // --- GET Handler for Fetching Lists and Contacts (Bypassing RLS) ---
+  if (req.method === 'GET') {
+    const { action, clientId, listId } = req.query;
+    
+    try {
+      if (action === 'get_lists') {
+        if (!clientId) return res.status(400).json({ error: 'Missing clientId' });
+        const { data, error } = await supabase
+          .from('broadcast_lists')
+          .select('*, broadcast_contacts(count)')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        return res.status(200).json({ lists: data });
+      } 
+      
+      if (action === 'get_contacts') {
+        if (!listId) return res.status(400).json({ error: 'Missing listId' });
+        const { data, error } = await supabase
+          .from('broadcast_contacts')
+          .select('*')
+          .eq('list_id', listId)
+          .order('full_name', { ascending: true });
+        if (error) throw error;
+        return res.status(200).json({ contacts: data });
+      }
+      
+      return res.status(400).json({ error: 'Invalid GET action' });
+    } catch (err) {
+      console.error("GET Error in broadcast API:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // --- POST Handler for Sending Broadcasts ---
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false } = req.body;
@@ -15,10 +55,6 @@ export default async function handler(req, res) {
   if (!clientId || !leadIds || leadIds.length === 0) {
     return res.status(400).json({ error: 'Faltan parámetros requeridos (clientId o leadIds).' });
   }
-
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     // 1. Obtener Token de WhatsApp y Phone Number ID del Cliente
@@ -74,10 +110,13 @@ export default async function handler(req, res) {
         }
       };
 
-      // Fallback para 'hello_world' de prueba (no requiere components)
+      // Templates without variables: skip components array
       if (templateName === 'hello_world') {
           delete payload.template.components;
           payload.template.language = { code: "en_US" };
+      } else if (templateName === 'iniciacion') {
+          // 'iniciacion' has a {{1}} variable with the campaign text
+          payload.template.language = { code: "es_CO" };
       }
 
       try {

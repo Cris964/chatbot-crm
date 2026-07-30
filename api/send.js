@@ -88,12 +88,19 @@ export default async function handler(req, res) {
         if (msgType === 'image') {
           metaPayload.type = 'image';
           metaPayload.image = { link: message };
+        } else if (msgType === 'video') {
+          metaPayload.type = 'video';
+          metaPayload.video = { link: message };
         } else if (msgType === 'audio') {
           metaPayload.type = 'audio';
           metaPayload.audio = { link: message };
         } else if (msgType === 'document' || msgType === 'file') {
           metaPayload.type = 'document';
           metaPayload.document = { link: message };
+        } else if (msgType === 'template') {
+          metaPayload.type = 'template';
+          // Assume the template has no variables for now, just a standard text template
+          metaPayload.template = { name: message.toLowerCase().trim(), language: { code: 'es' } };
         } else {
           metaPayload.type = 'text';
           metaPayload.text = { preview_url: false, body: message };

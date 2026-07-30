@@ -41,7 +41,11 @@ export async function dispatchToAI({
           'accesorio': ['accesorios', 'rejilla', 'rejillas', 'jabonera', 'papelera'],
           'rejilla': ['rejillas', 'accesorio', 'accesorios'],
           'fachada': ['fachaleta', 'fachaletas', 'piedra', 'muro', 'fachadas'],
-          'mueble': ['muebles', 'gabinete', 'combo', 'lavamanos']
+          'mueble': ['muebles', 'gabinete', 'combo', 'lavamanos'],
+          'maletin': ['morral', 'morrales', 'maleta', 'maletas', 'mochila', 'bolso'],
+          'maletín': ['morral', 'morrales', 'maleta', 'maletas', 'mochila', 'bolso'],
+          'maleta': ['morral', 'morrales', 'maletín', 'maletin', 'bolso'],
+          'mochila': ['morral', 'morrales', 'maleta', 'maletas', 'maletín']
       };
       let expandedKeywords = [...keywords];
       keywords.forEach(k => { if (synonyms[k]) expandedKeywords.push(...synonyms[k]); });
@@ -120,9 +124,9 @@ REGLAS DE FOTOS (MUY IMPORTANTE):
 1. COPIA Y PEGA las etiquetas [SEND_IMAGE: https://...] exactamente como aparecen en el catálogo de arriba del producto correspondiente.
 2. Si el producto tiene varias etiquetas de fotos, DEBES enviarlas TODAS juntas, pegando una debajo de la otra.
 3. ¡NUNCA inventes URLs! ¡NUNCA uses "example.com"! Usa ÚNICAMENTE las etiquetas proporcionadas en las opciones de arriba.
-4. ❌ PROHIBIDO escribir títulos antes de la imagen como: *Foto del Producto*: | 1. Foto del producto: | Aquí la imagen:
-5. ✅ CORRECTO - Frases naturales terminadas en dos puntos (:):
-"Mira, aquí tienes las fotos de este producto, tanto en detalle como ya instalado en ambiente:"
+4. ❌ PROHIBIDO escribir títulos, nombres técnicos, referencias o viñetas antes de la imagen. (Ejemplo incorrecto: *Porcelanato Capri*: | 1. Foto del producto:).
+5. ✅ CORRECTO - Solo usa frases conversacionales, cortas y súper naturales terminadas en dos puntos (:):
+"Mira, aquí te paso unas fotos para que lo veas mejor:"
 [SEND_IMAGE: https://url_real_de_supabase_aqui.jpg]
 "¿Qué te parece ese estilo?"
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
@@ -131,7 +135,11 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
 (Ejemplo: [LEAD_STATE: Negociación | 50]. Usa las etapas definidas en tu prompt principal).
 `;
   } else {
-    inventoryContext = '\n[INVENTARIO OCULTO/VACÍO]: No se encontraron productos que coincidan con la descripción del cliente en esta búsqueda. OBLIGATORIO: Hazle más preguntas para indagar exactamente qué busca (material, uso interior/exterior, formato, colores). NO ofrezcas productos ni fotos, porque no tienes el catálogo a la mano ahora mismo. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN:ASESOR]\nINSTRUCCIÓN FINAL CRÍTICA: SIEMPRE TERMINA TU MENSAJE CON [LEAD_STATE: Etapa | Score]\n';
+    let fallbackText = "OBLIGATORIO: Hazle más preguntas para indagar exactamente qué busca (modelo, tamaño, colores o estilo).";
+    if (clientSetup.name && (clientSetup.name.includes("Trazzos") || clientSetup.name.includes("Samaritana") || clientSetup.name.includes("Trearq"))) {
+        fallbackText = "OBLIGATORIO: Hazle más preguntas para indagar exactamente qué busca (material, uso interior/exterior, formato, colores).";
+    }
+    inventoryContext = `\n[INVENTARIO OCULTO/VACÍO]: No se encontraron productos que coincidan con la descripción del cliente en esta búsqueda. ${fallbackText} NO ofrezcas productos ni fotos, porque no tienes el catálogo a la mano ahora mismo. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN]\nINSTRUCCIÓN FINAL CRÍTICA: SIEMPRE TERMINA TU MENSAJE CON [LEAD_STATE: Etapa | Score]\n`;
   }
 
   const aiMessages = [

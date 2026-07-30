@@ -5,7 +5,7 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight,
-  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare
+  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -107,6 +107,11 @@ export default function Inbox() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [pendingFile, setPendingFile] = useState(null)
+  
+  // Plantillas state
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [templateName, setTemplateName] = useState('hello_world')
   const [teamMembers, setTeamMembers] = useState([])
   const [activeInfoTab, setActiveInfoTab] = useState('Contact')
   const [showSimModal, setShowSimModal] = useState(false)
@@ -468,6 +473,15 @@ export default function Inbox() {
       .update({ assigned_to: userId })
       .eq('id', conversationId)
     
+    // Also sync this assignment to the corresponding lead
+    if (selectedConv?.user_phone) {
+      await supabase
+        .from('leads')
+        .update({ assigned_to: userId })
+        .eq('client_id', tenant.clientId)
+        .eq('phone', selectedConv.user_phone)
+    }
+    
     if (error) {
       console.error("Assign Error:", error);
       alert("Error al asignar asesor: " + error.message);
@@ -479,7 +493,25 @@ export default function Inbox() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault()
-    if (!newMessage.trim() || !selectedConv) return
+    if (!newMessage.trim() && !pendingFile) return
+    if (!selectedConv) return
+
+    // Meta 24-hour window validation
+    if (selectedConv.channel === 'whatsapp' && !selectedConv.phone.startsWith('SIM_')) {
+      const lastUserMsg = [...(selectedConv.rawMessages || [])].reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+        const lastDate = new Date(lastUserMsg.timestamp || lastUserMsg.time || 0);
+        const hoursPassed = (new Date() - lastDate) / (1000 * 60 * 60);
+        if (hoursPassed > 24) {
+          alert('⚠️ POLÍTICA DE WHATSAPP (META):\n\nHan pasado más de 24 horas desde el último mensaje de este cliente. Meta bloquea el envío de mensajes de texto libres fuera de esta ventana de 24 horas.\n\nPara contactarlo nuevamente, debes usar una Plantilla Aprobada (Template) o esperar a que el cliente escriba de nuevo.');
+          return;
+        }
+      } else {
+         // Si no hay mensajes del usuario, también aplica la regla de 24h (solo plantillas inician chat)
+         alert('⚠️ POLÍTICA DE WHATSAPP (META):\n\nNo puedes iniciar una conversación con texto libre. Debes esperar a que el cliente te escriba o usar una Plantilla Aprobada (Template).');
+         return;
+      }
+    }
     
     const isSim = selectedConv.phone.startsWith('SIM_')
     const messageRole = isSim ? 'user' : 'agent'
@@ -545,6 +577,56 @@ export default function Inbox() {
          } catch (apiErr) {
            console.error('Error sending message via API:', apiErr);
          }
+       }
+    }
+  }
+
+  const handleSendTemplate = async (e) => {
+    e.preventDefault()
+    if (!templateName.trim() || !selectedConv) return
+    
+    const textMsg = `[Plantilla Enviada: ${templateName}]`
+    const messageObj = {
+      role: 'agent',
+      content: textMsg,
+      timestamp: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('conversations')
+      .update({ 
+        messages: [...selectedConv.rawMessages, messageObj],
+        updated_at: new Date().toISOString(),
+        needs_human: true
+      })
+      .eq('id', selectedConv.id)
+
+    if (!error) {
+       setShowTemplateModal(false)
+       try {
+         const res = await fetch('/api/send', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             client_id: tenant.clientId,
+             phone: selectedConv.phone,
+             message: templateName.trim(),
+             type: 'template',
+             channel: selectedConv.channel
+           })
+         });
+         const apiData = await res.json();
+         if (apiData.meta_message_id) {
+             const updatedMsgs = [...selectedConv.rawMessages, messageObj];
+             updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: 'template', content: templateName }];
+             await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+             alert(`Plantilla "${templateName}" enviada con éxito. La ventana de 24 horas se reabrirá cuando el cliente responda.`);
+         } else {
+             alert(`Error al enviar plantilla: ${apiData.error || 'Desconocido'}`);
+         }
+       } catch (apiErr) {
+         console.error('Error sending template:', apiErr);
+         alert('Hubo un error de conexión al enviar la plantilla.');
        }
     }
   }
@@ -700,10 +782,18 @@ export default function Inbox() {
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       const fileUrl = data.url;
       
+      const getMediaType = (mimeType) => {
+        if (mimeType.startsWith('image/')) return 'image';
+        if (mimeType.startsWith('video/')) return 'video';
+        if (mimeType.startsWith('audio/')) return 'audio';
+        return 'document';
+      };
+      const mediaType = getMediaType(file.type);
+
       const messageObj = {
         role: 'agent',
         content: fileUrl,
-        type: file.type.startsWith('image/') ? 'image' : 'file',
+        type: mediaType,
         timestamp: new Date().toISOString()
       }
 
@@ -726,14 +816,14 @@ export default function Inbox() {
               client_id: tenant.clientId,
               phone: selectedConv.phone,
               message: fileUrl,
-              type: file.type.startsWith('image/') ? 'image' : 'document',
+              type: mediaType,
               channel: selectedConv.channel
             })
           });
           const apiData = await apiRes.json();
           if (apiData.meta_message_id) {
               const updatedMsgs = [...selectedConv.rawMessages, messageObj];
-              updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: file.type.startsWith('image/') ? 'image' : 'document', content: fileUrl }];
+              updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: mediaType, content: fileUrl }];
               await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
           }
         } catch (apiErr) {
@@ -777,21 +867,9 @@ export default function Inbox() {
   const handleExportChats = async () => {
     if (selectedChats.length === 0) return;
     
-    const chatsToExportTemp = conversationsList.filter(c => selectedChats.includes(c.id));
-    const phones = chatsToExportTemp.map(c => c.phone).filter(Boolean);
+    const chatsToExport = conversationsList.filter(c => selectedChats.includes(c.id));
     
-    const { data: leads } = await supabase.from('leads').select('phone, stage').eq('client_id', tenant.clientId).in('phone', phones);
-    const interesadoPhones = new Set(leads?.filter(l => l.stage === 'Interesado').map(l => l.phone) || []);
-    
-    const chatsToExport = chatsToExportTemp.filter(c => interesadoPhones.has(c.phone));
-    
-    if (chatsToExport.length === 0) {
-       alert('De los chats seleccionados, NINGUNO se encuentra en la etapa "Interesado" del Pipeline. No se exportó nada.');
-       setSelectedChats([]);
-       return;
-    }
-
-    let exportText = `=== EXPORTACIÓN DE CHATS "INTERESADOS" (${new Date().toLocaleString()}) ===\n\n`;
+    let exportText = `=== EXPORTACIÓN DE CHATS (${new Date().toLocaleString()}) ===\n\n`;
     
     chatsToExport.forEach(chat => {
        exportText += `--- CHAT CON: ${chat.name} (${chat.phone}) ---\n`;
@@ -809,31 +887,17 @@ export default function Inbox() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Exportacion_Chats_Interesados_${Date.now()}.txt`;
+    a.download = `Exportacion_Chats_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
     setSelectedChats([]);
-    if (chatsToExport.length < chatsToExportTemp.length) {
-       alert(`Se exportaron ${chatsToExport.length} chat(s) en etapa "Interesado". Se omitieron ${chatsToExportTemp.length - chatsToExport.length} chat(s) por no cumplir la condición.`);
-    }
+    alert(`Se exportaron ${chatsToExport.length} chat(s) exitosamente.`);
   };
 
   const handleMoveToRemarketing = async () => {
     if (selectedChats.length === 0) return;
     
-    const chatsToMoveTemp = conversationsList.filter(c => selectedChats.includes(c.id));
-    const phones = chatsToMoveTemp.map(c => c.phone).filter(Boolean);
-    
-    const { data: leads } = await supabase.from('leads').select('phone, stage').eq('client_id', tenant.clientId).in('phone', phones);
-    const interesadoPhones = new Set(leads?.filter(l => l.stage === 'Interesado').map(l => l.phone) || []);
-    
-    const chatsToMove = chatsToMoveTemp.filter(c => interesadoPhones.has(c.phone));
-    
-    if (chatsToMove.length === 0) {
-       alert('De los chats seleccionados, NINGUNO se encuentra en la etapa "Interesado" del Pipeline. Acción cancelada.');
-       setSelectedChats([]);
-       return;
-    }
+    const chatsToMove = conversationsList.filter(c => selectedChats.includes(c.id));
 
     const inserts = chatsToMove.map(c => ({
        client_id: tenant.clientId,
@@ -847,11 +911,7 @@ export default function Inbox() {
     if (error) {
        alert("Error al mover a re-marketing: " + error.message);
     } else {
-       if (chatsToMove.length < chatsToMoveTemp.length) {
-          alert(`Éxito: ${chatsToMove.length} chat(s) movidos a Re-marketing. Se omitieron ${chatsToMoveTemp.length - chatsToMove.length} chat(s) que no estaban en etapa "Interesado".`);
-       } else {
-          alert(`${chatsToMove.length} chat(s) movidos exitosamente a Re-marketing.`);
-       }
+       alert(`${chatsToMove.length} chat(s) movidos exitosamente a Re-marketing.`);
        setSelectedChats([]);
     }
   };
@@ -1215,17 +1275,19 @@ export default function Inbox() {
                         >
                            <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-amber)' : 'inherit' }} />
                         </button>
-                        <button 
-                           className="btn btn-secondary btn-sm"
-                           title="Eliminar Chat Completo"
-                           style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
-                           onClick={() => {
-                              setChatToDelete(selectedConv);
-                              setShowDeleteModal(true);
-                           }}
-                        >
-                           <Trash2 size={14} />
-                        </button>
+                        {tenant.isAdmin && (
+                          <button 
+                             className="btn btn-secondary btn-sm"
+                             title="Eliminar Chat Completo"
+                             style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
+                             onClick={() => {
+                                setChatToDelete(selectedConv);
+                                setShowDeleteModal(true);
+                             }}
+                          >
+                             <Trash2 size={14} />
+                          </button>
+                        )}
                      </div>
                   </div>
               </div>
@@ -1298,7 +1360,9 @@ export default function Inbox() {
                           {m.sender === 'agent' && (
                             <>
                               <span title="Editar en CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleEditMessage(messages.indexOf(m), m.text || m.content || '')}>✏️</span>
-                              <span title="Eliminar del CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleDeleteMessage(messages.indexOf(m))}>🗑️</span>
+                              {tenant.isAdmin && (
+                                <span title="Eliminar del CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleDeleteMessage(messages.indexOf(m))}>🗑️</span>
+                              )}
                             </>
                           )}
                           {m.time}
@@ -1308,8 +1372,8 @@ export default function Inbox() {
                  <div ref={messagesEndRef} />
               </div>
 
-              <div className="chat-input-area" style={{ padding: '12px 20px', background: 'rgba(0,0,0,0.2)' }}>
-                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(var(--overlay-rgb), 0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '4px 12px', display: 'flex', alignItems: 'center' }}>
+              <div className="chat-input-area" style={{ padding: '12px 0', background: 'rgba(0,0,0,0.2)', width: '100%' }}>
+                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(var(--overlay-rgb), 0.03)', border: '1px solid var(--glass-border)', borderRadius: '0', padding: '4px 16px', display: 'flex', alignItems: 'center', width: '100%' }}>
                      {isRecording ? (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
                            <div className="pulse-red" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
@@ -1337,6 +1401,9 @@ export default function Inbox() {
                      <div className="flex gap-1">
                         {!isRecording ? (
                           <>
+                            {tenant.clientId === 'f920ca15-badb-4492-a344-e8d04f9f8c02' && selectedConv?.channel === 'whatsapp' && !selectedConv?.phone?.startsWith('SIM_') && (
+                               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(true)} title="Enviar Plantilla (Template)"><FileText size={18} /></button>
+                            )}
                             <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
                             <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" />
                             <button type="submit" className="btn btn-primary btn-sm" disabled={!newMessage.trim()}><Send size={16} /></button>
@@ -1497,7 +1564,7 @@ export default function Inbox() {
                    <Trash2 size={20} style={{ color: 'var(--accent-rose)' }} />
                    <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>Eliminar Chat</h3>
                  </div>
-                 <button className="btn btn-ghost btn-sm" onClick={() => setShowDeleteModal(false)}><X size={20} /></button>
+                 <button className="btn btn-ghost btn-sm" onClick={() => setShowDeleteModal(false)}><Close size={20} /></button>
               </div>
               <div style={{ padding: '20px' }}>
                  <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
@@ -1519,6 +1586,41 @@ export default function Inbox() {
                     </button>
                  </div>
               </div>
+           </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+           <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 420, padding: 0, overflow: 'hidden' }}>
+              <div className="card-header" style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <div className="flex items-center gap-3">
+                   <FileText size={20} className="text-primary-400" />
+                   <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>Enviar Plantilla</h3>
+                 </div>
+                 <button className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(false)}><Close size={20} /></button>
+              </div>
+              <form onSubmit={handleSendTemplate} style={{ padding: '20px' }}>
+                 <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
+                   Ingresa el nombre interno de la plantilla aprobada en Meta para enviarla a este cliente y reactivar el chat.
+                 </p>
+                 <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nombre de la Plantilla</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      placeholder="ej: hello_world, reactivacion_ventas_v1"
+                      value={templateName}
+                      onChange={e => setTemplateName(e.target.value)}
+                      required
+                    />
+                 </div>
+                 <div className="flex gap-2 justify-end">
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowTemplateModal(false)}>Cancelar</button>
+                    <button type="submit" className="btn btn-primary">Enviar Plantilla</button>
+                 </div>
+              </form>
            </div>
         </div>
       )}

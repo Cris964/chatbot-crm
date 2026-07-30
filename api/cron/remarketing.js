@@ -17,8 +17,8 @@ export default async function handler(req, res) {
 
     const { data: convs } = await supabase
         .from('conversations')
-        .select('id, user_phone, client_id, messages, status, channel, updated_at')
-        .eq('status', 'active')
+        .select('id, user_phone, client_id, messages, archived, channel, updated_at')
+        .eq('archived', false)
         .lte('updated_at', fourHoursAgo); // Solo revisar los que llevan más de 4 horas sin actividad
 
     if (convs) {
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
             // Contar cuántos mensajes consecutivos del agente hay al final
             let consecutiveAgents = 0;
             for (let i = msgs.length - 1; i >= 0; i--) {
-                if (msgs[i].role === 'agent') consecutiveAgents++;
+                if (msgs[i].role === 'agent' || msgs[i].role === 'assistant') consecutiveAgents++;
                 else break;
             }
 

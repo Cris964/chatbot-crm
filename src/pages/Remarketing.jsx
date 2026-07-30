@@ -22,7 +22,7 @@ export default function Remarketing() {
   
   // Campaign Modal
   const [showCampaignModal, setShowCampaignModal] = useState(false)
-  const [campaignText, setCampaignText] = useState('')
+  const [templateToSend, setTemplateToSend] = useState('iniciacion')
   const [isSending, setIsSending] = useState(false)
 
   useEffect(() => {
@@ -70,8 +70,8 @@ export default function Remarketing() {
         body: JSON.stringify({
           clientId: tenant.clientId,
           leadIds: selectedLeads,
-          campaignText: campaignText,
-          templateName: 'alerta_promocion'
+          campaignText: templateToSend,
+          templateName: templateToSend
         })
       });
 
@@ -297,19 +297,25 @@ export default function Remarketing() {
               <button className="btn btn-ghost btn-sm" onClick={() => setShowCampaignModal(false)}><X size={20} /></button>
             </div>
             <div style={{ padding: 24 }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
-                Instrucción para <strong style={{ color: 'var(--primary-400)' }}>Cami</strong>. Ella redactará y enviará el mensaje personalizado a cada uno de los {selectedLeads.length} clientes.
-              </p>
-              <textarea 
-                className="form-input" 
-                rows={4} 
-                placeholder="Ej: Hola, diles que tenemos una nueva colección de grifería de lujo en negro mate y dales un 10% de descuento si vienen esta semana..."
-                value={campaignText}
-                onChange={e => setCampaignText(e.target.value)}
-              />
+              <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  📤 Se enviará una <strong style={{ color: 'var(--primary-400)' }}>Plantilla de WhatsApp aprobada</strong> directamente a los <strong>{selectedLeads.length}</strong> clientes seleccionados, sin restricciones de las 24 horas de Meta.
+                </p>
+              </div>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Plantilla a Enviar</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Nombre interno de la plantilla (ej: iniciacion)"
+                  value={templateToSend}
+                  onChange={e => setTemplateToSend(e.target.value)}
+                />
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 6 }}>El nombre debe coincidir exactamente con la plantilla aprobada en Meta Business Manager.</p>
+              </div>
               <div className="flex justify-end gap-3" style={{ marginTop: 24 }}>
                 <button className="btn btn-secondary" onClick={() => setShowCampaignModal(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || !campaignText.trim()}>
+                <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || !templateToSend.trim()}>
                   {isSending ? 'Enviando...' : 'Iniciar Difusión'}
                 </button>
               </div>

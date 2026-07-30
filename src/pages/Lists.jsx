@@ -23,15 +23,14 @@ export default function Lists() {
 
   const fetchLists = async () => {
     setIsLoading(true)
-    // Get lists and count of contacts
-    const { data: listsData, error } = await supabase
-      .from('broadcast_lists')
-      .select('*, broadcast_contacts(count)')
-      .eq('client_id', tenant.clientId)
-      .order('created_at', { ascending: false })
-
-    if (!error && listsData) {
-      setLists(listsData)
+    try {
+      const response = await fetch('/api/broadcast?action=get_lists&clientId=' + tenant.clientId)
+      const data = await response.json()
+      if (response.ok && data.lists) {
+        setLists(data.lists)
+      }
+    } catch (err) {
+      console.error('Error fetching lists:', err)
     }
     setIsLoading(false)
   }
@@ -39,14 +38,14 @@ export default function Lists() {
   const handleOpenList = async (list) => {
     setSelectedList(list)
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('broadcast_contacts')
-      .select('*')
-      .eq('list_id', list.id)
-      .order('full_name', { ascending: true })
-
-    if (!error && data) {
-      setContacts(data)
+    try {
+      const response = await fetch('/api/broadcast?action=get_contacts&listId=' + list.id)
+      const data = await response.json()
+      if (response.ok && data.contacts) {
+        setContacts(data.contacts)
+      }
+    } catch (err) {
+      console.error('Error fetching contacts:', err)
     }
     setIsLoading(false)
   }

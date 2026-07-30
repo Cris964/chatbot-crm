@@ -151,6 +151,17 @@ export default function Leads() {
       .update(updates)
       .eq('id', id)
     
+    if (updates.assigned_to !== undefined) {
+      const lead = leads.find(l => l.id === id);
+      if (lead && lead.phone) {
+        await supabase
+          .from('conversations')
+          .update({ assigned_to: updates.assigned_to })
+          .eq('client_id', tenant.clientId)
+          .eq('user_phone', lead.phone);
+      }
+    }
+    
     if (!error) fetchLeads()
   }
 
