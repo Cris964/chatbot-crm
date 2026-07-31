@@ -143,7 +143,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   }
 
   const aiMessages = [
-      { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n\n${inventoryContext}` },
+      { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })}]\n\n${inventoryContext}` },
       ...finalMessages.slice(-30).map(m => {
           let cleanContent = m.content || "";
           if (m.role === 'user' && cleanContent) {
@@ -227,7 +227,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
       let textBefore = botReplyText.slice(lastIndex, extractionMatch.index);
       textBefore = cleanText(textBefore);
       if (textBefore) {
-          const paragraphs = textBefore.split(/\n{1,}/);
+          const paragraphs = textBefore.split(/\n{3,}/);
           for (const p of paragraphs) {
               if (p.trim()) messageQueue.push({ type: 'text', content: p.trim() });
           }
@@ -246,7 +246,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   let textAfter = botReplyText.slice(lastIndex);
   textAfter = cleanText(textAfter);
   if (textAfter) {
-      const paragraphs = textAfter.split(/\n{1,}/);
+      const paragraphs = textAfter.split(/\n{3,}/);
       for (const p of paragraphs) {
           if (p.trim()) messageQueue.push({ type: 'text', content: p.trim() });
       }
