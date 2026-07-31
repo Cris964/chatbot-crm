@@ -181,7 +181,7 @@ export default function Inbox() {
       if (conv) {
         setSimMessage('')
         setShowSimModal(false)
-        await fetchConversations()
+        await fetchConversations(true)
         
         // Map and select immediately
         const newConv = {
@@ -231,7 +231,7 @@ export default function Inbox() {
   useEffect(() => {
     if (!tenant.clientId || tenant.isLoading) return
 
-    fetchConversations()
+    fetchConversations(false)
     fetchTeamMembers()
 
 
@@ -246,7 +246,7 @@ export default function Inbox() {
         filter: `client_id=eq.${tenant.clientId}`
       }, (payload) => {
         console.log('Realtime conversation list update', payload)
-        fetchConversations()
+        fetchConversations(true)
       })
       .subscribe()
 
@@ -363,9 +363,9 @@ export default function Inbox() {
     }
   }, [selectedConv])
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (isBackground = false) => {
     if (!tenant.clientId) return
-    setIsLoading(true)
+    if (!isBackground) setIsLoading(true)
     
     try {
       let query = supabase
@@ -486,7 +486,7 @@ export default function Inbox() {
       console.error("Assign Error:", error);
       alert("Error al asignar asesor: " + error.message);
     } else {
-      fetchConversations()
+      fetchConversations(true)
       setSelectedConv(prev => ({ ...prev, assigned_to: userId }))
     }
   }
@@ -739,7 +739,7 @@ export default function Inbox() {
           console.error('Error sending audio via API:', apiErr);
         }
         
-        fetchConversations()
+        fetchConversations(true)
       } else {
         throw dbError
       }
@@ -839,7 +839,7 @@ export default function Inbox() {
           console.error('Error sending file via API:', apiErr);
         }
         
-        fetchConversations()
+        fetchConversations(true)
       } else {
         throw dbError
       }
@@ -864,7 +864,7 @@ export default function Inbox() {
         
       if (!error) {
         setSelectedConv({...selectedConv, rawMessages: updatedMessages});
-        fetchConversations();
+        fetchConversations(true);
       } else {
         alert("Error al eliminar mensaje: " + error.message);
       }
@@ -941,7 +941,7 @@ export default function Inbox() {
         
       if (!error) {
         setSelectedConv({...selectedConv, rawMessages: updatedMessages});
-        fetchConversations();
+        fetchConversations(true);
       } else {
         alert("Error al editar mensaje: " + error.message);
       }
@@ -1278,7 +1278,7 @@ export default function Inbox() {
                               const { error } = await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', selectedConv.id);
                               if (!error) {
                                   setSelectedConv({...selectedConv, archived: newArchivedState});
-                                  fetchConversations();
+                                  fetchConversations(true);
                               }
                            }}
                         >
@@ -1585,7 +1585,7 @@ export default function Inbox() {
                        const { error } = await supabase.from('conversations').update({ archived: true }).eq('id', chatToDelete.id);
                        if (!error) {
                            setSelectedConv(null);
-                           fetchConversations();
+                           fetchConversations(true);
                        } else {
                            alert('Error al eliminar el chat: ' + error.message);
                        }
