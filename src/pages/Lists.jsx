@@ -13,6 +13,7 @@ export default function Lists() {
   
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignText, setCampaignText] = useState('')
+  const [templateName, setTemplateName] = useState('alerta_promocion')
   const [errorMsg, setErrorMsg] = useState(null)
   const [selectedContacts, setSelectedContacts] = useState([])
 
@@ -183,7 +184,7 @@ export default function Lists() {
           clientId: tenant.clientId,
           leadIds: selectedContacts, 
           campaignText: campaignText,
-          templateName: 'alerta_promocion',
+          templateName: templateName.trim() || 'alerta_promocion',
           isListMode: true,
           isFreeMessage: campaignMode === 'free',
           mediaUrl,
@@ -383,11 +384,24 @@ export default function Lists() {
 
             {campaignMode === 'template' ? (
               <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px', fontSize: '0.85rem' }}>
-                <strong>Modo Plantilla:</strong> Se usará la plantilla <code>alerta_promocion</code>. Ideal para contactar masivamente (Re-marketing). Si adjuntas multimedia, tu plantilla debe soportarlo en Meta.
+                <strong>Modo Plantilla:</strong> Escribe el nombre exacto de la plantilla aprobada en Meta. Ideal para contactar masivamente (Re-marketing). Si adjuntas multimedia, tu plantilla debe soportarlo en Meta.
               </div>
             ) : (
               <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px', fontSize: '0.85rem' }}>
                 <strong>Modo Libre:</strong> Envía texto, fotos o audios libremente. <strong>⚠️ Solo llegará a los clientes que te hayan escrito en las últimas 24 horas.</strong>
+              </div>
+            )}
+
+            {campaignMode === 'template' && (
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Nombre de la Plantilla en Meta</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="Ej: nueva_linea"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                />
               </div>
             )}
 
