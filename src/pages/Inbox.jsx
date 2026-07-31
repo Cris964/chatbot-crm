@@ -303,65 +303,39 @@ export default function Inbox() {
           time: `${dateStr} ${timeStr}`
         };
       }))
-
-      const convUpdateSub = supabase
-        .channel(`inbox-active-conversation-${selectedConv.id}`)
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'conversations', 
-          filter: `id=eq.${selectedConv.id}` 
-        }, (payload) => {
-          console.log('Realtime active conversation update', payload)
-          if (payload.new && payload.new.messages) {
-            const updatedConv = payload.new
-            setSelectedConv(prev => ({ ...prev, ...updatedConv, rawMessages: updatedConv.messages }))
-            
-            setMessages(updatedConv.messages.map((m, i) => {
-              let ts = m.timestamp || m.created_at || updatedConv.updated_at || Date.now();
-              let safeTs = ts;
-              if (typeof ts === 'string' && ts.includes('T') && !ts.endsWith('Z')) {
-                 safeTs += 'Z';
-              }
-              let dateObj = (typeof safeTs === 'string' && /^\d{10}$/.test(safeTs)) ? new Date(parseInt(safeTs) * 1000) : ((typeof safeTs === 'number' && safeTs < 20000000000) ? new Date(safeTs * 1000) : new Date(safeTs));
-              const mediaUrl = m.media_url || m.url || 
-                (m.content?.startsWith('http') ? m.content : null) || 
-                (m.text?.startsWith('http') ? m.text : null);
-              const inferredType = (mediaUrl && mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? 'image' : ((mediaUrl && mediaUrl.match(/\.(mp3|wav|ogg|oga|aac|m4a|webm)/i)) ? 'audio' : 'text');
-              
-              let finalContent = m.content || m.text || m.media_url || m.url || '';
-              let finalType = m.type || m.message_type || inferredType;
-              if (finalContent.includes('[IMAGEN_BASE64_URL]:')) {
-                  finalType = 'image';
-                  finalContent = finalContent.replace('[IMAGEN_BASE64_URL]:', '').trim();
-              } else if (finalContent.includes('[Multimedia:')) {
-                  finalContent = '🖼️ [Multimedia no disponible]';
-              }
-
-              const dateStr = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-              const timeStr = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-
-              return {
-                id: i,
-                sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-                text: finalContent,
-                type: m.media_type || finalType,
-                media_url: mediaUrl,
-                time: `${dateStr} ${timeStr}`
-              };
-            }))
-            setTimeout(scrollToBottom, 100)
-          }
-        })
-        .subscribe()
-
-      return () => {
-        if (convUpdateSub) {
-          supabase.removeChannel(convUpdateSub)
-        }
-      }
     }
   }, [selectedConv])
+
+  useEffect(() => {
+    if (!selectedConv?.id) return;
+
+    const convUpdateSub = supabase
+      .channel(`inbox-active-conversation-${selectedConv.id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'conversations', 
+        filter: `id=eq.${selectedConv.id}` 
+      }, (payload) => {
+        console.log('Realtime active conversation update', payload)
+        if (payload.new && payload.new.messages) {
+          const updatedConv = payload.new
+          setSelectedConv(prev => {
+             if (prev && prev.id === updatedConv.id) {
+                return { ...prev, ...updatedConv, rawMessages: updatedConv.messages }
+             }
+             return prev
+          })
+        }
+      })
+      .subscribe()
+
+    return () => {
+      if (convUpdateSub) {
+        supabase.removeChannel(convUpdateSub)
+      }
+    }
+  }, [selectedConv?.id])
 
   const fetchConversations = async (isBackground = false) => {
     if (!tenant.clientId) return
