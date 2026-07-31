@@ -79,7 +79,7 @@ export default async function handler(req, res) {
             const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
             
             if (whatsappToken) {
-               const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey, supabase);
+               const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey, supabase, recipientId);
                if (typeof mediaResult === 'object' && mediaResult !== null) {
                   textResponse = mediaResult.text;
                   messageObj._mediaUrl = mediaResult.mediaUrl;

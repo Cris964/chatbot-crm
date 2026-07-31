@@ -1,4 +1,4 @@
-export async function processMediaMessage(messageObj, whatsappToken, openAiKey, supabase) {
+export async function processMediaMessage(messageObj, whatsappToken, openAiKey, supabase, phoneNumberId) {
   try {
     const type = messageObj.type;
     let mediaId = null;
@@ -16,7 +16,11 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
     if (!mediaId) return `[Multimedia no soportado. Tipo: ${type}]`;
 
     // 1. Get Media URL from Meta Graph API
-    const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+    let metaUrl = `https://graph.facebook.com/v21.0/${mediaId}`;
+    if (phoneNumberId) {
+      metaUrl += `?phone_number_id=${phoneNumberId}`;
+    }
+    const metaRes = await fetch(metaUrl, {
       headers: { Authorization: `Bearer ${whatsappToken}` }
     });
 
