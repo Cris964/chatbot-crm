@@ -954,7 +954,7 @@ export default function Inbox() {
       <style>{`
         .inbox-layout {
           display: grid;
-          grid-template-columns: ${showRightPanel ? '240px 320px 1fr 340px' : '240px 320px 1fr'};
+          grid-template-columns: ${showRightPanel ? '250px 330px 1fr 340px' : '250px 330px 1fr'};
           height: calc(100vh - 64px);
           overflow: hidden;
           background: transparent;
@@ -1045,51 +1045,74 @@ export default function Inbox() {
 
       <div className="inbox-layout" style={{ gridTemplateColumns: showRightPanel ? '240px 320px 1fr 340px' : '240px 320px 1fr' }}>
 
+          
           {/* Left Sidebar (Folders) */}
-          <div className="inbox-sidebar" style={{ width: '240px', padding: '16px', background: 'var(--bg-secondary)', borderRight: '1px solid var(--glass-border)' }}>
-             <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>Carpetas</h2>
+          <div className="inbox-sidebar folders-panel" style={{ width: '250px', padding: '24px 16px', background: 'rgba(var(--overlay-rgb), 0.03)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
+             <h2 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800, opacity: 0.5, marginBottom: '20px', paddingLeft: '8px', color: 'var(--text-primary)' }}>General</h2>
              
              <div 
-               style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', background: activeFolder === 'inbox' ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: activeFolder === 'inbox' ? 'var(--primary-color)' : 'var(--text-secondary)' }}
+               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', marginBottom: '8px', transition: 'all 0.2s', background: activeFolder === 'inbox' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'inbox' ? '#fff' : 'var(--text-primary)' }}
                onClick={() => setActiveFolder('inbox')}
+               onMouseEnter={(e) => { if(activeFolder !== 'inbox') e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.05)' }}
+               onMouseLeave={(e) => { if(activeFolder !== 'inbox') e.currentTarget.style.background = 'transparent' }}
              >
-               <span style={{ fontWeight: activeFolder === 'inbox' ? 600 : 400 }}>Entrada</span>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                 <MessageSquare size={18} opacity={activeFolder === 'inbox' ? 1 : 0.7} />
+                 <span style={{ fontWeight: activeFolder === 'inbox' ? 600 : 500, fontSize: '0.95rem' }}>Entrada</span>
+               </div>
+               <span style={{ fontSize: '0.75rem', fontWeight: 700, background: activeFolder === 'inbox' ? 'rgba(255,255,255,0.25)' : 'var(--primary-700)', color: activeFolder === 'inbox' ? '#fff' : 'var(--primary-color)', padding: '2px 8px', borderRadius: '12px' }}>
+                 {conversationsList.filter(c => getConversationFolder(c) === 'inbox' && !c.archived).length}
+               </span>
              </div>
+
              <div 
-               style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', background: activeFolder === 'assigned' ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: activeFolder === 'assigned' ? 'var(--primary-color)' : 'var(--text-secondary)' }}
+               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', marginBottom: '8px', transition: 'all 0.2s', background: activeFolder === 'assigned' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'assigned' ? '#fff' : 'var(--text-primary)' }}
                onClick={() => setActiveFolder('assigned')}
+               onMouseEnter={(e) => { if(activeFolder !== 'assigned') e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.05)' }}
+               onMouseLeave={(e) => { if(activeFolder !== 'assigned') e.currentTarget.style.background = 'transparent' }}
              >
-               <span style={{ fontWeight: activeFolder === 'assigned' ? 600 : 400 }}>Asignadas a mí</span>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                 <UserCheck size={18} opacity={activeFolder === 'assigned' ? 1 : 0.7} />
+                 <span style={{ fontWeight: activeFolder === 'assigned' ? 600 : 500, fontSize: '0.95rem' }}>Asignadas</span>
+               </div>
+               <span style={{ fontSize: '0.75rem', fontWeight: 700, background: activeFolder === 'assigned' ? 'rgba(255,255,255,0.25)' : 'rgba(var(--overlay-rgb), 0.1)', color: activeFolder === 'assigned' ? '#fff' : 'var(--text-primary)', padding: '2px 8px', borderRadius: '12px' }}>
+                 {conversationsList.filter(c => c.assigned_to === tenant.session?.user?.id && !c.archived).length}
+               </span>
              </div>
-             
-             <div 
-               style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', marginTop: '16px', display: 'flex', justifyContent: 'space-between' }}
-               onClick={() => setIsListsExpanded(!isListsExpanded)}
-             >
-               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Listas de Difusión</span>
-               <span>{isListsExpanded ? '▼' : '▶'}</span>
-             </div>
+
+             <h2 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800, opacity: 0.5, marginTop: '32px', marginBottom: '16px', paddingLeft: '8px', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsListsExpanded(!isListsExpanded)}>
+                Difusiones
+                <ChevronDown size={16} style={{ transform: isListsExpanded ? 'rotate(180deg)' : 'none', transition: '0.3s' }} />
+             </h2>
              
              {isListsExpanded && (
-               <div style={{ marginLeft: '12px', marginTop: '4px' }}>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', maxHeight: '300px', paddingRight: '4px' }}>
                  {broadcastLists.map(list => {
                    const fId = 'broadcast_' + list.id;
+                   const isActive = activeFolder === fId;
+                   const count = conversationsList.filter(c => getConversationFolder(c) === fId).length;
                    return (
                      <div 
                        key={list.id}
-                       style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '2px', fontSize: '0.9rem', background: activeFolder === fId ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: activeFolder === fId ? 'var(--primary-color)' : 'var(--text-secondary)' }}
+                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', background: isActive ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: isActive ? 'var(--primary-color)' : 'var(--text-secondary)' }}
                        onClick={() => setActiveFolder(fId)}
+                       onMouseEnter={(e) => { if(!isActive) e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.05)' }}
+                       onMouseLeave={(e) => { if(!isActive) e.currentTarget.style.background = 'transparent' }}
                      >
-                       <span>{list.name}</span>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                         <Megaphone size={16} opacity={isActive ? 1 : 0.6} />
+                         <span style={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{list.name}</span>
+                       </div>
+                       {count > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, background: isActive ? 'var(--primary-color)' : 'rgba(var(--overlay-rgb), 0.1)', color: isActive ? '#fff' : 'inherit', padding: '2px 6px', borderRadius: '10px' }}>{count}</span>}
                      </div>
                    )
                  })}
-                 {broadcastLists.length === 0 && <div style={{ fontSize: '0.8rem', opacity: 0.5, padding: '8px' }}>No hay listas</div>}
+                 {broadcastLists.length === 0 && <div style={{ fontSize: '0.8rem', opacity: 0.5, padding: '8px', textAlign: 'center' }}>No hay listas</div>}
                </div>
              )}
           </div>
 
-        {/* Sidebar */}
+          {/* Sidebar */}
         <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`}>
           <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
              <div className="flex justify-between items-center mb-4">
