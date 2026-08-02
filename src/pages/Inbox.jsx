@@ -1309,11 +1309,12 @@ export default function Inbox() {
             <>
               {/* Floating Toggle Button for Contact Panel */}
               <button 
+                 type="button"
                  className="floating-panel-toggle shadow-lg"
                  onClick={() => setShowRightPanel(!showRightPanel)}
                  style={{ 
                     position: 'absolute', 
-                    right: showRightPanel ? '340px' : '0', 
+                    right: 0, 
                     top: '50%', 
                     transform: 'translateY(-50%)',
                     zIndex: 50,
