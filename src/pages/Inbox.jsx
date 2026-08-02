@@ -953,8 +953,8 @@ export default function Inbox() {
     <div className="inbox-container">
       <style>{`
         .inbox-layout {
-          display: grid;
-          grid-template-columns: ${showRightPanel ? '250px 330px 1fr 340px' : '250px 330px 1fr'};
+          display: flex;
+          width: 100%;
           height: calc(100vh - 64px);
           overflow: hidden;
           background: transparent;
@@ -989,13 +989,11 @@ export default function Inbox() {
         /* Responsive Breakpoints */
         @media (max-width: 1280px) {
           .inbox-layout {
-            grid-template-columns: 280px 1fr 300px;
           }
         }
 
         @media (max-width: 1024px) {
           .inbox-layout {
-            grid-template-columns: 300px 1fr;
           }
           .contact-panel {
             display: none; /* Hide info panel on tablets */
@@ -1043,11 +1041,11 @@ export default function Inbox() {
         }
       `}</style>
 
-      <div className="inbox-layout" style={{ gridTemplateColumns: showRightPanel ? '240px 320px 1fr 340px' : '240px 320px 1fr' }}>
+      <div className="inbox-layout">
 
           
           {/* Left Sidebar (Folders) */}
-          <div className="inbox-sidebar folders-panel" style={{ width: '220px', padding: '16px 12px', background: 'var(--bg-secondary)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
+          <div className="inbox-sidebar folders-panel" style={{ width: '220px', flexShrink: 0, padding: '16px 12px', background: 'var(--bg-secondary)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
              
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'inbox' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'inbox' ? '#fff' : 'var(--text-primary)' }}
@@ -1145,7 +1143,7 @@ export default function Inbox() {
           </div>
   
           {/* Sidebar */}
-        <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`}>
+          <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`} style={{ width: '320px', flexShrink: 0 }}>
           <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
              <div className="flex justify-between items-center mb-4">
                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
@@ -1306,9 +1304,39 @@ export default function Inbox() {
         </div>
 
         {/* Chat Area */}
-        <div className={`chat-area inbox-panel-container ${mobileView !== 'chat' ? 'mobile-hidden' : ''}`}>
+        <div className={`chat-area inbox-panel-container ${mobileView !== 'chat' ? 'mobile-hidden' : ''}`} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           {selectedConv ? (
             <>
+              {/* Floating Toggle Button for Contact Panel */}
+              <button 
+                 className="floating-panel-toggle shadow-lg"
+                 onClick={() => setShowRightPanel(!showRightPanel)}
+                 style={{ 
+                    position: 'absolute', 
+                    right: showRightPanel ? '340px' : '0', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    zIndex: 50,
+                    background: 'var(--primary-color)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    width: '28px',
+                    height: '48px',
+                    borderTopLeftRadius: '8px',
+                    borderBottomLeftRadius: '8px',
+                    borderTopRightRadius: '0',
+                    borderBottomRightRadius: '0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'right 0.3s ease, background 0.2s ease',
+                    boxShadow: '-2px 0 10px rgba(0,0,0,0.2)'
+                 }}
+                 title={showRightPanel ? "Ocultar panel derecho" : "Mostrar panel derecho"}
+              >
+                 {showRightPanel ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
               <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center' }}>
                  <button 
                    className="mr-3 p-2 rounded-full mobile-only"
@@ -1539,7 +1567,7 @@ export default function Inbox() {
         </div>
 
         {/* Info Panel */}
-        <div className={`contact-panel inbox-panel-container ${mobileView !== 'info' ? 'mobile-hidden' : ''}`}>
+        <div className={`contact-panel inbox-panel-container ${mobileView !== 'info' ? 'mobile-hidden' : ''}`} style={{ display: showRightPanel ? 'flex' : 'none', width: '340px', flexShrink: 0, borderLeft: '1px solid var(--glass-border)', flexDirection: 'column' }}>
            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
              <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Panel</h3>
              <button className="btn btn-ghost btn-sm mobile-only" onClick={() => setMobileView('chat')} style={{ padding: 4 }}>
