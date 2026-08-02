@@ -96,7 +96,11 @@ export default function Inbox() {
   const location = useLocation()
   const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
-  const [activeTab, setActiveTab] = useState('all')
+  const [activeTab, setActiveTab] = useState('all');
+  const [activeFolder, setActiveFolder] = useState('inbox');
+  const [broadcastLists, setBroadcastLists] = useState([]);
+  const [isListsExpanded, setIsListsExpanded] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(true);
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedConv, setSelectedConv] = useState(null)
   const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
@@ -336,6 +340,26 @@ export default function Inbox() {
       }
     }
   }, [selectedConv?.id])
+
+  
+  const fetchBroadcastLists = async () => {
+    if (!tenant.clientId) return;
+    try {
+      const { data } = await supabase.from('broadcast_lists').select('id, name').eq('client_id', tenant.clientId).order('created_at', { ascending: false });
+      if (data) setBroadcastLists(data);
+    } catch(e) {}
+  };
+  useEffect(() => { fetchBroadcastLists(); }, [tenant.clientId]);
+
+  const getConversationFolder = (conv) => {
+      if (!conv || !conv.rawMessages) return 'inbox';
+      for (let i = conv.rawMessages.length - 1; i >= 0; i--) {
+          const m = conv.rawMessages[i];
+          if (m.action === 'move_to_inbox') return 'inbox';
+          if (m.is_broadcast && m.list_id) return 'broadcast_' + m.list_id;
+      }
+      return 'inbox';
+  };
 
   const fetchConversations = async (isBackground = false) => {
     if (!tenant.clientId) return
@@ -930,7 +954,7 @@ export default function Inbox() {
       <style>{`
         .inbox-layout {
           display: grid;
-          grid-template-columns: 320px 1fr 340px;
+          grid-template-columns: ${showRightPanel ? '240px 320px 1fr 340px' : '240px 320px 1fr'};
           height: calc(100vh - 64px);
           overflow: hidden;
           background: transparent;
@@ -1019,7 +1043,52 @@ export default function Inbox() {
         }
       `}</style>
 
-      <div className="inbox-layout">
+      <div className="inbox-layout" style={{ gridTemplateColumns: showRightPanel ? '240px 320px 1fr 340px' : '240px 320px 1fr' }}>
+
+          {/* Left Sidebar (Folders) */}
+          <div className="inbox-sidebar" style={{ width: '240px', padding: '16px', background: 'var(--bg-secondary)', borderRight: '1px solid var(--glass-border)' }}>
+             <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>Carpetas</h2>
+             
+             <div 
+               style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', background: activeFolder === 'inbox' ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: activeFolder === 'inbox' ? 'var(--primary-color)' : 'var(--text-secondary)' }}
+               onClick={() => setActiveFolder('inbox')}
+             >
+               <span style={{ fontWeight: activeFolder === 'inbox' ? 600 : 400 }}>Entrada</span>
+             </div>
+             <div 
+               style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', background: activeFolder === 'assigned' ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: activeFolder === 'assigned' ? 'var(--primary-color)' : 'var(--text-secondary)' }}
+               onClick={() => setActiveFolder('assigned')}
+             >
+               <span style={{ fontWeight: activeFolder === 'assigned' ? 600 : 400 }}>Asignadas a mí</span>
+             </div>
+             
+             <div 
+               style={{ padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', marginTop: '16px', display: 'flex', justifyContent: 'space-between' }}
+               onClick={() => setIsListsExpanded(!isListsExpanded)}
+             >
+               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Listas de Difusión</span>
+               <span>{isListsExpanded ? '▼' : '▶'}</span>
+             </div>
+             
+             {isListsExpanded && (
+               <div style={{ marginLeft: '12px', marginTop: '4px' }}>
+                 {broadcastLists.map(list => {
+                   const fId = 'broadcast_' + list.id;
+                   return (
+                     <div 
+                       key={list.id}
+                       style={{ padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '2px', fontSize: '0.9rem', background: activeFolder === fId ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: activeFolder === fId ? 'var(--primary-color)' : 'var(--text-secondary)' }}
+                       onClick={() => setActiveFolder(fId)}
+                     >
+                       <span>{list.name}</span>
+                     </div>
+                   )
+                 })}
+                 {broadcastLists.length === 0 && <div style={{ fontSize: '0.8rem', opacity: 0.5, padding: '8px' }}>No hay listas</div>}
+               </div>
+             )}
+          </div>
+
         {/* Sidebar */}
         <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`}>
           <div className="inbox-sidebar-header" style={{ padding: '20px' }}>

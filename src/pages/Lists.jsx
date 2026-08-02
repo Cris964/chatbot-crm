@@ -186,6 +186,7 @@ export default function Lists() {
           campaignText: campaignText,
           templateName: templateName.trim() || 'alerta_promocion',
           isListMode: true,
+          listId: selectedList?.id,
           isFreeMessage: campaignMode === 'free',
           mediaUrl,
           mediaType: finalMediaType

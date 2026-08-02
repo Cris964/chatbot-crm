@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   // --- POST Handler for Sending Broadcasts ---
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, isFreeMessage = false, mediaUrl, mediaType } = req.body;
+  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, listId, isFreeMessage = false, mediaUrl, mediaType } = req.body;
 
   if (!clientId || !leadIds || leadIds.length === 0) {
     return res.status(400).json({ error: 'Faltan parámetros requeridos (clientId o leadIds).' });
@@ -176,6 +176,31 @@ export default async function handler(req, res) {
           successes++;
           if (isListMode) {
             await supabase.from('broadcast_contacts').update({ status: 'messaged' }).eq('id', lead.id);
+            if (listId) {
+              const { data: existingChats } = await supabase.from('conversations').select('id, messages').eq('client_id', clientId).eq('user_phone', cleanPhone).limit(1);
+              const newMsgNode = {
+                 role: 'agent',
+                 content: `[DIFUSIÓN]: ${campaignText ? campaignText : 'Plantilla ' + templateName}`,
+                 timestamp: new Date().toISOString(),
+                 is_broadcast: true,
+                 list_id: listId
+              };
+              if (existingChats && existingChats.length > 0) {
+                 const chat = existingChats[0];
+                 await supabase.from('conversations').update({
+                     messages: [...(chat.messages || []), newMsgNode],
+                     updated_at: new Date().toISOString()
+                 }).eq('id', chat.id);
+              } else {
+                 await supabase.from('conversations').insert([{
+                     client_id: clientId,
+                     user_phone: cleanPhone,
+                     user_name: lead.name || 'Contacto',
+                     messages: [newMsgNode],
+                     channel: 'whatsapp'
+                 }]);
+              }
+            }
           } else {
              // Do not set status in 'leads' table to avoid overriding 'active' with 'messaged'.
              // You can add a 'remarketing_status' column in the future if needed.
