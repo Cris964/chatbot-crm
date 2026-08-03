@@ -116,6 +116,8 @@ export default function Inbox() {
   // Plantillas state
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [templateName, setTemplateName] = useState('hello_world')
+  const [templateVariable, setTemplateVariable] = useState('')
+  const [templateMediaUrl, setTemplateMediaUrl] = useState('')
   const [teamMembers, setTeamMembers] = useState([])
   const [activeInfoTab, setActiveInfoTab] = useState('Contact')
   const [showSimModal, setShowSimModal] = useState(false)
@@ -610,7 +612,9 @@ export default function Inbox() {
              phone: selectedConv.phone,
              message: templateName.trim(),
              type: 'template',
-             channel: selectedConv.channel
+             channel: selectedConv.channel,
+             variable: templateVariable.trim(),
+             mediaUrl: templateMediaUrl.trim()
            })
          });
          const apiData = await res.json();
@@ -1754,6 +1758,26 @@ export default function Inbox() {
                       value={templateName}
                       onChange={e => setTemplateName(e.target.value)}
                       required
+                    />
+                 </div>
+                 <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Texto para la variable {'{{1}}'} (Opcional)</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      placeholder="ej: Morrales escolares al 20% de descuento"
+                      value={templateVariable}
+                      onChange={e => setTemplateVariable(e.target.value)}
+                    />
+                 </div>
+                 <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Link de Imagen/Video del Encabezado (Opcional)</label>
+                    <input 
+                      type="url" 
+                      className="form-control" 
+                      placeholder="ej: https://tusitio.com/imagen.jpg"
+                      value={templateMediaUrl}
+                      onChange={e => setTemplateMediaUrl(e.target.value)}
                     />
                  </div>
                  <div className="flex gap-2 justify-end">

@@ -99,8 +99,39 @@ export default async function handler(req, res) {
           metaPayload.document = { link: message };
         } else if (msgType === 'template') {
           metaPayload.type = 'template';
-          // Assume the template has no variables for now, just a standard text template
           metaPayload.template = { name: message.toLowerCase().trim(), language: { code: 'es' } };
+          
+          const components = [];
+          
+          if (record.mediaUrl) {
+             // For simplicity, we assume image if not specified, but could be dynamic
+             const mType = record.mediaType || 'image'; 
+             components.push({
+               type: "header",
+               parameters: [
+                 {
+                   type: mType,
+                   [mType]: { link: record.mediaUrl }
+                 }
+               ]
+             });
+          }
+          
+          if (record.variable) {
+             components.push({
+               type: "body",
+               parameters: [
+                 {
+                   type: "text",
+                   text: record.variable
+                 }
+               ]
+             });
+          }
+          
+          if (components.length > 0) {
+             metaPayload.template.components = components;
+          }
         } else {
           metaPayload.type = 'text';
           metaPayload.text = { preview_url: false, body: message };
