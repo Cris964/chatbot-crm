@@ -88,15 +88,20 @@ export default function Dashboard() {
         .select('*')
         .eq('client_id', tenant.clientId)
 
+      // 4. Fetch Conversations
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('client_id', tenant.clientId)
+
       let totalRevenue = 0;
       let totalSalesCount = 0;
+      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+      const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
       
       if (orders && orders.length > 0) {
         totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
         totalSalesCount = orders.length;
-        
-        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-        const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
         
         orders.forEach(o => {
           const date = new Date(o.created_at)
@@ -106,7 +111,6 @@ export default function Dashboard() {
             grouped[monthIdx].value2 = grouped[monthIdx].value * 0.7 
           }
         })
-        setChartData(grouped)
       }
 
       if (leads) {
@@ -115,15 +119,32 @@ export default function Dashboard() {
         const won = wonLeads.length
         const convRate = leads.length > 0 ? `${((won / leads.length) * 100).toFixed(1)}%` : '0%'
 
+        const parseVal = (v) => {
+           if(!v) return 0;
+           if (typeof v === 'number') return v;
+           return Number(String(v).replace(/[^0-9.-]+/g, "")) || 0;
+        };
+
         if (!orders || orders.length === 0) {
-           totalRevenue = wonLeads.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+           totalRevenue = wonLeads.reduce((sum, l) => sum + parseVal(l.value || l.amount), 0);
            totalSalesCount = won;
+           
+           wonLeads.forEach(l => {
+             const date = new Date(l.created_at)
+             const monthIdx = date.getMonth()
+             if (date.getFullYear() === 2026) {
+               grouped[monthIdx].value += parseVal(l.value || l.amount)
+               grouped[monthIdx].value2 = grouped[monthIdx].value * 0.7 
+             }
+           })
         }
+        
+        setChartData(grouped)
 
         const recent = leads.slice(0, 4).map(l => ({
           lead: l.name,
           stage: l.stage || 'Nuevo',
-          value: l.amount ? `$${(l.amount/1000).toFixed(1)}k` : `$${(Math.random() * 3 + 1).toFixed(1)}k`,
+          value: l.value ? (String(l.value).includes('$') ? l.value : `$${(parseVal(l.value)/1000).toFixed(1)}k`) : (l.amount ? `$${(l.amount/1000).toFixed(1)}k` : `$0.0k`),
           date: new Date(l.created_at).toLocaleDateString(),
           color: l.stage === 'Gano' ? '#10b981' : (l.stage === 'Perdio' ? '#f43f5e' : '#6366f1')
         }))
@@ -141,7 +162,9 @@ export default function Dashboard() {
           salesCount: totalSalesCount,
           dealsActive: active,
           newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
-          conversion: convRate
+          conversion: convRate,
+          aiChats: aiChatsCount,
+          pendingChats: pendingChatsCount
         }))
         setRecentDealsList(recent)
         setPipelineState(pData)
@@ -150,14 +173,20 @@ export default function Dashboard() {
            const metrics = teamMembers.map(member => {
               const mLeads = leads.filter(l => l.assigned_to === member.user_id || l.assigned_to === member.id || l.assigned_to === member.full_name)
               const won = mLeads.filter(l => l.stage === 'Gano')
+              
+              let chatsHandled = 0;
+              if (convs) {
+                 chatsHandled = convs.filter(c => c.assigned_to === member.user_id || c.assigned_to === member.id).length;
+              }
+
               return {
                  id: member.id,
                  name: member.full_name || 'Desconocido',
-                 totalAssigned: mLeads.length,
+                 totalAssigned: chatsHandled,
                  newLeads: mLeads.filter(l => l.stage === 'Nuevo').length,
                  won: won.length,
                  lost: mLeads.filter(l => l.stage === 'Perdio').length,
-                 revenue: won.reduce((sum, l) => sum + (Number(l.amount) || 0), 0)
+                 revenue: won.reduce((sum, l) => sum + parseVal(l.value || l.amount), 0)
               }
            }).sort((a, b) => b.revenue - a.revenue)
            setAgentMetrics(metrics)
@@ -215,8 +244,8 @@ export default function Dashboard() {
              <div className="ai-icon-wrapper" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}><Activity size={18} /></div>
              <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats.salesCount} ord.</span>
           </div>
-          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Tasa de Conversión</div>
-          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.conversion}</div>
+          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Atendidos por IA</div>
+          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.aiChats || 0}</div>
           <div className="sparkline-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
@@ -230,9 +259,9 @@ export default function Dashboard() {
           <div className="flex justify-between items-start mb-4">
              <div className="ai-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Target size={18} /></div>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Leads en Proceso</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.dealsActive}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Seguimiento activo</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Pendientes</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.pendingChats || 0}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Esperando asesor humano</div>
         </div>
 
         <div className="stat-card animate-slideUp" style={{ animationDelay: '0.4s' }}>
@@ -250,8 +279,9 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-8">
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>
             <div className="flex gap-2">
-              <div className="flex items-center gap-2" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></div> Ventas 2026
+              <div className="flex items-center gap-4" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                <span className="flex items-center gap-1"><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }}></div> Chats IA</span>
+                <span className="flex items-center gap-1"><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></div> Chats Humanos</span>
               </div>
             </div>
           </div>
@@ -266,9 +296,10 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `$${v/1000}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `${v}`} />
                 <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
-                <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} />
+                <Area type="monotone" name="Chats IA" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} />
+                <Area type="monotone" name="Chats Humanos" dataKey="value2" stroke="#10b981" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

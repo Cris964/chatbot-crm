@@ -16,6 +16,7 @@ export default function Lists() {
   const [templateName, setTemplateName] = useState('alerta_promocion')
   const [errorMsg, setErrorMsg] = useState(null)
   const [selectedContacts, setSelectedContacts] = useState([])
+  const [isGlobalCampaign, setIsGlobalCampaign] = useState(false)
 
   // Nuevos estados para multimedia y modos de campaña
   const [campaignMode, setCampaignMode] = useState('template') // 'template' o 'free'
@@ -71,6 +72,7 @@ export default function Lists() {
     setSelectedList(null)
     setContacts([])
     setSelectedContacts([])
+    setIsGlobalCampaign(false)
   }
 
   const toggleSelectContact = (id) => {
@@ -177,37 +179,90 @@ export default function Lists() {
         finalMediaType = pendingMedia.isAudio ? 'audio' : pendingMedia.mediaType;
       }
 
-      const response = await fetch('/api/broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: tenant.clientId,
-          leadIds: selectedContacts, 
-          campaignText: campaignText,
-          templateName: templateName.trim() || 'alerta_promocion',
-          isListMode: true,
-          listId: selectedList?.id,
-          isFreeMessage: campaignMode === 'free',
-          mediaUrl,
-          mediaType: finalMediaType
-        })
-      });
+      if (isGlobalCampaign) {
+         const { data: allContacts, error: contactErr } = await supabase
+           .from('broadcast_contacts')
+           .select('id, list_id')
+           .eq('client_id', tenant.clientId);
+           
+         if (contactErr) throw new Error(contactErr.message);
+         
+         const grouped = {};
+         allContacts.forEach(c => {
+            if (!grouped[c.list_id]) grouped[c.list_id] = [];
+            grouped[c.list_id].push(c.id);
+         });
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        setTimeout(() => {
-          setIsSending(false)
-          setShowCampaignModal(false)
-          setCampaignText('')
-          setSelectedContacts([])
-          setPendingMedia(null)
-          handleOpenList(selectedList) 
-          alert(`¡Campaña enviada con éxito a la lista!\nÉxitos: ${data.stats?.successes || 0}\nFallos: ${data.stats?.failures || 0}`);
-        }, 1000)
+         let globalSuccesses = 0;
+         let globalFailures = 0;
+
+         for (const lId of Object.keys(grouped)) {
+            const lContacts = grouped[lId];
+            for (let i = 0; i < lContacts.length; i += 50) {
+               const chunk = lContacts.slice(i, i + 50);
+               const res = await fetch('/api/broadcast', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({
+                   clientId: tenant.clientId,
+                   leadIds: chunk,
+                   campaignText: campaignText,
+                   templateName: templateName.trim() || 'alerta_promocion',
+                   isListMode: true,
+                   listId: lId,
+                   isFreeMessage: campaignMode === 'free',
+                   mediaUrl,
+                   mediaType: finalMediaType
+                 })
+               });
+               const data = await res.json();
+               globalSuccesses += data.stats?.successes || 0;
+               globalFailures += data.stats?.failures || 0;
+            }
+         }
+         
+         setTimeout(() => {
+           setIsSending(false)
+           setShowCampaignModal(false)
+           setCampaignText('')
+           setPendingMedia(null)
+           setIsGlobalCampaign(false)
+           alert(`¡Campaña Global enviada a todas las listas!\nÉxitos: ${globalSuccesses}\nFallos: ${globalFailures}`);
+         }, 1000);
+         
       } else {
-        setIsSending(false)
-        alert(`Error al enviar la campaña: ${data.error || 'Desconocido'}`);
+        const response = await fetch('/api/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: tenant.clientId,
+            leadIds: selectedContacts, 
+            campaignText: campaignText,
+            templateName: templateName.trim() || 'alerta_promocion',
+            isListMode: true,
+            listId: selectedList?.id,
+            isFreeMessage: campaignMode === 'free',
+            mediaUrl,
+            mediaType: finalMediaType
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          setTimeout(() => {
+            setIsSending(false)
+            setShowCampaignModal(false)
+            setCampaignText('')
+            setSelectedContacts([])
+            setPendingMedia(null)
+            handleOpenList(selectedList) 
+            alert(`¡Campaña enviada con éxito a la lista!\nÉxitos: ${data.stats?.successes || 0}\nFallos: ${data.stats?.failures || 0}`);
+          }, 1000)
+        } else {
+          setIsSending(false)
+          alert(`Error al enviar la campaña: ${data.error || 'Desconocido'}`);
+        }
       }
     } catch (err) {
       console.error(err)
@@ -275,6 +330,26 @@ export default function Lists() {
             </div>
           ))}
           
+          <div 
+            className="card glass-panel" 
+            style={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.2))',
+              border: '1px solid var(--primary-500)',
+              color: 'var(--primary-500)'
+            }}
+            onClick={() => { setIsGlobalCampaign(true); setShowCampaignModal(true); }}
+          >
+            <div style={{ padding: '1rem', background: 'var(--primary-500)', borderRadius: '50%', marginBottom: '1rem', color: '#fff' }}>
+              <Megaphone size={24} />
+            </div>
+            <p style={{ fontWeight: '600' }}>Enviar a Todas las Listas</p>
+          </div>
+
           <div 
             className="card glass-panel" 
             style={{ 
@@ -460,11 +535,11 @@ export default function Lists() {
             </div>
             
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
-              <button className="btn btn-ghost" onClick={() => { setShowCampaignModal(false); setPendingMedia(null); stopRecording(true); }} disabled={isSending}>
+              <button className="btn btn-ghost" onClick={() => { setShowCampaignModal(false); setPendingMedia(null); stopRecording(true); setIsGlobalCampaign(false); }} disabled={isSending}>
                 Cancelar
               </button>
               <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || (!campaignText.trim() && !pendingMedia)}>
-                {isSending ? 'Enviando...' : `Lanzar a ${selectedContacts.length} contactos`}
+                {isSending ? 'Enviando...' : (isGlobalCampaign ? 'Lanzar a Todas las Listas' : `Lanzar a ${selectedContacts.length} contactos`)}
               </button>
             </div>
           </div>

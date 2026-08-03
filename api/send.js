@@ -99,7 +99,8 @@ export default async function handler(req, res) {
           metaPayload.document = { link: message };
         } else if (msgType === 'template') {
           metaPayload.type = 'template';
-          metaPayload.template = { name: message.toLowerCase().trim(), language: { code: 'es' } };
+          const langCode = record.languageCode || 'es';
+          metaPayload.template = { name: message.toLowerCase().trim(), language: { code: langCode } };
           
           const components = [];
           

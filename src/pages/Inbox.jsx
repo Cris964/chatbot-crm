@@ -115,10 +115,11 @@ export default function Inbox() {
   
   // Plantillas state
   const [showTemplateModal, setShowTemplateModal] = useState(false)
-  const [templateName, setTemplateName] = useState('hello_world')
+  const [templateName, setTemplateName] = useState('')
   const [templateVariable, setTemplateVariable] = useState('')
-  const [templateMediaUrl, setTemplateMediaUrl] = useState('')
   const [templateMediaFile, setTemplateMediaFile] = useState(null)
+  const [templateMediaUrl, setTemplateMediaUrl] = useState('')
+  const [templateLanguage, setTemplateLanguage] = useState('es')
   const [teamMembers, setTeamMembers] = useState([])
   const [activeInfoTab, setActiveInfoTab] = useState('Contact')
   const [showSimModal, setShowSimModal] = useState(false)
@@ -644,7 +645,8 @@ export default function Inbox() {
              type: 'template',
              channel: selectedConv.channel,
              variable: templateVariable.trim(),
-             mediaUrl: mediaUrlToSend
+             mediaUrl: mediaUrlToSend,
+             languageCode: templateLanguage
            })
          });
          const apiData = await res.json();
@@ -1791,6 +1793,22 @@ export default function Inbox() {
                  <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
                    Ingresa el nombre interno de la plantilla aprobada en Meta para enviarla a este cliente y reactivar el chat.
                  </p>
+                 <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Idioma de la Plantilla en Facebook</label>
+                    <select 
+                      className="form-control" 
+                      value={templateLanguage}
+                      onChange={e => setTemplateLanguage(e.target.value)}
+                    >
+                      <option value="es">Español (es)</option>
+                      <option value="es_CO">Español - Colombia (es_CO)</option>
+                      <option value="es_LA">Español - Latinoamérica (es_LA)</option>
+                      <option value="es_MX">Español - México (es_MX)</option>
+                      <option value="es_ES">Español - España (es_ES)</option>
+                      <option value="en">Inglés (en)</option>
+                      <option value="en_US">Inglés - EE.UU. (en_US)</option>
+                    </select>
+                 </div>
                  <div className="form-group" style={{ marginBottom: 20 }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nombre de la Plantilla</label>
                     <input 
