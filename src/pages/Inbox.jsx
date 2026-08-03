@@ -118,6 +118,7 @@ export default function Inbox() {
   const [templateName, setTemplateName] = useState('hello_world')
   const [templateVariable, setTemplateVariable] = useState('')
   const [templateMediaUrl, setTemplateMediaUrl] = useState('')
+  const [templateMediaFile, setTemplateMediaFile] = useState(null)
   const [teamMembers, setTeamMembers] = useState([])
   const [activeInfoTab, setActiveInfoTab] = useState('Contact')
   const [showSimModal, setShowSimModal] = useState(false)
@@ -584,26 +585,55 @@ export default function Inbox() {
   const handleSendTemplate = async (e) => {
     e.preventDefault()
     if (!templateName.trim() || !selectedConv) return
+    setIsLoading(true)
     
-    const textMsg = `[Plantilla Enviada: ${templateName}]`
-    const messageObj = {
-      role: 'agent',
-      content: textMsg,
-      timestamp: new Date().toISOString()
-    }
+    let mediaUrlToSend = templateMediaUrl.trim();
+    
+    try {
+      if (templateMediaFile) {
+        // Upload the file first
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(templateMediaFile);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
 
-    const { error } = await supabase
-      .from('conversations')
-      .update({ 
-        messages: [...selectedConv.rawMessages, messageObj],
-        updated_at: new Date().toISOString(),
-        needs_human: true
-      })
-      .eq('id', selectedConv.id)
+        const fileName = `template_${Date.now()}_${templateMediaFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+        
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base64,
+            fileName,
+            contentType: templateMediaFile.type
+          })
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
+        mediaUrlToSend = uploadData.url;
+      }
+      
+      const textMsg = `[Plantilla Enviada: ${templateName}]`
+      const messageObj = {
+        role: 'agent',
+        content: textMsg,
+        timestamp: new Date().toISOString()
+      }
 
-    if (!error) {
-       setShowTemplateModal(false)
-       try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({ 
+          messages: [...selectedConv.rawMessages, messageObj],
+          updated_at: new Date().toISOString(),
+          needs_human: true
+        })
+        .eq('id', selectedConv.id)
+
+      if (!error) {
+         setShowTemplateModal(false)
          const res = await fetch('/api/send', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
@@ -614,7 +644,7 @@ export default function Inbox() {
              type: 'template',
              channel: selectedConv.channel,
              variable: templateVariable.trim(),
-             mediaUrl: templateMediaUrl.trim()
+             mediaUrl: mediaUrlToSend
            })
          });
          const apiData = await res.json();
@@ -626,10 +656,12 @@ export default function Inbox() {
          } else {
              alert(`Error al enviar plantilla: ${apiData.error || 'Desconocido'}`);
          }
-       } catch (apiErr) {
-         console.error('Error sending template:', apiErr);
-         alert('Hubo un error de conexión al enviar la plantilla.');
-       }
+      }
+    } catch (apiErr) {
+      console.error('Error sending template:', apiErr);
+      alert('Hubo un error de conexión al enviar la plantilla.');
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -1771,13 +1803,24 @@ export default function Inbox() {
                     />
                  </div>
                  <div className="form-group" style={{ marginBottom: 20 }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Link de Imagen/Video del Encabezado (Opcional)</label>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Archivo de Imagen/Video (Opcional)</label>
+                    <input 
+                      type="file" 
+                      className="form-control" 
+                      accept="image/*,video/*"
+                      onChange={e => setTemplateMediaFile(e.target.files[0])}
+                      style={{ padding: '8px' }}
+                    />
+                 </div>
+                 <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>O pegar Link (URL) de Imagen/Video</label>
                     <input 
                       type="url" 
                       className="form-control" 
                       placeholder="ej: https://tusitio.com/imagen.jpg"
                       value={templateMediaUrl}
                       onChange={e => setTemplateMediaUrl(e.target.value)}
+                      disabled={!!templateMediaFile}
                     />
                  </div>
                  <div className="flex gap-2 justify-end">
