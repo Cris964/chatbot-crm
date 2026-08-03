@@ -1081,7 +1081,7 @@ export default function Inbox() {
 
           
           {/* Left Sidebar (Folders) */}
-          <div className="inbox-sidebar folders-panel" style={{ width: '220px', flexShrink: 0, padding: '16px 12px', background: 'var(--bg-secondary)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
+          <div className="inbox-sidebar folders-panel" style={{ width: '220px', flexShrink: 0, padding: '16px 12px', background: 'linear-gradient(180deg, #111827 0%, #1e1b4b 100%)', borderRight: '1px solid rgba(99, 102, 241, 0.15)', display: 'flex', flexDirection: 'column', boxShadow: 'inset -10px 0 20px -10px rgba(0,0,0,0.5)' }}>
              
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'inbox' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'inbox' ? '#fff' : 'var(--text-primary)' }}
@@ -1131,7 +1131,7 @@ export default function Inbox() {
                  <span style={{ fontWeight: activeFolder === 'pending' ? 600 : 500, fontSize: '0.9rem' }}>Pendientes</span>
                </div>
                <span style={{ fontSize: '0.7rem', fontWeight: 700, background: activeFolder === 'pending' ? 'rgba(255,255,255,0.25)' : 'rgba(var(--overlay-rgb), 0.1)', color: activeFolder === 'pending' ? '#fff' : 'var(--text-primary)', padding: '2px 8px', borderRadius: '12px' }}>
-                 {conversationsList.filter(c => c.unreadCount > 0 && !c.archived).length}
+                 {conversationsList.filter(c => c.unread && !c.archived).length}
                </span>
              </div>
 
@@ -1253,6 +1253,15 @@ export default function Inbox() {
               </div>
             ) : conversationsList
                 .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
+                .filter(c => {
+                   const fId = getConversationFolder(c);
+                   if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
+                   if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
+                   if (activeFolder === 'pending') return c.unread && !c.archived;
+                   if (activeFolder === 'resolved') return c.archived;
+                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
+                   return fId === 'inbox' && !c.archived;
+                })
                 .filter(c => {
                    if (!searchQuery) return true;
                    const q = searchQuery.toLowerCase();

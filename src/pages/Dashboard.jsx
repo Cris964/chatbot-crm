@@ -5,7 +5,7 @@ import {
   MoreHorizontal, ChevronRight, Activity, Zap
 } from 'lucide-react'
 import {
-  AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid
+  AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -88,8 +88,13 @@ export default function Dashboard() {
         .select('*')
         .eq('client_id', tenant.clientId)
 
-      if (orders) {
-        const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
+      let totalRevenue = 0;
+      let totalSalesCount = 0;
+      
+      if (orders && orders.length > 0) {
+        totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
+        totalSalesCount = orders.length;
+        
         const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
         const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
         
@@ -101,19 +106,19 @@ export default function Dashboard() {
             grouped[monthIdx].value2 = grouped[monthIdx].value * 0.7 
           }
         })
-
-        setStats(prev => ({ 
-          ...prev, 
-          revenue: totalRevenue, 
-          salesCount: orders.length 
-        }))
         setChartData(grouped)
       }
 
       if (leads) {
         const active = leads.filter(l => !['Gano', 'Perdio'].includes(l.stage)).length
-        const won = leads.filter(l => l.stage === 'Gano').length
+        const wonLeads = leads.filter(l => l.stage === 'Gano')
+        const won = wonLeads.length
         const convRate = leads.length > 0 ? `${((won / leads.length) * 100).toFixed(1)}%` : '0%'
+
+        if (!orders || orders.length === 0) {
+           totalRevenue = wonLeads.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+           totalSalesCount = won;
+        }
 
         const recent = leads.slice(0, 4).map(l => ({
           lead: l.name,
@@ -127,11 +132,13 @@ export default function Dashboard() {
         const pData = stages.map(s => ({
           name: s,
           value: leads.filter(l => l.stage === s).length,
-          color: s === 'Nuevo' ? '#6366f1' : '#10b981'
+          color: s === 'Nuevo' ? '#6366f1' : (s === 'Contactado' ? '#8b5cf6' : (s === 'Propuesta' ? '#f59e0b' : '#10b981'))
         }))
 
         setStats(prev => ({ 
           ...prev, 
+          revenue: totalRevenue,
+          salesCount: totalSalesCount,
           dealsActive: active,
           newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
           conversion: convRate
@@ -141,7 +148,7 @@ export default function Dashboard() {
 
         if (teamMembers && teamMembers.length > 0) {
            const metrics = teamMembers.map(member => {
-              const mLeads = leads.filter(l => l.assigned_to === member.user_id)
+              const mLeads = leads.filter(l => l.assigned_to === member.user_id || l.assigned_to === member.id || l.assigned_to === member.full_name)
               const won = mLeads.filter(l => l.stage === 'Gano')
               return {
                  id: member.id,
@@ -296,10 +303,10 @@ export default function Dashboard() {
                   <BarChart data={pipelineState} layout="vertical" margin={{ left: 10, right: 10 }}>
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }} width={90} />
-                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
+                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: '#fff' }} />
                     <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
                       {pipelineState.map((entry, index) => (
-                        <cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Bar>
                   </BarChart>

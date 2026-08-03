@@ -293,15 +293,15 @@ export default function Settings() {
                     </div>
                     <div className="form-group">
                       <label className="form-label">WhatsApp Token (API Oficial)</label>
-                      <input className="form-input" name="whatsapp_token" value={workspaceData.whatsapp_token} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                      <input type="password" className="form-input" name="whatsapp_token" value={workspaceData.whatsapp_token} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Facebook Page ID (Para Messenger)</label>
-                      <input className="form-input" name="facebook_page_id" value={workspaceData.facebook_page_id} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                      <input type="password" className="form-input" name="facebook_page_id" value={workspaceData.facebook_page_id} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Instagram Account ID (Para IG Direct)</label>
-                      <input className="form-input" name="instagram_account_id" value={workspaceData.instagram_account_id} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
+                      <input type="password" className="form-input" name="instagram_account_id" value={workspaceData.instagram_account_id} onChange={handleWorkspaceChange} style={{ fontFamily: 'monospace' }} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Facebook Access Token (Para enviar por Messenger/IG)</label>
