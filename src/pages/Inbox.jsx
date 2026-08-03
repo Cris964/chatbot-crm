@@ -1080,11 +1080,11 @@ export default function Inbox() {
         }
       `}</style>
 
-      <div className="inbox-layout">
+      <div className="inbox-layout" style={{ gridTemplateColumns: showRightPanel ? '220px 320px 1fr 340px' : '220px 320px 1fr', transition: 'grid-template-columns 0.3s ease' }}>
 
           
           {/* Left Sidebar (Folders) */}
-          <div className="inbox-sidebar folders-panel" style={{ width: '220px', flexShrink: 0, padding: '16px 12px', background: 'linear-gradient(180deg, #111827 0%, #1e1b4b 100%)', borderRight: '1px solid rgba(99, 102, 241, 0.15)', display: 'flex', flexDirection: 'column', boxShadow: 'inset -10px 0 20px -10px rgba(0,0,0,0.5)' }}>
+          <div className="inbox-sidebar folders-panel" style={{ padding: '16px 12px', background: 'rgba(var(--overlay-rgb), 0.02)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
              
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'inbox' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'inbox' ? '#fff' : 'var(--text-primary)' }}
@@ -1449,6 +1449,13 @@ export default function Inbox() {
                      <div className="flex gap-1">
                         <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
                         <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
+                          <button 
+                             className="btn btn-secondary btn-sm mobile-hidden"
+                             title={showRightPanel ? "Ocultar panel" : "Mostrar panel"}
+                             onClick={() => setShowRightPanel(!showRightPanel)}
+                          >
+                             {showRightPanel ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+                          </button>
                         <button 
                            className="btn btn-secondary btn-sm"
                            title={selectedConv?.archived ? "Desarchivar" : "Archivar"}
