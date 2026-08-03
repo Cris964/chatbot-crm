@@ -654,7 +654,8 @@ export default function Inbox() {
              await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
              alert(`Plantilla "${templateName}" enviada con éxito. La ventana de 24 horas se reabrirá cuando el cliente responda.`);
          } else {
-             alert(`Error al enviar plantilla: ${apiData.error || 'Desconocido'}`);
+             const errorDetail = apiData.details?.error?.message || apiData.error || 'Desconocido';
+             alert(`Error al enviar plantilla: ${errorDetail}`);
          }
       }
     } catch (apiErr) {
@@ -1802,7 +1803,7 @@ export default function Inbox() {
                     />
                  </div>
                  <div className="form-group" style={{ marginBottom: 20 }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Texto para la variable {'{{1}}'} (Opcional)</label>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Texto para la variable {'{{1}}'} (Requerido si la plantilla lo tiene)</label>
                     <input 
                       type="text" 
                       className="form-control" 
