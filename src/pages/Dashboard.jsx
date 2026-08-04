@@ -124,6 +124,14 @@ function DashboardContent() {
 
       let totalRevenue = 0;
       let totalSalesCount = 0;
+      let aiChatsCount = 0;
+      let pendingChatsCount = 0;
+
+      if (convs) {
+        aiChatsCount = convs.filter(c => c.needs_human === false || c.needs_human == null).length;
+        pendingChatsCount = convs.filter(c => c.needs_human === true && !c.assigned_to).length;
+      }
+
       const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
       const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
       
