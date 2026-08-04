@@ -74,7 +74,7 @@ export default async function handler(req, res) {
     const tableName = isListMode ? 'broadcast_contacts' : 'leads';
     const { data: leads, error: leadsErr } = await supabase
       .from(tableName)
-      .select('id, phone, name')
+      .select('id, phone')
       .in('id', leadIds);
 
     if (leadsErr || !leads || leads.length === 0) {
