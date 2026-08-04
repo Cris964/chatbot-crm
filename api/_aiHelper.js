@@ -314,9 +314,13 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   } catch(e) { console.error('Lead error', e) }
 
   let assignedUserId = null;
-  if (humanDept === 'TREARQ') assignedUserId = '096b5cb3-9754-4581-be3c-d6c2a64caead';
-  else if (humanDept === 'ASESOR') assignedUserId = '2db217bc-c72e-448a-9a8d-4b2469c93661';
-  else if (saleMatch) {
+  if (clientId === 'c91119cc-5451-4a64-b0e8-6b53d33d5563') {
+       assignedUserId = '2fcab0de-af97-446d-a217-bc986897cb3d'; // Daniela
+  } else if (humanDept === 'TREARQ') {
+       assignedUserId = '096b5cb3-9754-4581-be3c-d6c2a64caead';
+  } else if (humanDept === 'ASESOR') {
+       assignedUserId = '2db217bc-c72e-448a-9a8d-4b2469c93661';
+  } else if (saleMatch) {
        const { data: vends } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('role', 'vendedor').eq('status', 'activo').limit(1);
        if (vends && vends.length > 0) assignedUserId = vends[0].user_id;
   }
