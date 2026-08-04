@@ -77,9 +77,10 @@ export default async function handler(req, res) {
 
     // 2. Obtener los teléfonos de los leads seleccionados
     const tableName = isListMode ? 'broadcast_contacts' : 'leads';
+    const selectCols = isListMode ? 'id, phone, full_name' : 'id, phone, name';
     const { data: leads, error: leadsErr } = await supabase
       .from(tableName)
-      .select('id, phone')
+      .select(selectCols)
       .in('id', leadIds);
 
     if (leadsErr || !leads || leads.length === 0) {
@@ -201,7 +202,7 @@ export default async function handler(req, res) {
                  await supabase.from('conversations').insert([{
                      client_id: clientId,
                      user_phone: cleanPhone,
-                     user_name: lead.name || 'Contacto',
+                     user_name: lead.name || lead.full_name || 'Contacto',
                      messages: [newMsgNode],
                      channel: 'whatsapp'
                  }]);
