@@ -39,6 +39,10 @@ export function TenantProvider({ session, children }) {
         .limit(1)
         .maybeSingle()
 
+      if (memberError && memberError.code !== 'PGRST116') {
+        throw new Error('Error de equipo: ' + memberError.message);
+      }
+
       if (membership) {
         setTenantState({
           clientId: membership.client_id,
@@ -54,12 +58,16 @@ export function TenantProvider({ session, children }) {
       }
 
       // Fallback: Legacy flow — check clients table directly (for backward compatibility)
-      const { data: legacyClient } = await supabase
+      const { data: legacyClient, error: legacyError } = await supabase
         .from('clients')
         .select('*')
         .eq('user_id', session.user.id)
         .limit(1)
         .maybeSingle()
+
+      if (legacyError && legacyError.code !== 'PGRST116') {
+        throw new Error('Error de cliente: ' + legacyError.message);
+      }
 
       if (legacyClient) {
         // Auto-migrate: create team_members entry for this legacy user

@@ -147,9 +147,9 @@ export default function Layout({ session }) {
              {!isSidebarCollapsed && (
                <div className="logo-text">
                  <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.03em' }}>NexusCRM</h1>
-                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                   {tenant.clientName || 'Cargando...'}
-                 </span>
+                   <span style={{ fontSize: '0.65rem', color: tenant.error ? 'var(--accent-rose)' : 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                     {tenant.error ? `Error: ${tenant.error}` : (tenant.clientName || 'Cargando...')}
+                   </span>
                </div>
              )}
           </div>
