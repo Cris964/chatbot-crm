@@ -39,7 +39,7 @@ export default function Lists() {
     setIsLoading(true)
     setErrorMsg(null)
     try {
-      const response = await fetch('/api/broadcast?action=get_lists&clientId=' + tenant.clientId)
+      const response = await fetch('/api/broadcast?action=get_lists&clientId=' + tenant.id)
       const data = await response.json()
       if (response.ok && data.lists) {
         setLists(data.lists)
@@ -183,7 +183,7 @@ export default function Lists() {
          const { data: allContacts, error: contactErr } = await supabase
            .from('broadcast_contacts')
            .select('id, list_id')
-           .eq('client_id', tenant.clientId);
+           .eq('client_id', tenant.id);
            
          if (contactErr) throw new Error(contactErr.message);
          
@@ -204,7 +204,7 @@ export default function Lists() {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({
-                   clientId: tenant.clientId,
+                   clientId: tenant.id,
                    leadIds: chunk,
                    campaignText: campaignText,
                    templateName: templateName.trim() || 'alerta_promocion',
@@ -236,7 +236,7 @@ export default function Lists() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            clientId: tenant.clientId,
+            clientId: tenant.id,
             leadIds: selectedContacts, 
             campaignText: campaignText,
             templateName: templateName.trim() || 'alerta_promocion',
