@@ -199,8 +199,8 @@ export default function Lists() {
 
          for (const lId of Object.keys(grouped)) {
             const lContacts = grouped[lId];
-            for (let i = 0; i < lContacts.length; i += 50) {
-               const chunk = lContacts.slice(i, i + 50);
+            for (let i = 0; i < lContacts.length; i += 15) {
+               const chunk = lContacts.slice(i, i + 15);
                const res = await fetch('/api/broadcast', {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
