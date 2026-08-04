@@ -117,7 +117,7 @@ export default async function handler(req, res) {
           type: "template",
           template: {
             name: templateName,
-            language: { code: "es_CO" },
+            language: { code: req.body.templateLanguage || "es" },
             components: []
           }
         };
