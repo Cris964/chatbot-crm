@@ -14,6 +14,7 @@ export default function Lists() {
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignText, setCampaignText] = useState('')
   const [templateName, setTemplateName] = useState('alerta_promocion')
+  const [templateLanguage, setTemplateLanguage] = useState('es')
   const [errorMsg, setErrorMsg] = useState(null)
   const [selectedContacts, setSelectedContacts] = useState([])
   const [isGlobalCampaign, setIsGlobalCampaign] = useState(false)
@@ -208,6 +209,7 @@ export default function Lists() {
                    leadIds: chunk,
                    campaignText: campaignText,
                    templateName: templateName.trim() || 'alerta_promocion',
+                   templateLanguage: templateLanguage,
                    isListMode: true,
                    listId: lId,
                    isFreeMessage: campaignMode === 'free',
@@ -240,6 +242,7 @@ export default function Lists() {
             leadIds: selectedContacts, 
             campaignText: campaignText,
             templateName: templateName.trim() || 'alerta_promocion',
+            templateLanguage: templateLanguage,
             isListMode: true,
             listId: selectedList?.id,
             isFreeMessage: campaignMode === 'free',
@@ -469,18 +472,29 @@ export default function Lists() {
               </div>
             )}
 
-            {campaignMode === 'template' && (
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Nombre de la Plantilla en Meta</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="Ej: nueva_linea"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                />
-              </div>
-            )}
+              {campaignMode === 'template' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Nombre de la Plantilla en Meta</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Ej: nueva_linea"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Idioma</label>
+                    <select className="form-input" value={templateLanguage} onChange={(e) => setTemplateLanguage(e.target.value)}>
+                      <option value="es">Español (es)</option>
+                      <option value="es_CO">Español Colombia (es_CO)</option>
+                      <option value="es_LA">Español Latino (es_LA)</option>
+                      <option value="en_US">Inglés (en_US)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label" style={{ fontWeight: 600 }}>
