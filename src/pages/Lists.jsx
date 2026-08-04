@@ -160,7 +160,7 @@ export default function Lists() {
   }
 
   const handleSendCampaign = async () => {
-    if (!campaignText.trim() && !pendingMedia) return
+    if (campaignMode === 'free' && !campaignText.trim() && !pendingMedia) return
     setIsSending(true)
     
     try {
@@ -562,7 +562,7 @@ export default function Lists() {
               <button className="btn btn-ghost" onClick={() => { setShowCampaignModal(false); setPendingMedia(null); stopRecording(true); setIsGlobalCampaign(false); }} disabled={isSending}>
                 Cancelar
               </button>
-              <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || (!campaignText.trim() && !pendingMedia)}>
+              <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || (campaignMode === 'free' && !campaignText.trim() && !pendingMedia)}>
                 {isSending ? 'Enviando...' : (isGlobalCampaign ? 'Lanzar a Todas las Listas' : `Lanzar a ${selectedContacts.length} contactos`)}
               </button>
             </div>
