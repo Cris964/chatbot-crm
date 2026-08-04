@@ -50,7 +50,12 @@ export default async function handler(req, res) {
   // --- POST Handler for Sending Broadcasts ---
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, listId, isFreeMessage = false, mediaUrl, mediaType } = req.body;
+  let { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, listId, isFreeMessage = false, mediaUrl, mediaType } = req.body;
+
+  // Meta API STRICTLY forbids newlines or multiple consecutive spaces in template variables
+  if (campaignText) {
+    campaignText = campaignText.replace(/[\r\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim();
+  }
 
   if (!clientId || !leadIds || leadIds.length === 0) {
     return res.status(400).json({ error: 'Faltan parámetros requeridos (clientId o leadIds).' });
