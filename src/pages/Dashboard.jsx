@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, Component } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
   Users, DollarSign, TrendingUp, Target, ArrowUpRight, ArrowDownRight,
@@ -43,7 +43,35 @@ const pipelineData = [
   { name: 'Closing', value: 12, color: '#8b5cf6' },
 ]
 
-export default function Dashboard() {
+class DashboardErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    this.setState({ error, errorInfo });
+    console.error("Dashboard Render Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', background: '#ffebee', color: '#b71c1c', borderRadius: '8px', margin: '20px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>Dashboard Crashed!</h2>
+          <p style={{ marginTop: '10px' }}>{this.state.error && this.state.error.toString()}</p>
+          <pre style={{ marginTop: '20px', overflowX: 'auto', fontSize: '12px', background: '#ffcdd2', padding: '10px' }}>
+            {this.state.errorInfo && this.state.errorInfo.componentStack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function DashboardContent() {
   const { session } = useOutletContext()
   const tenant = useTenant()
   const [isLoading, setIsLoading] = useState(true)
@@ -404,6 +432,14 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <DashboardErrorBoundary>
+      <DashboardContent />
+    </DashboardErrorBoundary>
   )
 }
 
