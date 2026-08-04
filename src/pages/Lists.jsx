@@ -218,6 +218,7 @@ export default function Lists() {
                const data = await res.json();
                globalSuccesses += data.stats?.successes || 0;
                globalFailures += data.stats?.failures || 0;
+               if (data.firstError) window.lastGlobalError = data.firstError;
             }
          }
          
@@ -227,7 +228,7 @@ export default function Lists() {
            setCampaignText('')
            setPendingMedia(null)
            setIsGlobalCampaign(false)
-           alert(`¡Campaña Global enviada a todas las listas!\nÉxitos: ${globalSuccesses}\nFallos: ${globalFailures}`);
+           alert(`¡Campaña Global enviada a todas las listas!\nÉxitos: ${globalSuccesses}\nFallos: ${globalFailures}` + (globalFailures > 0 && window.lastGlobalError ? `\nError: ${JSON.stringify(window.lastGlobalError)}` : ""));
          }, 1000);
          
       } else {

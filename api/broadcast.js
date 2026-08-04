@@ -74,7 +74,7 @@ export default async function handler(req, res) {
     const tableName = isListMode ? 'broadcast_contacts' : 'leads';
     const { data: leads, error: leadsErr } = await supabase
       .from(tableName)
-      .select('id, phone')
+      .select('id, phone, name')
       .in('id', leadIds);
 
     if (leadsErr || !leads || leads.length === 0) {
@@ -83,6 +83,7 @@ export default async function handler(req, res) {
 
     let successes = 0;
     let failures = 0;
+    global.firstError = null;
 
     // 3. Bucle de envío a Meta API
     const sendPromises = leads.map(async (lead) => {
@@ -201,17 +202,16 @@ export default async function handler(req, res) {
                  }]);
               }
             }
-          } else {
-             // Do not set status in 'leads' table to avoid overriding 'active' with 'messaged'.
-             // You can add a 'remarketing_status' column in the future if needed.
           }
         } else {
           console.error(`Error enviando a ${cleanPhone}:`, data);
-          failures++;
+          failures++; 
+          if (!global.firstError) global.firstError = data;
         }
       } catch (err) {
         console.error(`Network error para ${cleanPhone}:`, err);
-        failures++;
+        failures++; 
+        if (!global.firstError) global.firstError = { error: err.message };
       }
     });
 
@@ -220,7 +220,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ 
       success: true, 
       message: `Difusión finalizada. Enviados: ${successes}, Fallos: ${failures}`,
-      stats: { successes, failures }
+      stats: { successes, failures }, firstError: global.firstError
     });
 
   } catch (err) {
