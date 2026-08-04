@@ -482,17 +482,26 @@ export default function Lists() {
               </div>
             )}
 
-            <div className="form-group">
-              <label className="form-label">{campaignMode === 'template' ? "Texto de la variable {{1}} (Opcional)" : "Texto del mensaje (Opcional si hay adjunto)"}</label>
-              <textarea 
-                className="form-input" 
-                rows="4" 
-                placeholder={campaignMode === 'template' ? "Ej: Tenemos 20% de descuento en todos los morrales hoy." : "Escribe tu mensaje libre aquí..."}
-                value={campaignText}
-                onChange={(e) => setCampaignText(e.target.value)}
-                style={{ resize: 'none' }}
-              />
-            </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  {campaignMode === 'template' 
+                    ? 'Variables de la Plantilla ({{1}}, {{2}}...)'
+                    : 'Texto del Mensaje (Formato libre)'}
+                </label>
+                {campaignMode === 'template' && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', marginTop: '-0.25rem' }}>
+                    Cada línea que escribas será una variable en el orden de la plantilla. Por ejemplo, la primera línea es {"{{1}}"}, la segunda {"{{2}}"}, etc.
+                  </p>
+                )}
+                <textarea 
+                  className="form-input" 
+                  rows="6" 
+                  placeholder={campaignMode === 'template' ? "MEDIANO\nJM325M\n$40.000\n6 meses de garantía" : "Escribe tu mensaje libre aquí..."}
+                  value={campaignText}
+                  onChange={(e) => setCampaignText(e.target.value)}
+                  style={{ resize: 'none' }}
+                />
+              </div>
             
             {/* Adjuntos */}
             <div style={{ marginTop: '1rem', padding: '1rem', border: '1px dashed var(--border-light)', borderRadius: '8px', background: 'var(--bg-secondary)' }}>

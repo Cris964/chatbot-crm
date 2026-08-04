@@ -52,9 +52,9 @@ export default async function handler(req, res) {
 
   let { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, listId, isFreeMessage = false, mediaUrl, mediaType } = req.body;
 
-  // Meta API STRICTLY forbids newlines or multiple consecutive spaces in template variables
+  // We will process campaignText differently depending on if it's a template or free message
   if (campaignText) {
-    campaignText = campaignText.replace(/[\r\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim();
+    campaignText = campaignText.trim();
   }
 
   if (!clientId || !leadIds || leadIds.length === 0) {
@@ -149,14 +149,13 @@ export default async function handler(req, res) {
             payload.template.language = { code: "en_US" };
         } else {
             if (campaignText) {
+              const lines = campaignText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
               payload.template.components.push({
                 type: "body",
-                parameters: [
-                  {
-                    type: "text",
-                    text: campaignText
-                  }
-                ]
+                parameters: lines.map(line => ({
+                  type: "text",
+                  text: line.replace(/[\r\n\t]+/g, ' ') // Meta strictly forbids newlines in variables
+                }))
               });
             } else if (!mediaUrl) {
               payload.template.components.push({

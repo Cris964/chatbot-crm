@@ -1,0 +1,412 @@
+import { useState, useEffect } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import {
+  Users, DollarSign, TrendingUp, Target, ArrowUpRight, ArrowDownRight,
+  MoreHorizontal, ChevronRight, Activity, Zap
+} from 'lucide-react'
+import {
+  AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell
+} from 'recharts'
+import { supabase } from '../lib/supabase'
+import { useTenant } from '../lib/useTenant'
+
+const mainChartData = [
+  { name: 'Jan', value: 32000, value2: 28000 },
+  { name: 'Feb', value: 45000, value2: 35000 },
+  { name: 'Mar', value: 42000, value2: 38000 },
+  { name: 'Apr', value: 38000, value2: 48000 },
+  { name: 'May', value: 55000, value2: 42000 },
+  { name: 'Jun', value: 68000, value2: 58000 },
+  { name: 'Jul', value: 62000, value2: 55000 },
+  { name: 'Aug', value: 75000, value2: 68000 },
+  { name: 'Sep', value: 89000, value2: 72000 },
+  { name: 'Oct', value: 78000, value2: 75000 },
+  { name: 'Nov', value: 85000, value2: 82000 },
+  { name: 'Dec', value: 95000, value2: 88000 },
+]
+
+const sparklineData = [
+  { pv: 2400 }, { pv: 1398 }, { pv: 9800 }, { pv: 3908 }, { pv: 4800 }, { pv: 3800 }, { pv: 4300 },
+]
+
+const recentDeals = [
+  { lead: 'Alex Banner', stage: 'Opening', value: '$10.00k', date: '08/03/2026', color: '#10b981' },
+  { lead: 'Anner Daterson', stage: 'Succeed', value: '$15.00k', date: '03/02/2026', color: '#6366f1' },
+  { lead: 'James Wilson', stage: 'Contract', value: '$8.50k', date: '01/02/2026', color: '#f59e0b' },
+]
+
+const pipelineData = [
+  { name: 'Lead', value: 45, color: '#6366f1' },
+  { name: 'Contact', value: 32, color: '#10b981' },
+  { name: 'Proposal', value: 24, color: '#f59e0b' },
+  { name: 'Negotiation', value: 18, color: '#ec4899' },
+  { name: 'Closing', value: 12, color: '#8b5cf6' },
+]
+
+export default function Dashboard() {
+  const { session } = useOutletContext()
+  const tenant = useTenant()
+  const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState({
+    revenue: 0,
+    salesCount: 0,
+    dealsActive: 0,
+    newLeads: 0,
+    conversion: '0%'
+  })
+  const [chartData, setChartData] = useState([])
+  const [recentDealsList, setRecentDealsList] = useState([])
+  const [pipelineState, setPipelineState] = useState([])
+  const [agentMetrics, setAgentMetrics] = useState([])
+
+  useEffect(() => {
+    if (tenant.clientId && !tenant.isLoading) {
+       fetchDashboardData()
+    }
+  }, [tenant.clientId, tenant.isLoading])
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true)
+    try {
+      // 1. Fetch Orders
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('client_id', tenant.clientId)
+        .neq('status', 'cancelado')
+
+      // 2. Fetch Leads
+      const { data: leads } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('client_id', tenant.clientId)
+        .order('created_at', { ascending: false })
+
+      // 3. Fetch Team Members
+      const { data: teamMembers } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('client_id', tenant.clientId)
+
+      // 4. Fetch Conversations
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('client_id', tenant.clientId)
+
+      let totalRevenue = 0;
+      let totalSalesCount = 0;
+      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+      const grouped = months.map(m => ({ name: m, value: 0, value2: 0 }))
+      
+      if (orders && orders.length > 0) {
+        totalRevenue = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
+        totalSalesCount = orders.length;
+        
+        orders.forEach(o => {
+          const date = new Date(o.created_at)
+          const monthIdx = date.getMonth()
+          if (date.getFullYear() === 2026) {
+            grouped[monthIdx].value += (Number(o.amount) || 0)
+            grouped[monthIdx].value2 = grouped[monthIdx].value * 0.7 
+          }
+        })
+      }
+
+      if (leads) {
+        const active = leads.filter(l => !['Gano', 'Perdio'].includes(l.stage)).length
+        const wonLeads = leads.filter(l => l.stage === 'Gano')
+        const won = wonLeads.length
+        const convRate = leads.length > 0 ? `${((won / leads.length) * 100).toFixed(1)}%` : '0%'
+
+        const parseVal = (v) => {
+           if(!v) return 0;
+           if (typeof v === 'number') return v;
+           return Number(String(v).replace(/[^0-9.-]+/g, "")) || 0;
+        };
+
+        if (!orders || orders.length === 0) {
+           totalRevenue = wonLeads.reduce((sum, l) => sum + parseVal(l.value || l.amount), 0);
+           totalSalesCount = won;
+           
+           wonLeads.forEach(l => {
+             const date = new Date(l.created_at)
+             const monthIdx = date.getMonth()
+             if (date.getFullYear() === 2026) {
+               grouped[monthIdx].value += parseVal(l.value || l.amount)
+               grouped[monthIdx].value2 = grouped[monthIdx].value * 0.7 
+             }
+           })
+        }
+        
+        setChartData(grouped)
+
+        const recent = leads.slice(0, 4).map(l => ({
+          lead: l.name,
+          stage: l.stage || 'Nuevo',
+          value: l.value ? (String(l.value).includes('$') ? l.value : `$${(parseVal(l.value)/1000).toFixed(1)}k`) : (l.amount ? `$${(l.amount/1000).toFixed(1)}k` : `$0.0k`),
+          date: new Date(l.created_at).toLocaleDateString(),
+          color: l.stage === 'Gano' ? '#10b981' : (l.stage === 'Perdio' ? '#f43f5e' : '#6366f1')
+        }))
+        
+        const stages = ['Nuevo', 'Contactado', 'Propuesta', 'Negociación']
+        const pData = stages.map(s => ({
+          name: s,
+          value: leads.filter(l => l.stage === s).length,
+          color: s === 'Nuevo' ? '#6366f1' : (s === 'Contactado' ? '#8b5cf6' : (s === 'Propuesta' ? '#f59e0b' : '#10b981'))
+        }))
+
+        setStats(prev => ({ 
+          ...prev, 
+          revenue: totalRevenue,
+          salesCount: totalSalesCount,
+          dealsActive: active,
+          newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
+          conversion: convRate
+        }))
+        setRecentDealsList(recent)
+        setPipelineState(pData)
+
+        if (teamMembers && teamMembers.length > 0) {
+           const metrics = teamMembers.map(member => {
+              const mLeads = leads.filter(l => l.assigned_to === member.user_id || l.assigned_to === member.id || l.assigned_to === member.full_name)
+              const won = mLeads.filter(l => l.stage === 'Gano')
+              
+              let chatsHandled = 0;
+              if (convs) {
+                 chatsHandled = convs.filter(c => c.assigned_to === member.user_id || c.assigned_to === member.id).length;
+              }
+
+              return {
+                 id: member.id,
+                 name: member.full_name || 'Desconocido',
+                 totalAssigned: chatsHandled,
+                 newLeads: mLeads.filter(l => l.stage === 'Nuevo').length,
+                 won: won.length,
+                 lost: mLeads.filter(l => l.stage === 'Perdio').length,
+                 revenue: won.reduce((sum, l) => sum + parseVal(l.value || l.amount), 0)
+              }
+           }).sort((a, b) => b.revenue - a.revenue)
+           setAgentMetrics(metrics)
+        }
+      }
+
+    } catch (err) {
+      console.error("Dashboard error:", err)
+    }
+    setIsLoading(false)
+  }
+
+  return (
+    <div className="page-content" style={{ padding: '32px', position: 'relative' }}>
+      {isLoading && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg-primary)', zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+          <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }}></div>
+          <p style={{ marginTop: 16, color: 'var(--text-secondary)' }}>Cargando métricas...</p>
+        </div>
+      )}
+      <div className="flex justify-between items-end mb-8 animate-slideUp">
+        <div>
+          <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(to right, white, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Resumen General
+          </h1>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.95rem' }}>Visualización de métricas clave para {tenant.clientName}</p>
+        </div>
+        <div className="flex gap-3">
+          <button className="btn btn-secondary"><Activity size={16} /> Reportes</button>
+          <button className="btn btn-primary"><TrendingUp size={16} /> Analizar con IA</button>
+        </div>
+      </div>
+
+      <div className="stats-grid animate-slideUp">
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.1s' }}>
+          <div className="flex justify-between items-start mb-4 relative z-10">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><DollarSign size={18} /></div>
+             <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800 }}>+15%</span>
+          </div>
+          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Ventas Totales</div>
+          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>
+            ${stats.revenue >= 1000000 ? `${(stats.revenue / 1000000).toFixed(1)}M` : `${(stats.revenue / 1000).toFixed(1)}k`}
+          </div>
+          <div className="sparkline-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparklineData}>
+                <Area type="monotone" dataKey="pv" stroke="#10b981" fill="rgba(16, 185, 129, 0.1)" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.2s' }}>
+          <div className="flex justify-between items-start mb-4 relative z-10">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}><Activity size={18} /></div>
+             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats.salesCount} ord.</span>
+          </div>
+          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Atendidos por IA</div>
+          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.aiChats || 0}</div>
+          <div className="sparkline-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparklineData}>
+                <Area type="monotone" dataKey="pv" stroke="#6366f1" fill="rgba(99, 102, 241, 0.1)" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.3s' }}>
+          <div className="flex justify-between items-start mb-4">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Target size={18} /></div>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Pendientes</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.pendingChats || 0}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Esperando asesor humano</div>
+        </div>
+
+        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.4s' }}>
+          <div className="flex justify-between items-start mb-4">
+             <div className="ai-icon-wrapper" style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899' }}><Zap size={18} /></div>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Nuevos Leads (30d)</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.newLeads}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Crecimiento constante</div>
+        </div>
+      </div>
+
+      <div className="charts-grid">
+        <div className="card animate-slideUp w-full" style={{ animationDelay: '0.5s', padding: '32px' }}>
+          <div className="flex justify-between items-center mb-8">
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>
+            <div className="flex gap-2">
+              <div className="flex items-center gap-4" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                <span className="flex items-center gap-1"><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }}></div> Chats IA</span>
+                <span className="flex items-center gap-1"><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></div> Chats Humanos</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `${v}`} />
+                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
+                <Area type="monotone" name="Chats IA" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} />
+                <Area type="monotone" name="Chats Humanos" dataKey="value2" stroke="#10b981" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="charts-row-split">
+          <div className="card animate-slideUp" style={{ animationDelay: '0.6s' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Últimos Negocios</h3>
+            <div className="flex flex-col gap-4">
+              {recentDealsList.map((deal, i) => (
+                <div key={i} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="avatar sm" style={{ background: `${deal.color}20`, color: deal.color }}>{deal.lead.substring(0,1)}</div>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{deal.lead}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.stage}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800 }}>{deal.value}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card animate-slideUp" style={{ animationDelay: '0.7s' }}>
+             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Estado del Pipeline</h3>
+             <div style={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pipelineState} layout="vertical" margin={{ left: 10, right: 10 }}>
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }} width={90} />
+                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: '#fff' }} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
+                      {pipelineState.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
+        </div>
+
+        {/* Agent Metrics Leaderboard */}
+        <div className="card animate-slideUp w-full" style={{ animationDelay: '0.8s', padding: '32px', marginTop: '24px' }}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Rendimiento por Asesor</h3>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Basado en historial de Leads</div>
+          </div>
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
+            <table className="w-full" style={{ borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '16px 8px', fontWeight: 600 }}>Asesor</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Asignados</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Nuevos (Sin tocar)</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Ganados</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Perdidos</th>
+                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'right' }}>Ventas Generadas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agentMetrics.length > 0 ? agentMetrics.map((agent, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-default)', transition: 'background 0.2s' }} className="hover:bg-white/5">
+                    <td style={{ padding: '16px 8px' }}>
+                      <div className="flex items-center gap-3">
+                         <div className="avatar sm" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>{agent.name.substring(0, 1).toUpperCase()}</div>
+                         <div style={{ fontWeight: 600 }}>{agent.name}</div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center', fontWeight: 600 }}>{agent.totalAssigned}</td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                       {agent.newLeads > 0 ? (
+                         <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>{agent.newLeads}</span>
+                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                       {agent.won > 0 ? (
+                         <span className="badge emerald">{agent.won}</span>
+                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                       {agent.lost > 0 ? (
+                         <span className="badge rose">{agent.lost}</span>
+                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
+                    </td>
+                    <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 800, color: agent.revenue > 0 ? '#10b981' : 'var(--text-primary)' }}>
+                       ${agent.revenue.toLocaleString('es-CO')}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No hay datos de asesores para este periodo</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChevronDown(props) {
+  return (
+    <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+  )
+}

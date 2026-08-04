@@ -1,0 +1,122 @@
+import { useState, useEffect } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { supabase } from './lib/supabase'
+import { TenantProvider } from './lib/useTenant'
+import Layout from './components/Layout'
+import Dashboard from './pages/Dashboard'
+import Inbox from './pages/Inbox'
+import Leads from './pages/Leads'
+import Pipeline from './pages/Pipeline'
+import Clients from './pages/Clients'
+import Sales from './pages/Sales'
+import Dispatches from './pages/Dispatches'
+import Remarketing from './pages/Remarketing'
+import Lists from './pages/Lists'
+import Automations from './pages/Automations'
+import Reports from './pages/Reports'
+import Settings from './pages/Settings'
+import UsersPage from './pages/Users'
+import Login from './pages/Login'
+import Calendar from './pages/Calendar'
+import Marketing from './pages/Marketing'
+import Products from './pages/Products'
+import SuperAdmin from './pages/SuperAdmin'
+
+// Protected Route Wrapper
+const ProtectedRoute = ({ children, isLoading, session }) => {
+  if (isLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando...</div>
+  if (!session) return <Navigate to="/login" replace />
+  return children
+}
+
+function App() {
+  const [session, setSession] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    console.log('App: Initializing auth state...')
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error('App: Error getting session:', error)
+      console.log('App: Session loaded:', session ? 'Yes' : 'No')
+      setSession(session)
+      setIsLoading(false)
+    })
+
+    // Listen for changes on auth state (log in, log out, etc.)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('App: Auth state changed:', _event, session ? 'Yes' : 'No')
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return (
+    <Routes>
+      <Route 
+        path="/login" 
+        element={
+          session ? <Navigate to="/dashboard" replace /> : <Login onLogin={(session) => setSession(session)} />
+        } 
+      />
+      
+      <Route path="/" element={
+        <ProtectedRoute isLoading={isLoading} session={session}>
+          <TenantProvider session={session}>
+            <Layout session={session} />
+          </TenantProvider>
+        </ProtectedRoute>
+      }>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="inbox" element={<Inbox />} />
+        
+        {/* Management Routes (Spanish & English Aliases) */}
+        <Route path="leads" element={<Leads />} />
+        <Route path="clientes" element={<Clients />} />
+        <Route path="clients" element={<Navigate to="/clientes" replace />} />
+        
+        <Route path="pipeline" element={<Pipeline />} />
+        
+        <Route path="ventas" element={<Sales />} />
+        <Route path="sales" element={<Navigate to="/ventas" replace />} />
+        
+        <Route path="remarketing" element={<Remarketing />} />
+        <Route path="lists" element={<Lists />} />
+
+        <Route path="despachos" element={<Dispatches />} />
+        <Route path="dispatches" element={<Navigate to="/despachos" replace />} />
+        
+        <Route path="productos" element={<Products />} />
+        
+        {/* System Routes */}
+        <Route path="automatizaciones" element={<Automations />} />
+        <Route path="automations" element={<Navigate to="/automatizaciones" replace />} />
+        
+        <Route path="reportes" element={<Reports />} />
+        <Route path="reports" element={<Navigate to="/reportes" replace />} />
+        
+        <Route path="calendario" element={<Calendar />} />
+        <Route path="marketing" element={<Marketing />} />
+        
+        <Route path="usuarios" element={<UsersPage />} />
+        
+        <Route path="configuracion" element={<Settings />} />
+        <Route path="settings" element={<Navigate to="/configuracion" replace />} />
+
+        <Route path="super-admin" element={<SuperAdmin />} />
+
+        {/* Catch-all for internal routes */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
+      
+      {/* Absolute Catch-all */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  )
+}
+
+export default App
