@@ -228,7 +228,7 @@ export default function Dashboard() {
           </div>
           <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Ventas Totales</div>
           <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>
-            ${stats.revenue >= 1000000 ? `${(stats.revenue / 1000000).toFixed(1)}M` : `${(stats.revenue / 1000).toFixed(1)}k`}
+            ${stats?.revenue >= 1000000 ? `${(stats?.revenue / 1000000).toFixed(1)}M` : `${(stats?.revenue / 1000).toFixed(1)}k`}
           </div>
           <div className="sparkline-container">
             <ResponsiveContainer width="100%" height="100%">
@@ -242,10 +242,10 @@ export default function Dashboard() {
         <div className="stat-card animate-slideUp" style={{ animationDelay: '0.2s' }}>
           <div className="flex justify-between items-start mb-4 relative z-10">
              <div className="ai-icon-wrapper" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}><Activity size={18} /></div>
-             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats.salesCount} ord.</span>
+             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats?.salesCount} ord.</span>
           </div>
           <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Atendidos por IA</div>
-          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.aiChats || 0}</div>
+          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats?.aiChats || 0}</div>
           <div className="sparkline-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
@@ -260,7 +260,7 @@ export default function Dashboard() {
              <div className="ai-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Target size={18} /></div>
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Pendientes</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.pendingChats || 0}</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats?.pendingChats || 0}</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Esperando asesor humano</div>
         </div>
 
@@ -269,7 +269,7 @@ export default function Dashboard() {
              <div className="ai-icon-wrapper" style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899' }}><Zap size={18} /></div>
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Nuevos Leads (30d)</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats.newLeads}</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats?.newLeads}</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Crecimiento constante</div>
         </div>
       </div>
@@ -312,7 +312,7 @@ export default function Dashboard() {
               {recentDealsList.map((deal, i) => (
                 <div key={i} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 transition-all">
                   <div className="flex items-center gap-3">
-                    <div className="avatar sm" style={{ background: `${deal.color}20`, color: deal.color }}>{deal.lead.substring(0,1)}</div>
+                    <div className="avatar sm" style={{ background: `${deal?.color}20`, color: deal?.color }}>{deal?.lead?.substring(0,1)}</div>
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{deal.lead}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.stage}</div>
@@ -369,7 +369,7 @@ export default function Dashboard() {
                   <tr key={i} style={{ borderBottom: '1px solid var(--border-default)', transition: 'background 0.2s' }} className="hover:bg-white/5">
                     <td style={{ padding: '16px 8px' }}>
                       <div className="flex items-center gap-3">
-                         <div className="avatar sm" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>{agent.name.substring(0, 1).toUpperCase()}</div>
+                         <div className="avatar sm" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>{agent?.name?.substring(0, 1).toUpperCase()}</div>
                          <div style={{ fontWeight: 600 }}>{agent.name}</div>
                       </div>
                     </td>
@@ -389,8 +389,8 @@ export default function Dashboard() {
                          <span className="badge rose">{agent.lost}</span>
                        ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
                     </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 800, color: agent.revenue > 0 ? '#10b981' : 'var(--text-primary)' }}>
-                       ${agent.revenue.toLocaleString('es-CO')}
+                    <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 800, color: agent?.revenue > 0 ? '#10b981' : 'var(--text-primary)' }}>
+                       ${agent?.revenue?.toLocaleString('es-CO')}
                     </td>
                   </tr>
                 )) : (
