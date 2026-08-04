@@ -157,11 +157,6 @@ export default async function handler(req, res) {
                   text: line.replace(/[\r\n\t]+/g, ' ') // Meta strictly forbids newlines in variables
                 }))
               });
-            } else if (!mediaUrl) {
-              payload.template.components.push({
-                type: "body",
-                parameters: [{ type: "text", text: "Promoción especial" }]
-              });
             }
         }
       }
