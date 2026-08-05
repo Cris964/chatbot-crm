@@ -1040,9 +1040,9 @@ export default function Inbox() {
         }
 
         @media (max-width: 768px) {
-          .inbox-sidebar { width: 100%; }
-          .chat-area { width: 100%; }
-          .contact-panel { width: 100%; padding: 20px; }
+          .inbox-sidebar { width: 100% !important; flex-shrink: 0 !important; }
+          .chat-area { width: 100% !important; flex: none !important; }
+          .contact-panel { width: 100% !important; flex-shrink: 0 !important; padding: 20px; }
         }
 
         .conversation-item {
