@@ -992,7 +992,7 @@ export default function Inbox() {
     <div className="inbox-container">
       <style>{`
         .inbox-layout {
-          display: flex;
+          display: grid;
           width: 100%;
           height: calc(100vh - 64px);
           overflow: hidden;
