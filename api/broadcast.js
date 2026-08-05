@@ -95,6 +95,12 @@ export default async function handler(req, res) {
     const sendPromises = leads.map(async (lead) => {
       // Limpiar teléfono (solo números)
       let cleanPhone = lead.phone.replace(/\D/g, '');
+      
+      // Asegurar código de país (asumiendo Colombia +57 si tiene 10 dígitos)
+      if (cleanPhone.length === 10) {
+        cleanPhone = '57' + cleanPhone;
+      }
+
       let payload = {};
       
       if (isFreeMessage) {
