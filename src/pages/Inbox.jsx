@@ -1834,13 +1834,14 @@ export default function Inbox() {
                  </div>
                  <div className="form-group" style={{ marginBottom: 20 }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Texto para la variable {'{{1}}'} (Requerido si la plantilla lo tiene)</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      placeholder="ej: Morrales escolares al 20% de descuento"
-                      value={templateVariable}
-                      onChange={e => setTemplateVariable(e.target.value)}
-                    />
+                    <textarea 
+                        className="form-control" 
+                        placeholder="ej: Morrales escolares al 20% de descuento\nIngresa una variable por renglón si la plantilla usa varias."
+                        value={templateVariable}
+                        onChange={e => setTemplateVariable(e.target.value)}
+                        rows={3}
+                        style={{ resize: 'vertical' }}
+                      />
                  </div>
                  <div className="form-group" style={{ marginBottom: 20 }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Archivo de Imagen/Video (Opcional)</label>

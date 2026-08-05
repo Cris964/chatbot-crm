@@ -119,18 +119,21 @@ export default async function handler(req, res) {
           }
           
           if (record.variable) {
-             components.push({
-               type: "body",
-               parameters: [
-                 {
+            const lines = record.variable.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length > 0) {
+               components.push({
+                 type: "body",
+                 parameters: lines.map(line => ({
                    type: "text",
-                   text: record.variable
-                 }
-               ]
-             });
+                   text: line.replace(/[\r\n\t]+/g, ' ')
+                 }))
+               });
+            }
           }
           
-          if (components.length > 0) {
+          if (metaPayload.template.name === 'hello_world') {
+             // do not include components for hello_world
+          } else {
              metaPayload.template.components = components;
           }
         } else {
