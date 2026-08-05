@@ -1182,7 +1182,7 @@ export default function Inbox() {
           </div>
   
           {/* Sidebar */}
-          <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`} style={{ width: '320px', flexShrink: 0 }}>
+          <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`} style={{ width: '100%', flexShrink: 0 }}>
           <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
              <div className="flex justify-between items-center mb-4">
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1628,7 +1628,7 @@ export default function Inbox() {
         </div>
 
         {/* Info Panel */}
-        <div className={`contact-panel inbox-panel-container ${mobileView !== 'info' ? 'mobile-hidden' : ''}`} style={{ display: showRightPanel ? 'flex' : 'none', width: '340px', flexShrink: 0, borderLeft: '1px solid var(--glass-border)', flexDirection: 'column' }}>
+        <div className={`contact-panel inbox-panel-container ${mobileView !== 'info' ? 'mobile-hidden' : ''}`} style={{ display: showRightPanel ? 'flex' : 'none', width: '100%', flexShrink: 0, borderLeft: '1px solid var(--glass-border)', flexDirection: 'column' }}>
            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
              <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Panel</h3>
              <button className="btn btn-ghost btn-sm mobile-only" onClick={() => setMobileView('chat')} style={{ padding: 4 }}>
