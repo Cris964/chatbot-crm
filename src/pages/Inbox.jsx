@@ -6,7 +6,7 @@ import {
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
   Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
-, PanelRightClose, PanelRightOpen, ArrowRightFromLine } from 'lucide-react'
+, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 
@@ -1084,11 +1084,11 @@ export default function Inbox() {
 
           
           {/* Left Sidebar (Folders) */}
-          <div className="inbox-sidebar folders-panel" style={{ padding: '16px 12px', background: 'rgba(var(--overlay-rgb), 0.02)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
+          <div className={`inbox-sidebar folders-panel ${mobileView !== 'folders' ? 'mobile-hidden' : ''}`} style={{ padding: '16px 12px', background: 'rgba(var(--overlay-rgb), 0.02)', borderRight: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
              
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'inbox' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'inbox' ? '#fff' : 'var(--text-primary)' }}
-               onClick={() => setActiveFolder('inbox')}
+               onClick={() => { setActiveFolder('inbox'); setMobileView('list'); }}
              >
                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                  <MessageSquare size={16} opacity={activeFolder === 'inbox' ? 1 : 0.7} />
@@ -1101,7 +1101,7 @@ export default function Inbox() {
 
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'assigned' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'assigned' ? '#fff' : 'var(--text-primary)' }}
-               onClick={() => setActiveFolder('assigned')}
+               onClick={() => { setActiveFolder('assigned'); setMobileView('list'); }}
              >
                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                  <UserCheck size={16} opacity={activeFolder === 'assigned' ? 1 : 0.7} />
@@ -1114,7 +1114,7 @@ export default function Inbox() {
 
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'unassigned' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'unassigned' ? '#fff' : 'var(--text-primary)' }}
-               onClick={() => setActiveFolder('unassigned')}
+               onClick={() => { setActiveFolder('unassigned'); setMobileView('list'); }}
              >
                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                  <UserPlus size={16} opacity={activeFolder === 'unassigned' ? 1 : 0.7} />
@@ -1127,7 +1127,7 @@ export default function Inbox() {
 
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'pending' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'pending' ? '#fff' : 'var(--text-primary)' }}
-               onClick={() => setActiveFolder('pending')}
+               onClick={() => { setActiveFolder('pending'); setMobileView('list'); }}
              >
                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                  <Clock size={16} opacity={activeFolder === 'pending' ? 1 : 0.7} />
@@ -1140,7 +1140,7 @@ export default function Inbox() {
 
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'resolved' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'resolved' ? '#fff' : 'var(--text-primary)' }}
-               onClick={() => setActiveFolder('resolved')}
+               onClick={() => { setActiveFolder('resolved'); setMobileView('list'); }}
              >
                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                  <CheckCircle2 size={16} opacity={activeFolder === 'resolved' ? 1 : 0.7} />
@@ -1166,7 +1166,7 @@ export default function Inbox() {
                      <div 
                        key={list.id}
                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', background: isActive ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: isActive ? 'var(--primary-color)' : 'var(--text-secondary)' }}
-                       onClick={() => setActiveFolder(fId)}
+                       onClick={() => { setActiveFolder(fId); setMobileView('list'); }}
                      >
                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                          <Megaphone size={14} opacity={isActive ? 1 : 0.6} />
@@ -1185,7 +1185,12 @@ export default function Inbox() {
           <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`} style={{ width: '320px', flexShrink: 0 }}>
           <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
              <div className="flex justify-between items-center mb-4">
-               <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                 <button className="mobile-only" onClick={() => setMobileView('folders')} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }}>
+                   <Menu size={24} />
+                 </button>
+                 <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
+               </div>
              </div>
              <div className="search-bar" style={{ padding: '8px 12px' }}>
                <Search size={16} />
