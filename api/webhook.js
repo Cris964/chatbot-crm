@@ -40,6 +40,40 @@ export default async function handler(req, res) {
 
       if (body.object === 'whatsapp_business_account') {
           const changes = entry?.changes?.[0]?.value;
+          
+          // Handle message delivery statuses (e.g. failed templates)
+          if (changes?.statuses && changes.statuses.length > 0) {
+              const status = changes.statuses[0];
+              if (status.status === 'failed') {
+                  const errorCode = status.errors?.[0]?.code || 'Desconocido';
+                  const errorTitle = status.errors?.[0]?.title || 'Error de entrega';
+                  const recipient = status.recipient_id;
+                  const wamid = status.id;
+                  
+                  // Initialize Supabase admin client to log the error
+                  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+                  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+                  
+                  // Find the conversation by recipient
+                  supabaseAdmin.from('conversations').select('id, messages').eq('user_phone', recipient).limit(1).then(({ data }) => {
+                      if (data && data.length > 0) {
+                          const chat = data[0];
+                          const errorNode = {
+                              role: 'agent',
+                              content: `[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: ${errorCode}. Motivo: ${errorTitle}. (Probablemente faltaron variables o la plantilla fue rechazada)`,
+                              timestamp: new Date().toISOString()
+                          };
+                          supabaseAdmin.from('conversations').update({
+                              messages: [...(chat.messages || []), errorNode],
+                              updated_at: new Date().toISOString()
+                          }).eq('id', chat.id).then();
+                      }
+                  });
+              }
+              return res.status(200).send('Status received');
+          }
+
           if (!changes || !changes.messages || changes.messages.length === 0) return res.status(200).send('No message payload');
           messageObj = changes.messages[0];
           senderPhone = messageObj.from;
