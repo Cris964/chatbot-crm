@@ -88,12 +88,14 @@ export async function dispatchToAI({
               if (pideCeramica && esCeramica) score += 5;
               if (pideMadera && esMadera) score += 10;
               
+              if (p.name === 'PROMO_ACTUAL') score += 1000;
+
               return { ...p, score };
           });
           scoredProducts.sort((a, b) => b.score - a.score);
           companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 15);
       } else {
-          companyProducts = [];
+          companyProducts = companyProducts.filter(p => p.name === 'PROMO_ACTUAL');
       }
   }
 
@@ -106,7 +108,8 @@ OPCIÓN ${index + 1}:
 CARACTERÍSTICAS: ${p.name}. ${p.description || 'Sin descripción'}
 PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
       if (p.promo_text) line += `\nPROMOCIÓN: ${p.promo_text}`;
-      if (p.image_url) {
+      const isActivo = clientSetup.name && clientSetup.name.toLowerCase().includes('activo');
+      if (p.image_url && (!isActivo || p.name === 'PROMO_ACTUAL')) {
           const urls = p.image_url.split(',').map(u => u.trim()).filter(Boolean);
           line += `\nFOTOS DEL PRODUCTO (COPIA Y PEGA ESTAS ETIQUETAS EXACTAS PARA MOSTRARLAS AL CLIENTE):\n` + urls.map(u => `[SEND_IMAGE: ${u}]`).join('\n');
       }
@@ -129,6 +132,7 @@ REGLAS DE FOTOS (MUY IMPORTANTE):
 "Mira, aquí te paso unas fotos para que lo veas mejor:"
 [SEND_IMAGE: https://url_real_de_supabase_aqui.jpg]
 "¿Qué te parece ese estilo?"
+REGLA ESPECIAL DE DIFUSIÓN: Si en tu inventario existe una opción llamada "PROMO_ACTUAL", significa que el cliente acaba de recibir una campaña publicitaria. Si el cliente responde afirmativamente (ej. "Si", "Sí", "Me interesa", o hace clic en un botón de respuesta rápida), DEBES enviarle OBLIGATORIAMENTE todas las fotos asociadas a "PROMO_ACTUAL" de inmediato. EXCEPCIÓN CRÍTICA: En este caso específico de responder a una difusión con "Si", DEBES OMITIR por completo el "Saludo inicial OBLIGATORIO". No envíes el saludo largo, simplemente envía una frase corta y amigable junto con las fotos de la promoción.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
 REGLA SOBRE ASESORES: NUNCA uses la frase "asesor humano". Si vas a transferir el chat o alguien pide ayuda de un asesor, di EXACTAMENTE: "Para finalizar con tu orden, el área encargada ya se pondrá en contacto contigo, ¡muchas gracias!" y nada más.
 INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBES INCLUIR LA ETIQUETA EXACTA: [LEAD_STATE: Etapa | Score]
@@ -142,9 +146,31 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
     inventoryContext = `\n[INVENTARIO OCULTO/VACÍO]: No se encontraron productos que coincidan con la descripción del cliente en esta búsqueda. ${fallbackText} NO ofrezcas productos ni fotos, porque no tienes el catálogo a la mano ahora mismo. SI PIDEN ASESOR INCLUYE EL TAG [NEEDS_HUMAN]\nINSTRUCCIÓN FINAL CRÍTICA: SIEMPRE TERMINA TU MENSAJE CON [LEAD_STATE: Etapa | Score]\n`;
   }
 
+  
+  // Check if the user is responding to a broadcast (DIFUSION)
+  let isRespondingToDifusion = false;
+  if (finalMessages.length >= 2) {
+      const lastUserMsg = finalMessages[finalMessages.length - 1];
+      const prevMsg = finalMessages[finalMessages.length - 2];
+      if (lastUserMsg.role === 'user' && prevMsg.role === 'agent' && (prevMsg.content || '').includes('[DIFUSION]')) {
+          const contentLower = (lastUserMsg.content || '').toLowerCase().trim();
+          const positiveWords = ['si', 'sí', 's', 'claro', 'info', 'interesa', 'precio', 'quiero', 'mas', 'más', 'dale'];
+          const negativeWords = ['no', 'nunca', 'jamas', 'jamás', 'deja', 'dejen', 'cancelar', 'stop'];
+          const isNegative = negativeWords.some(w => contentLower.includes(w) || contentLower === w);
+          if (!isNegative && positiveWords.some(w => contentLower.includes(w) || contentLower === w)) {
+              isRespondingToDifusion = true;
+          }
+      }
+  }
+
   const aiMessages = [
       { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })}]\n\n${inventoryContext}` },
+      ...(isRespondingToDifusion && companyProducts && companyProducts.some(p => p.name === 'PROMO_ACTUAL') ? [{
+          role: 'system',
+          content: 'CRÍTICO Y OBLIGATORIO: El usuario acaba de responder de forma POSITIVA a una [DIFUSION]. OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO ("Hola, bienvenido al mundo de los morrales..."). RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDO INMEDIATAMENTE POR LAS ETIQUETAS DE IMÁGENES DE [PROMO_ACTUAL]. NO HAGAS PREGUNTAS NI MUESTRES EL MENÚ.'
+      }] : []),
       ...finalMessages.slice(-30).map(m => {
+
           let cleanContent = m.content || "";
           if (m.role === 'user' && cleanContent) {
               cleanContent = cleanContent.replace(/^\[Nota de Voz del Cliente\]:\s*/, '');
@@ -233,7 +259,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
           }
       }
       let url = (extractionMatch[3] || extractionMatch[4] || extractionMatch[5]).trim().replace(/[\)\]\.,]+$/, '');
-      let isVideo = extractionMatch[2] === 'SEND_VIDEO' || url.toLowerCase().endsWith('.mp4');
+      let isVideo = extractionMatch[2] === 'SEND_VIDEO' || url.toLowerCase().match(/\.(mp4|mov|webm|avi|mkv)(\?.*)?$/);
       let msgType = isVideo ? 'video' : 'image';
       let finalMediaUrl = url;
       if (msgType === 'image' && url.toLowerCase().endsWith('.webp')) {
@@ -320,9 +346,36 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
        assignedUserId = '096b5cb3-9754-4581-be3c-d6c2a64caead';
   } else if (humanDept === 'ASESOR') {
        assignedUserId = '2db217bc-c72e-448a-9a8d-4b2469c93661';
+  } else if (citaMatch) {
+       const { data: agends } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('role', 'agendador').eq('status', 'activo').limit(1);
+       if (agends && agends.length > 0) assignedUserId = agends[0].user_id;
   } else if (saleMatch) {
        const { data: vends } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('role', 'vendedor').eq('status', 'activo').limit(1);
        if (vends && vends.length > 0) assignedUserId = vends[0].user_id;
+  }
+
+  // Round Robin / Load Balancing Assignment if human needed and no specific role matched
+  if (needsHuman && !assignedUserId) {
+       const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('client_id', clientId);
+       if (teamMembers && teamMembers.length > 0) {
+           const memberIds = teamMembers.map(m => m.user_id);
+           const { data: convCounts } = await supabase.from('conversations')
+               .select('assigned_to')
+               .eq('client_id', clientId)
+               .eq('archived', false)
+               .in('assigned_to', memberIds);
+               
+           const counts = {};
+           memberIds.forEach(id => counts[id] = 0);
+           if (convCounts) {
+               convCounts.forEach(c => {
+                   if (c.assigned_to) counts[c.assigned_to]++;
+               });
+           }
+           // Sort by count ascending to find the agent with the fewest active chats
+           memberIds.sort((a, b) => counts[a] - counts[b]);
+           assignedUserId = memberIds[0];
+       }
   }
 
   const cleanReplyForDB = cleanText(botReplyText)
