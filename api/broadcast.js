@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -8,10 +12,24 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', '*');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // --- POST Actions (Bypassing RLS for create_list and add_contact) ---
+  if (req.method === 'POST' && req.body.action === 'create_list') {
+    const { clientId, name } = req.body;
+    if (!clientId || !name) return res.status(400).json({ error: 'Missing clientId or name' });
+    const { data, error } = await supabase.from('broadcast_lists').insert([{ client_id: clientId, name }]).select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ list: data });
+  }
+
+  if (req.method === 'POST' && req.body.action === 'add_contact') {
+    const { listId, phone, name } = req.body;
+    if (!listId || !phone) return res.status(400).json({ error: 'Missing listId or phone' });
+    const cleanPhone = phone.replace(/\D/g, '');
+    const { data, error } = await supabase.from('broadcast_contacts').insert([{ list_id: listId, phone: cleanPhone, full_name: name || '' }]).select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ contact: data });
+  }
 
   // --- GET Handler for Fetching Lists and Contacts (Bypassing RLS) ---
   if (req.method === 'GET') {
@@ -50,7 +68,7 @@ export default async function handler(req, res) {
   // --- POST Handler for Sending Broadcasts ---
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  let { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, listId, isFreeMessage = false, mediaUrl, mediaType } = req.body;
+  let { clientId, leadIds, campaignText, templateName = 'alerta_promocion', isListMode = false, listId, isFreeMessage = false, mediaUrl, mediaType, aiContextUrls = [] } = req.body;
 
   // We will process campaignText differently depending on if it's a template or free message
   if (campaignText) {
@@ -83,16 +101,47 @@ export default async function handler(req, res) {
       .select(selectCols)
       .in('id', leadIds);
 
-    if (leadsErr || !leads || leads.length === 0) {
+    if (leadsErr) {
+      console.error("Supabase Error leads:", leadsErr);
+      return res.status(400).json({ error: 'Error DB leads: ' + leadsErr.message });
+    }
+    if (!leads || leads.length === 0) {
       return res.status(400).json({ error: 'No se encontraron los leads especificados.' });
     }
+
+      // 2.5. Actualizar Contexto Visual de la IA (Producto Oculto)
+      if (aiContextUrls && aiContextUrls.length > 0) {
+        const { data: existingPromo } = await supabase
+          .from('products')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('name', 'PROMO_ACTUAL')
+          .single();
+          
+        const promoData = {
+          client_id: clientId,
+          name: 'PROMO_ACTUAL',
+          description: 'Imágenes exclusivas de la última promoción enviada por difusión al cliente.',
+          price: 0,
+          category: 'INTERNAL',
+          active: true,
+          image_url: aiContextUrls.join(',')
+        };
+  
+        if (existingPromo) {
+          await supabase.from('products').update(promoData).eq('id', existingPromo.id);
+        } else {
+          await supabase.from('products').insert([promoData]);
+        }
+      }
 
     let successes = 0;
     let failures = 0;
     global.firstError = null;
 
-    // 3. Bucle de envío a Meta API
-    const sendPromises = leads.map(async (lead) => {
+    // 3. Bucle de envío a Meta API (Procesamiento Secuencial con pausas)
+    for (let i = 0; i < leads.length; i++) {
+      const lead = leads[i];
       // Limpiar teléfono (solo números)
       let cleanPhone = lead.phone.replace(/\D/g, '');
       
@@ -112,7 +161,7 @@ export default async function handler(req, res) {
         };
         
         if (mediaUrl) {
-          const finalType = mediaType === 'audio' ? 'audio' : (mediaType === 'video' ? 'video' : (mediaType === 'image' ? 'image' : 'document'));
+          const finalType = mediaType === 'video' ? 'video' : (mediaType === 'image' ? 'image' : (mediaType === 'audio' ? 'audio' : 'document'));
           payload.type = finalType;
           payload[finalType] = { link: mediaUrl };
           if (campaignText && finalType !== 'audio') {
@@ -196,15 +245,17 @@ export default async function handler(req, res) {
                  const chat = existingChats[0];
                  await supabase.from('conversations').update({
                      messages: [...(chat.messages || []), newMsgNode],
-                     updated_at: new Date().toISOString()
+                     updated_at: new Date().toISOString(),
+                     needs_human: false
                  }).eq('id', chat.id);
               } else {
                  await supabase.from('conversations').insert([{
                      client_id: clientId,
                      user_phone: cleanPhone,
-                     user_name: lead.name || lead.full_name || 'Contacto',
+                     user_name: lead.name || lead.full_name || 'Cliente',
+                     channel: 'whatsapp',
                      messages: [newMsgNode],
-                     channel: 'whatsapp'
+                     needs_human: false
                  }]);
               }
             }
@@ -219,9 +270,10 @@ export default async function handler(req, res) {
         failures++; 
         if (!global.firstError) global.firstError = { error: err.message };
       }
-    });
-
-    await Promise.all(sendPromises);
+      
+      // Breve pausa para no asfixiar a Meta por exceso de peticiones simultáneas (Spam rate limit)
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
 
     return res.status(200).json({ 
       success: true, 

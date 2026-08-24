@@ -18,14 +18,23 @@ export default function Lists() {
   const [errorMsg, setErrorMsg] = useState(null)
   const [selectedContacts, setSelectedContacts] = useState([])
   const [isGlobalCampaign, setIsGlobalCampaign] = useState(false)
+  
+  const [showCreateListModal, setShowCreateListModal] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  
+  const [showAddContactModal, setShowAddContactModal] = useState(false)
+  const [newContactPhone, setNewContactPhone] = useState('')
+  const [newContactName, setNewContactName] = useState('')
 
   // Nuevos estados para multimedia y modos de campaña
   const [campaignMode, setCampaignMode] = useState('template') // 'template' o 'free'
   const [pendingMedia, setPendingMedia] = useState(null)
+  const [aiContextMedia, setAiContextMedia] = useState([]) // Arrays of File objects
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
 
   const fileInputRef = useRef(null)
+  const aiContextFileInputRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const recordingTimerRef = useRef(null)
@@ -68,6 +77,53 @@ export default function Lists() {
     }
     setIsLoading(false)
   }
+
+  const handleCreateList = async () => {
+    if (!newListName.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_list', clientId: tenant.clientId, name: newListName.trim() })
+      });
+      if (res.ok) {
+        setShowCreateListModal(false);
+        setNewListName('');
+        fetchLists();
+      } else {
+        const data = await res.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+    setIsLoading(false);
+  };
+
+  const handleAddContact = async () => {
+    if (!newContactPhone.trim() || !selectedList) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_contact', listId: selectedList.id, phone: newContactPhone.trim(), name: newContactName.trim() })
+      });
+      if (res.ok) {
+        setShowAddContactModal(false);
+        setNewContactPhone('');
+        setNewContactName('');
+        handleOpenList(selectedList); // refresh contacts
+      } else {
+        const data = await res.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+    setIsLoading(false);
+  };
 
   const handleBack = () => {
     setSelectedList(null)
@@ -129,10 +185,11 @@ export default function Lists() {
     }
   }
 
+
   const handleFileUpload = (e) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files[0]
     if (!file) return
-    
+
     const getMediaType = (mimeType, fName) => {
       if (!mimeType) mimeType = '';
       const m = mimeType.toLowerCase();
@@ -149,15 +206,40 @@ export default function Lists() {
       return 'document';
     };
     
+    // Validaciones básicas
+    if (file.size > 16 * 1024 * 1024) {
+      alert("El archivo es demasiado grande. Máximo 16MB.");
+      return;
+    }
+
     setPendingMedia({
       blob: file,
       type: file.type || 'application/octet-stream',
       name: file.name,
-      mediaType: getMediaType(file.type, file.name)
+      mediaType: getMediaType(file.type, file.name),
+      isAudio: false
     })
     
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+    const handleAiContextUpload = (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      
+      if (aiContextMedia.length + files.length > 5) {
+        alert("Máximo 4 imágenes y 1 video.");
+        return;
+      }
+
+    const newMedia = files.map(f => ({
+      blob: f,
+      type: f.type,
+      name: f.name
+    }));
+
+    setAiContextMedia(prev => [...prev, ...newMedia]);
+  };
 
   const handleSendCampaign = async () => {
     if (campaignMode === 'free' && !campaignText.trim() && !pendingMedia) return
@@ -178,6 +260,20 @@ export default function Lists() {
         const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
         mediaUrl = publicUrlData.publicUrl;
         finalMediaType = pendingMedia.isAudio ? 'audio' : pendingMedia.mediaType;
+      }
+
+      let aiContextUrls = [];
+      if (aiContextMedia.length > 0) {
+        for (const media of aiContextMedia) {
+          const fileName = `ctx_${Date.now()}_${media.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+          const { error } = await supabase.storage
+            .from('whatsapp_media')
+            .upload(fileName, media.blob, { contentType: media.type });
+          if (!error) {
+            const { data } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+            if (data?.publicUrl) aiContextUrls.push(data.publicUrl);
+          }
+        }
       }
 
       if (isGlobalCampaign) {
@@ -214,7 +310,8 @@ export default function Lists() {
                    listId: lId,
                    isFreeMessage: campaignMode === 'free',
                    mediaUrl,
-                   mediaType: finalMediaType
+                   mediaType: finalMediaType,
+                   aiContextUrls
                  })
                });
                const data = await res.json();
@@ -229,44 +326,69 @@ export default function Lists() {
            setShowCampaignModal(false)
            setCampaignText('')
            setPendingMedia(null)
+           setAiContextMedia([])
            setIsGlobalCampaign(false)
            alert(`¡Campaña Global enviada a todas las listas!\nÉxitos: ${globalSuccesses}\nFallos: ${globalFailures}` + (globalFailures > 0 && window.lastGlobalError ? `\nError: ${JSON.stringify(window.lastGlobalError)}` : ""));
          }, 1000);
          
       } else {
-        const response = await fetch('/api/broadcast', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientId: tenant.clientId,
-            leadIds: selectedContacts, 
-            campaignText: campaignText,
-            templateName: templateName.trim() || 'alerta_promocion',
-            templateLanguage: templateLanguage,
-            isListMode: true,
-            listId: selectedList?.id,
-            isFreeMessage: campaignMode === 'free',
-            mediaUrl,
-            mediaType: finalMediaType
-          })
-        });
+        let listSuccesses = 0;
+        let listFailures = 0;
 
-        const data = await response.json();
-        
-        if (response.ok) {
-          setTimeout(() => {
-            setIsSending(false)
-            setShowCampaignModal(false)
-            setCampaignText('')
-            setSelectedContacts([])
-            setPendingMedia(null)
-            handleOpenList(selectedList) 
-            alert(`¡Campaña enviada con éxito a la lista!\nÉxitos: ${data.stats?.successes || 0}\nFallos: ${data.stats?.failures || 0}`);
-          }, 1000)
-        } else {
-          setIsSending(false)
-          alert(`Error al enviar la campaña: ${data.error || 'Desconocido'}`);
+        for (let i = 0; i < selectedContacts.length; i += 15) {
+          const chunk = selectedContacts.slice(i, i + 15);
+          const response = await fetch('/api/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clientId: tenant.clientId,
+              leadIds: chunk, 
+              campaignText: campaignText,
+              templateName: templateName.trim() || 'alerta_promocion',
+              templateLanguage: templateLanguage,
+              isListMode: true,
+              listId: selectedList?.id,
+              isFreeMessage: campaignMode === 'free',
+              mediaUrl,
+              mediaType: finalMediaType,
+              aiContextUrls
+            })
+          });
+
+          if (!response.ok) {
+            // Si Vercel devuelve un HTML por timeout, intentar parsearlo fallará
+            let errText = "Error desconocido del servidor.";
+            try {
+              const errData = await response.json();
+              errText = errData.error || errText;
+            } catch (e) {
+              errText = `Error HTTP ${response.status}: El servidor tardó demasiado o falló.`;
+            }
+            alert(`Error al enviar el lote ${Math.floor(i/15) + 1}: ${errText}`);
+            setIsSending(false);
+            return;
+          }
+
+          const data = await response.json();
+          listSuccesses += data.stats?.successes || 0;
+          listFailures += data.stats?.failures || 0;
+          
+          // Pausa entre lotes para evitar ahogar Supabase o Vercel
+          if (i + 15 < selectedContacts.length) {
+             await new Promise(r => setTimeout(r, 1000));
+          }
         }
+
+        setTimeout(() => {
+          setIsSending(false)
+          setShowCampaignModal(false)
+          setCampaignText('')
+          setSelectedContacts([])
+          setPendingMedia(null)
+          setAiContextMedia([])
+          handleOpenList(selectedList) 
+          alert(`¡Campaña enviada con éxito a la lista!\nÉxitos: ${listSuccesses}\nFallos: ${listFailures}`);
+        }, 1000)
       }
     } catch (err) {
       console.error(err)
@@ -294,15 +416,26 @@ export default function Lists() {
           </div>
         </div>
         
-        {selectedList && (
-          <button 
-            className="btn btn-primary" 
+        {!selectedList && (
+            <button className="btn btn-primary" onClick={() => setShowCreateListModal(true)}>
+              <Plus size={16} /> Crear Lista
+            </button>
+          )}
+          
+          {selectedList && (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={() => setShowAddContactModal(true)}>
+                <Plus size={16} /> Agregar Contacto
+              </button>
+              <button 
+                className="btn btn-primary" 
             onClick={() => setShowCampaignModal(true)} 
             disabled={selectedContacts.length === 0}
           >
             <Megaphone size={16} /> Lanzar Campaña ({selectedContacts.length})
-          </button>
-        )}
+              </button>
+            </div>
+          )}
       </header>
 
       {/* VISTA DE LISTAS (TARJETAS) */}
@@ -379,6 +512,31 @@ export default function Lists() {
       {/* VISTA DE CONTACTOS EN LA LISTA */}
       {selectedList && (
         <div className="card glass-panel" style={{ marginTop: '2rem' }}>
+          
+          {contacts.length > 0 && (
+            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginRight: '0.5rem' }}>Dividir envíos para evitar Spam:</span>
+              {Array.from({ length: Math.ceil(contacts.length / 150) }).map((_, i) => {
+                const start = i * 150;
+                const end = Math.min((i + 1) * 150, contacts.length);
+                return (
+                  <button
+                    key={i}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                    onClick={() => {
+                      const batch = contacts.slice(start, end).map(c => c.id);
+                      setSelectedContacts(batch);
+                    }}
+                  >
+                    Lote {i + 1} ({start + 1} - {end})
+                  </button>
+                );
+              })}
+              <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', background: 'transparent', border: 'none', color: 'var(--text-tertiary)' }} onClick={() => setSelectedContacts([])}>Desmarcar todos</button>
+            </div>
+          )}
+
           <div className="table-responsive">
             <table className="table">
               <thead>
@@ -558,8 +716,53 @@ export default function Lists() {
               )}
             </div>
             
+            {/* Contexto AI */}
+            <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--bg-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', marginTop: '1.5rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Archivos Adicionales (Fotos IA / Video)</label>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Sube hasta 4 fotos para la IA, y 1 video si quieres que se envíe automáticamente después de la plantilla.</p>
+                </div>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => aiContextFileInputRef.current?.click()}
+                  disabled={aiContextMedia.length >= 5}
+                >
+                  <Paperclip size={16} /> Subir Archivos
+                </button>
+                <input 
+                  type="file" 
+                  ref={aiContextFileInputRef} 
+                  style={{ display: 'none' }} 
+                  onChange={handleAiContextUpload} 
+                  accept="image/*,video/*" 
+                  multiple 
+                />
+              </div>
+
+              {aiContextMedia.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+                  {aiContextMedia.map((media, idx) => (
+                    <div key={idx} style={{ position: 'relative', width: '60px', height: '60px', borderRadius: '4px', border: '1px solid var(--border-light)', overflow: 'hidden' }}>
+                      <img 
+                        src={URL.createObjectURL(media.blob)} 
+                        alt={media.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                      <button 
+                        style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', padding: '2px' }}
+                        onClick={() => setAiContextMedia(prev => prev.filter((_, i) => i !== idx))}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
-              <button className="btn btn-ghost" onClick={() => { setShowCampaignModal(false); setPendingMedia(null); stopRecording(true); setIsGlobalCampaign(false); }} disabled={isSending}>
+              <button className="btn btn-ghost" onClick={() => { setShowCampaignModal(false); setPendingMedia(null); setAiContextMedia([]); stopRecording(true); setIsGlobalCampaign(false); }} disabled={isSending}>
                 Cancelar
               </button>
               <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || (campaignMode === 'free' && !campaignText.trim() && !pendingMedia)}>

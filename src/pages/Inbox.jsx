@@ -1295,7 +1295,13 @@ const res = await fetch('/api/upload', {
                    if (c.phone && c.phone.includes(q)) return true;
                    if (c.preview && c.preview.toLowerCase().includes(q)) return true;
                    if (c.rawMessages && c.rawMessages.some(m => (m.content || m.text || '').toLowerCase().includes(q))) return true;
-                   return false;
+                     const fId = getConversationFolder(c);
+                     if (fId.startsWith('broadcast_')) {
+                        const lId = fId.replace('broadcast_', '');
+                        const bl = broadcastLists.find(b => b.id === lId);
+                        if (bl && bl.name && bl.name.toLowerCase().includes(q)) return true;
+                     }
+                     return false;
                 })
                 .map(c => (
               <div 
