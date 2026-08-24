@@ -805,7 +805,25 @@ export default function Inbox() {
 
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
       
-      const res = await fetch('/api/upload', {
+      
+        const getMedia = (mt, fn) => {
+          if(!mt) mt=''; const m=mt.toLowerCase();
+          if(m.startsWith('image/')) return 'image';
+          if(m.startsWith('video/')) return 'video';
+          if(m.startsWith('audio/')) return 'audio';
+          const ext = fn ? fn.split('.').pop().toLowerCase() : '';
+          if(['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
+          if(['mp4','webm','mov'].includes(ext)) return 'video';
+          return 'document';
+        };
+        const mType = getMedia(file.type, file.name);
+        let tempMsg = null;
+        if (mType === 'image' || mType === 'video') {
+            tempMsg = { role: 'agent', content: URL.createObjectURL(file), type: mType, timestamp: new Date().toISOString(), isUploading: true };
+            setSelectedConv(prev => { if(!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), tempMsg] } });
+        }
+        
+const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1494,7 +1512,7 @@ export default function Inbox() {
 
               <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {messages.map(m => (
-                    <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`}>
+                    <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`} style={{ opacity: m.isUploading ? 0.6 : 1 }}>
                         {m.type === 'image' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
                           <div>
                             <img src={m.media_url || m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
