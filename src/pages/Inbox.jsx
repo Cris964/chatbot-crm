@@ -1280,8 +1280,9 @@ const res = await fetch('/api/upload', {
             ) : conversationsList
                 .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
                 .filter(c => {
-                   const fId = getConversationFolder(c);
-                   if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
+                     if (searchQuery) return true; // BYPASS folder filter if searching globally
+                     const fId = getConversationFolder(c);
+                     if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
                    if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
                    if (activeFolder === 'pending') return c.unread && !c.archived;
                    if (activeFolder === 'resolved') return c.archived;
