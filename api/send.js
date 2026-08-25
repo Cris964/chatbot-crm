@@ -64,6 +64,33 @@ export default async function handler(req, res) {
     const client = clients[0];
     const channel = record.channel || 'whatsapp';
     
+    // Support AI Context Photos
+    const aiContextUrls = record.aiContextUrls || [];
+    if (aiContextUrls && aiContextUrls.length > 0) {
+      const { data: existingPromo } = await supabase
+        .from('products')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('name', 'PROMO_ACTUAL')
+        .single();
+        
+      const promoData = {
+        client_id: clientId,
+        name: 'PROMO_ACTUAL',
+        description: 'Imágenes exclusivas de la última promoción enviada por difusión al cliente.',
+        price: 0,
+        category: 'INTERNAL',
+        active: true,
+        image_url: aiContextUrls.join(',')
+      };
+
+      if (existingPromo) {
+        await supabase.from('products').update(promoData).eq('id', existingPromo.id);
+      } else {
+        await supabase.from('products').insert([promoData]);
+      }
+    }
+    
     let metaUrl, metaPayload, headers;
 
     if (channel === 'whatsapp') {
@@ -82,12 +109,27 @@ export default async function handler(req, res) {
           recipient_type: 'individual',
           to: phone,
         };
+        
+        // CTWA Context workaround: Always reply to the last user message
+        // This prevents Error 131026 (Message Undeliverable) for Click-to-WhatsApp ads
+        const { data: convData } = await supabase.from('conversations').select('messages').eq('client_id', clientId).eq('user_phone', phone).single();
+        if (convData && convData.messages && convData.messages.length > 0) {
+            const userMsgs = convData.messages.filter(m => m.role === 'user' && m.meta_id);
+            if (userMsgs.length > 0) {
+                const lastWamid = userMsgs[userMsgs.length - 1].meta_id;
+                metaPayload.context = { message_id: lastWamid };
+            }
+        }
 
         const msgType = record.type || 'text';
 
         if (msgType === 'image') {
           metaPayload.type = 'image';
-          metaPayload.image = { link: message };
+          let finalImageUrl = message;
+            if (finalImageUrl.toLowerCase().includes('.webp')) {
+                finalImageUrl = 'https://wsrv.nl/?url=' + encodeURIComponent(finalImageUrl) + '&output=jpg';
+            }
+            metaPayload.image = { link: finalImageUrl };
         } else if (msgType === 'video') {
           metaPayload.type = 'video';
           metaPayload.video = { link: message };
@@ -98,6 +140,9 @@ export default async function handler(req, res) {
           metaPayload.type = 'document';
           metaPayload.document = { link: message };
         } else if (msgType === 'template') {
+          if (phone.length > 14) {
+              return res.status(400).json({ error: 'No puedes enviar plantillas a usuarios de anuncios (Click-to-WhatsApp) por políticas de Meta. Solo puedes responderles con texto/multimedia.' });
+          }
           metaPayload.type = 'template';
           const langCode = record.languageCode || 'es';
           metaPayload.template = { name: message.toLowerCase().trim(), language: { code: langCode } };
@@ -105,8 +150,11 @@ export default async function handler(req, res) {
           const components = [];
           
           if (record.mediaUrl) {
-             // For simplicity, we assume image if not specified, but could be dynamic
-             const mType = record.mediaType || 'image'; 
+             // Smart inference from URL if frontend didn't pass it
+             let inferredType = 'image';
+             if (record.mediaUrl.toLowerCase().endsWith('.mp4')) inferredType = 'video';
+             
+             const mType = record.mediaType || inferredType; 
              components.push({
                type: "header",
                parameters: [
@@ -165,7 +213,7 @@ export default async function handler(req, res) {
         } else if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'document') {
             metaPayload.message.attachment = {
                 type: msgType === 'document' ? 'file' : msgType,
-                payload: { url: message, is_reusable: true }
+                payload: { url: (msgType === 'image' && message.toLowerCase().includes('.webp')) ? 'https://wsrv.nl/?url=' + encodeURIComponent(message) + '&output=jpg' : message, is_reusable: true }
             };
         }
 
@@ -195,6 +243,34 @@ export default async function handler(req, res) {
     }
 
     console.log('Successfully sent message:', metaResult);
+
+    // REGLA ESPECIAL: Si se envió la plantilla "explicacion", enviar inmediatamente el video Parte 2
+    if (metaPayload.type === 'template' && metaPayload.template && metaPayload.template.name === 'explicacion') {
+        try {
+            console.log('Plantilla "explicacion" enviada. Buscando PARTE_2_EXPLICACION...');
+            const { data: p2 } = await supabase.from('products').select('image_url').eq('client_id', clientId).eq('name', 'PARTE_2_EXPLICACION').maybeSingle();
+            if (p2 && p2.image_url) {
+                const videoUrls = p2.image_url.split(',').map(u => u.trim()).filter(Boolean);
+                for (const vidUrl of videoUrls) {
+                    const vidPayload = {
+                        messaging_product: 'whatsapp',
+                        to: phone,
+                        type: 'video',
+                        video: { link: vidUrl }
+                    };
+                    console.log(`Enviando video Parte 2 a ${phone}...`);
+                    await fetch(metaUrl, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(vidPayload)
+                    });
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+        } catch (e) {
+            console.error('Error enviando PARTE 2 video', e);
+        }
+    }
 
     return res.status(200).json({
       success: true,
