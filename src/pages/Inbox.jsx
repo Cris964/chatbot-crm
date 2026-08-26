@@ -5,7 +5,7 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
-  Mic, Square, Trash2, UserPlus, Facebook, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
+  Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
 , PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
@@ -106,6 +106,8 @@ export default function Inbox() {
   const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
+    const [isEditingName, setIsEditingName] = useState(false)
+    const [editedName, setEditedName] = useState('')
   const [botActive, setBotActive] = useState(true)
   const [showAI, setShowAI] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
@@ -1687,8 +1689,31 @@ const res = await fetch('/api/upload', {
            <div style={{ padding: 16, background: 'rgba(var(--overlay-rgb), 0.02)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
               {activeInfoTab === 'Contact' && (
                 <div className="animate-slideUp">
-                  <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Contacto</h4>
-                  <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                       <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0 }}>Contacto</h4>
+                       {!isEditingName ? (
+                         <button className="btn btn-ghost btn-sm" onClick={() => { setEditedName(selectedConv?.name || ''); setIsEditingName(true); }} style={{ padding: 4 }}>
+                            <Edit2 size={14} />
+                         </button>
+                       ) : (
+                         <button className="btn btn-primary btn-sm" onClick={handleSaveName} style={{ padding: '2px 8px' }}>
+                            <CheckIcon size={14} />
+                         </button>
+                       )}
+                    </div>
+                    {isEditingName ? (
+                       <input 
+                         type="text" 
+                         className="input" 
+                         value={editedName} 
+                         onChange={e => setEditedName(e.target.value)} 
+                         style={{ marginBottom: 16, fontSize: '0.85rem', padding: '6px 10px' }} 
+                         placeholder="Nombre del cliente" 
+                       />
+                    ) : (
+                       <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16 }}>{selectedConv?.name || 'Sin nombre'}</div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                      <div className="flex items-center gap-3">
                         <Phone size={14} className="text-primary-400" />
                         <span style={{ fontSize: '0.85rem' }}>{selectedConv?.phone || 'N/A'}</span>
