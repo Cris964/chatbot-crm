@@ -167,7 +167,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
       { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })}]\n\n${inventoryContext}` },
       ...(isRespondingToDifusion && companyProducts && companyProducts.some(p => p.name === 'PROMO_ACTUAL') ? [{
           role: 'system',
-          content: 'CRÍTICO Y OBLIGATORIO: El usuario acaba de responder de forma POSITIVA a una [DIFUSION]. OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO ("Hola, bienvenido al mundo de los morrales..."). RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDO INMEDIATAMENTE POR LAS ETIQUETAS DE IMÁGENES DE [PROMO_ACTUAL]. NO HAGAS PREGUNTAS NI MUESTRES EL MENÚ.'
+          content: 'CRÍTICO Y OBLIGATORIO: El usuario acaba de responder de forma POSITIVA a una [DIFUSION]. OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO. RESPONDE ÚNICAMENTE CON ESTA FRASE EXACTA: "📸🥰 ¿Quieres que te comparta más foticos de esta referencia para que puedas verla mejor? ✨🎒" SEGUIDO INMEDIATAMENTE POR LAS ETIQUETAS DE IMÁGENES DE [PROMO_ACTUAL].'
       }] : []),
       ...finalMessages.slice(-30).map(m => {
 
