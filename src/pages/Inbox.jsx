@@ -662,19 +662,20 @@ export default function Inbox() {
 
         const fileName = `template_${Date.now()}_${templateMediaFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
         
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            base64,
-            fileName,
-            contentType: templateMediaFile.type
-          })
-        });
+        const { error: uploadError } = await supabase.storage
+          .from('whatsapp_media')
+          .upload(fileName, templateMediaFile, {
+            contentType: templateMediaFile.type,
+            upsert: true
+          });
+          
+        if (uploadError) throw uploadError;
         
-        const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
-        mediaUrlToSend = uploadData.url;
+        const { data: publicUrlData } = supabase.storage
+          .from('whatsapp_media')
+          .getPublicUrl(fileName);
+          
+        mediaUrlToSend = publicUrlData.publicUrl;
       }
       
       const textMsg = `[Plantilla Enviada: ${templateName}]`
@@ -884,19 +885,20 @@ export default function Inbox() {
             setSelectedConv(prev => { if(!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), tempMsg] } });
         }
         
-const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base64,
-          fileName,
-          contentType: file.type
-        })
-      });
+const { error: uploadError } = await supabase.storage
+        .from('whatsapp_media')
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: true
+        });
+        
+      if (uploadError) throw uploadError;
       
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      const fileUrl = data.url;
+      const { data: publicUrlData } = supabase.storage
+        .from('whatsapp_media')
+        .getPublicUrl(fileName);
+        
+      const fileUrl = publicUrlData.publicUrl;
       
       const getMediaType = (mimeType, fName) => {
         if (!mimeType) mimeType = '';
