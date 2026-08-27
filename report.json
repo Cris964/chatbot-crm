@@ -1,0 +1,715 @@
+{
+  "productsWithoutPhotos": [
+    "JM331M - Activo mediano",
+    "JM332M - Activo mediano",
+    "JM325M - Activo mediano",
+    "JM350M - Activo mediano",
+    "JM351M - Activo mediano",
+    "JM334M - Activo mediano",
+    "JM335M - Activo mediano",
+    "JM327M - Activo mediano",
+    "JM326 - Activo grande",
+    "AT25085 - Activo grande",
+    "JM324 - Combo activo grande",
+    "AT25066 - Combo activo grande",
+    "AT3080 - Portátil",
+    "RDA04 - Portátil",
+    "RDA03 - Portátil",
+    "MT051 - Morral Toto mediano con cartuchera",
+    "MC0050- Morral CAT",
+    "M2223-19 - Portátil",
+    "M2224-19 - Portátil",
+    "M2225-19 - Portátil",
+    "B2026-17 - Portátil",
+    "6613-6 - Portátil activo con clave",
+    "TR130- MORRAL DAMA",
+    "AT25057 - Camping activo",
+    "MN0048 - Morral camping nacional",
+    "AT25002 - Morral viajero",
+    "TA25062 - Morral viajero",
+    "1137 - Morral viajero",
+    "3728 - Morral viajero",
+    "EM003 - Morral viajero",
+    "AC011 - Calvin Klein",
+    "K1801 - Calvin Klein",
+    "K20218 - Calvin Klein",
+    "MN01 - Mini morral",
+    "JM334S - Activo pequeño",
+    "015 Canguro CAT",
+    "006 Canguro CAT",
+    "008 Canguro CAT",
+    "038 Canguro CAT",
+    "014 Piernero CAT",
+    "019 Carril CAT",
+    "05 Carril CAT",
+    "024 Carril CAT",
+    "004 Carril CAT",
+    "017 Carriel CAT expansión",
+    "021 Carriel CAT mediano",
+    "007 Carriel CAT mediano",
+    "037 Pechera CAT",
+    "AT 25090 Cartuchera Activo",
+    "AT 25091 Cartuchera Activo",
+    "5001 Monedero Activo",
+    "WA-307 Carriel",
+    "800-1 Carriel",
+    "800-2 Carriel",
+    "25022 Carriel",
+    "JM237 Piernera económica",
+    "366-3P Carriel Ladizulo",
+    "366-4P Carriel Ladizulo",
+    "366-2P Carriel Ladizulo",
+    "366-2 Carriel Ladizulo",
+    "366-1 Carriel Ladizulo",
+    "366-1P Carriel Ladizulo",
+    "366-4 Carriel Ladizulo",
+    "AT25043 Carriel",
+    "AT25042 Carriel",
+    "AT25050 Carriel",
+    "AT25049 Carriel",
+    "JM245 Carriel",
+    "JM224 Carriel",
+    "30322 PECHERA",
+    "116P CARRIEL",
+    "B09160-3 - Carriel",
+    "B09195 - Carriel",
+    "B01229 - Canguro",
+    "B01230 - Canguro",
+    "B01611 - Canguro",
+    "B01280 - Canguro",
+    "1624 - Canguro económico",
+    "22922 - Pechera",
+    "B01227 - Canguro",
+    "34715 - Pechera",
+    "A/392 - Carriel",
+    "30322 - Pechera",
+    "1016 - Canguro económico",
+    "AT25039 - Canguro económico",
+    "3309 - Canguro económico",
+    "10625 - Canguro económico",
+    "1014 - Canguro económico",
+    "1015 - Canguro económico",
+    "SPORT01 - Canguro",
+    "JM285L - Lonchera",
+    "JM288L - Lonchera",
+    "JM322L - Lonchera",
+    "F0939 - Morral de cuero",
+    "AT25864 - Canguro",
+    "AT8063 - Canguro",
+    "WB494 - Canguro Carriel",
+    "ZK-26017 - Canguro Carriel",
+    "JM26412 Billetera",
+    "JM26406 Billetera",
+    "JM26409 Billetera",
+    "JM26397 Billetera",
+    "61944 Billetera",
+    "24002-30 Billetera",
+    "24002-21 Billetera",
+    "JM26408 Billetera",
+    "JM26399 Billetera",
+    "JM26404 Billetera",
+    "BL001 Billetera",
+    "BL003 Billetera",
+    "BL002 Billetera",
+    "JM26413 Billetera",
+    "28057 Billetera",
+    "ZK-2612 Billetera",
+    "JM26418 Billetera",
+    "JM26427 Billetera",
+    "15945 Billetera",
+    "AT8060B Porta celulares",
+    "JM227 Porta celulares",
+    "JM204 Porta celulares",
+    "TA25019 Porta celulares",
+    "JM226 Bolso",
+    "6611 Bolso",
+    "JM224 Bolso niño",
+    "JM225 Bolso niño",
+    "RA01 Morral RA",
+    "RA02 Morral RA",
+    "AT25052 Morral",
+    "ZK2402-209 Morral",
+    "HB227 Pañalera",
+    "26073A Bolso",
+    "RDA05- Bolso dama",
+    "RDA06 - Bolso dama",
+    "16404 Bolso manos libres",
+    "16417 Bolso manos libres",
+    "16405 Bolso manos libres",
+    "16416 Bolso manos libres",
+    "15565 Bolso manos libres",
+    "16418 Bolso manos libres",
+    "15914 Bolso manos libres",
+    "16068 Bolso manos libres",
+    "15913 Bolso manos libres",
+    "16415 Bolso manos libres",
+    "16411 Bolso manos libres",
+    "16063 Bolso manos libres",
+    "15415 Bolso manos libres",
+    "ZK-2620 Bolso manos libres",
+    "ZK-2621 Bolso manos libres",
+    "ZK-26012 Bolso manos libres",
+    "ZK-26011 Bolso manos libres",
+    "28196 Bolso manos libres",
+    "HB912 Bolso manos libres",
+    "28128 Bolso manos libres",
+    "HB921 Bolso manos libres",
+    "ZK-2633 Bolso manos libres",
+    "28117 Bolso manos libres",
+    "WB549 Bolso manos libres",
+    "WO1642 Bolso manos libres",
+    "WO1641 Bolso manos libres",
+    "W44 Bolso manos libres",
+    "JM26506 Bolso manos libres",
+    "JM26507 Bolso manos libres",
+    "15924 Bolso manos libres",
+    "1125-1 Bolso manos libres",
+    "1125 Bolso manos libres",
+    "SPRAY02 Bolso manos libres",
+    "ZK2785 Bolso manos libres",
+    "15940 - Bolso de dama",
+    "WB500 - Bolso de dama",
+    "WB348 - Bolso de dama",
+    "TA25017 - Bolso de dama",
+    "TA25018 - Bolso de dama",
+    "B2003-17 - Bolso de dama",
+    "AT8009 - Portátil",
+    "AT8008 - Portátil",
+    "AT8010 - Portátil",
+    "JM26517 Bolso manos libres",
+    "HB178 Bolso manos libres",
+    "HB910 Bolso manos libres",
+    "HB066 Bolso manos libres",
+    "HB681 Bolso manos libres",
+    "HB-239 Bolso manos libres",
+    "28020 Bolso manos libres",
+    "TA25009 Bolso manos libres",
+    "TA25010 Bolso manos libres",
+    "27141 Bolso manos libres",
+    "HB808 Bolso manos libres",
+    "HB146 Bolso manos libres",
+    "788 Bolso manos libres",
+    "MGM0048 maleta de marca",
+    "MMM045  MALETA DE MARCA",
+    "13990 - Bolso de dama",
+    "WB492 - Bolso de dama",
+    "A601P - Bolso de dama",
+    "JM26522 - Bolso de dama",
+    "WB185 - Bolso de dama",
+    "WB491 - Bolso de dama",
+    "A010P2 - Bolso de dama",
+    "WB187 - Bolso de dama",
+    "A010P - Bolso de dama",
+    "HB194 - Bolso de dama",
+    "M16 - Morral de niño",
+    "COM-14 - Combo",
+    "Combo P 3C - Combo",
+    "Combo G 3C - Combo",
+    "M6D1 1C - Bolso de niño",
+    "M6D2 2C - Bolso de niño",
+    "AT8143 - Bolso MFS",
+    "M10 - Morral de niño",
+    "M12 - Morral de niño",
+    "M14 - Morral de niño",
+    "ML23-092 - Bolso dama",
+    "900M - Bolso dama",
+    "MR25-2 - Bolso niño",
+    "MR25-1 - Bolso niño",
+    "AT8146 - Bolso MFS",
+    "3D0022 - Lonchera B",
+    "3DP0018 - Morral",
+    "9003C - Cartuchera",
+    "AT8053B - Canguro carriel",
+    "003 Carril CAT"
+  ],
+  "contactsWithErrors": [
+    {
+      "phone": "573025373662",
+      "name": "Alex Ulcue",
+      "fails": 27,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573217564642",
+      "name": "Blanca Burbano",
+      "fails": 26,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573183331833",
+      "name": "Blay Delgado",
+      "fails": 25,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573185873892",
+      "name": "De Mari",
+      "fails": 24,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 130472. Motivo: User's number is part of an experiment. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573147667542",
+      "name": "Ángela Echeverry",
+      "fails": 24,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573214875746",
+      "name": "Betty Novoa",
+      "fails": 24,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573233912321",
+      "name": "Andrea Marcillo",
+      "fails": 23,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573217102364",
+      "name": "Andrea",
+      "fails": 22,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573107759754",
+      "name": "Carlos Gallego",
+      "fails": 22,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573107121803",
+      "name": "Ahilen Coronel",
+      "fails": 20,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573022392860",
+      "name": "ortiz",
+      "fails": 20,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573204819314",
+      "name": "Daniela Bolívar",
+      "fails": 20,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573156524899",
+      "name": "ALEXANDER GONZALEZ RIVERA",
+      "fails": 19,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573135068656",
+      "name": "Alexander Vez Gómez",
+      "fails": 19,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573104493977",
+      "name": "Zandra Buano",
+      "fails": 19,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573167602903",
+      "name": "👩‍👦‍👦🧒🏻❤️👶🏼LOS AMÓ",
+      "fails": 18,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573113579950",
+      "name": "kr006730",
+      "fails": 17,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573212124032",
+      "name": "Ana Becerra",
+      "fails": 17,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131050. Motivo: Unable to deliver the message. This recipient has chosen to stop receiving marketing messages on WhatsApp from your business. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573122688760",
+      "name": "Ariatna Sarmiento",
+      "fails": 16,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573103458842",
+      "name": "Sj Store",
+      "fails": 16,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573184989882",
+      "name": "D Ald. (Confirmar nombre)",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573166080746",
+      "name": "Natalie",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573183592457",
+      "name": "Mónica Rodríguez",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573146200567",
+      "name": "Nancy Montoya",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 130472. Motivo: User's number is part of an experiment. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573188024025",
+      "name": "Carlos Bernal",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573215146100",
+      "name": "Cuatyk J....",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573168954721",
+      "name": "Adriana Jaramillo",
+      "fails": 15,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573185152414",
+      "name": "Aleja Garay",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573156437535",
+      "name": "Bárbara Salazar",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573158967237",
+      "name": "🥰",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573164280817",
+      "name": "Adriana Becerra",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573245637363",
+      "name": "Ingrid Penkua",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573178691536",
+      "name": "Amparo Cárdenas",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573172601807",
+      "name": "Eliana Uribe",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 130472. Motivo: User's number is part of an experiment. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573187665114",
+      "name": "Claudia Tamayo",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573216707516",
+      "name": "Claudia",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "17025106495",
+      "name": "Lorena Palmira",
+      "fails": 14,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573167835851",
+      "name": "Sandra Muñoz",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131026. Motivo: Message undeliverable. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573012027700",
+      "name": "LUZ ARNOLY MAMIAN CAMILO",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573103456259",
+      "name": "Alejandra Camuez",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573128703326",
+      "name": "Angélica Echeverry",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573003890456",
+      "name": "Frank",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573225998939",
+      "name": "Fai",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573122500407",
+      "name": "Leidy",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573213078047",
+      "name": "Chelo-kity",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573123950008",
+      "name": "M&A",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573002227199",
+      "name": "DIDIMSPORT",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573225637563",
+      "name": "Ingrid Puenca",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573207819676",
+      "name": "cajein",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    },
+    {
+      "phone": "573215738815",
+      "name": "Jenny Túquerrez",
+      "fails": 13,
+      "errors": [
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131048. Motivo: Spam Rate limit hit. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131049. Motivo: This message was not delivered to maintain healthy ecosystem engagement.. (Probablemente faltaron variables o la plantilla fue rechazada)",
+        "[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: 131053. Motivo: Media upload error. (Probablemente faltaron variables o la plantilla fue rechazada)"
+      ]
+    }
+  ]
+}

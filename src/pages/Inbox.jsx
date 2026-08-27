@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { Building2, Settings,  useState, useRef, useEffect, useMemo } from 'react'
 import { useOutletContext, useLocation } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
-  Mail, MapPin, Calendar, ShoppingBag, Clock, ChevronDown, CheckCheck, MessageSquare,
+  Mail, MapPin, Calendar, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
   Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
-, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu } from 'lucide-react'
+, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu  } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 
@@ -117,6 +117,8 @@ export default function Inbox() {
   
   // Plantillas state
   const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [showContactSettings, setShowContactSettings] = useState(false)
+  const [editedClientType, setEditedClientType] = useState('detal')
   const [templateName, setTemplateName] = useState('')
   const [templateVariable, setTemplateVariable] = useState('')
   const [templateMediaFile, setTemplateMediaFile] = useState(null)
@@ -1380,7 +1382,7 @@ const res = await fetch('/api/upload', {
                          <span>{c.time}</span>
                        </div>
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview}</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview?.includes('supabase.co/storage') ? ( (c.preview.includes('.mp4') || c.preview.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : c.preview}</p>
                     {c.tags && c.tags.length > 0 && (
                       <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
                          {c.tags.map((t, i) => {
@@ -1590,7 +1592,7 @@ const res = await fetch('/api/upload', {
                               
                               return (
                                 <>
-                                  {cleanMsgText && <p style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{cleanMsgText}</p>}
+                                  {cleanMsgText && <p style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{cleanMsgText.includes('supabase.co/storage') && cleanMsgText.startsWith('http') && !cleanMsgText.includes(' ') ? ((cleanMsgText.includes('.mp4') || cleanMsgText.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : cleanMsgText}</p>}
                                   {imgMatches.map((url, idx) => (
                                     <img key={idx} src={url} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8, display: 'block' }} />
                                   ))}
@@ -1674,13 +1676,9 @@ const res = await fetch('/api/upload', {
         </div>
 
         {/* Info Panel */}
-        <div className={`contact-panel inbox-panel-container ${mobileView !== 'info' ? 'mobile-hidden' : ''}`} style={{ display: showRightPanel ? 'flex' : 'none', width: '100%', flexShrink: 0, borderLeft: '1px solid var(--glass-border)', flexDirection: 'column' }}>
-           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-             <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Panel</h3>
-             <button className="btn btn-ghost btn-sm mobile-only" onClick={() => setMobileView('chat')} style={{ padding: 4 }}>
-               <Close size={20} />
-             </button>
-           </div>
+        {/* Info Panel Modal */}
+{showContactSettings && (<div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}><div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 420, padding: 0, overflow: 'hidden', maxHeight: '90vh', overflowY: 'auto' }}><div className="contact-panel" style={{ display: 'flex', width: '100%', flexDirection: 'column' }}>
+           <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Configuración de Cliente</h3><button className="btn btn-ghost btn-sm" onClick={() => setShowContactSettings(false)}><Close size={20} /></button></div>
            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
              {['Contact', 'Deal Info', 'Timeline'].map(t => (
                <div 
@@ -1720,6 +1718,15 @@ const res = await fetch('/api/upload', {
                          </button>
                        )}
                     </div>
+                    
+                    <div style={{ marginBottom: 16 }}>
+                        <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: 8 }}>Tipo de Cliente</h4>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className={`btn btn-sm ${editedClientType === 'detal' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1 }} onClick={() => saveClientType('detal')}>Al Detal</button>
+                            <button className={`btn btn-sm ${editedClientType === 'mayorista' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1 }} onClick={() => saveClientType('mayorista')}>Mayorista</button>
+                        </div>
+                    </div>
+
                     {isEditingName ? (
                        <input 
                          type="text" 
@@ -1784,8 +1791,8 @@ const res = await fetch('/api/upload', {
                 </div>
               )}
            </div>
-        </div>
-      </div>
+        </div></div></div>)}
+    </div>
 
       {/* Simulation Modal */}
       {showSimModal && (
