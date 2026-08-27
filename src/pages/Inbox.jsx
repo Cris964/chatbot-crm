@@ -239,6 +239,12 @@ export default function Inbox() {
   }
 
   useEffect(() => {
+    if (selectedConv) {
+      setEditedClientType(selectedConv.client_type || 'detal');
+    }
+  }, [selectedConv]);
+
+  useEffect(() => {
     scrollToBottom()
   }, [messages, selectedConv])
 
@@ -474,6 +480,35 @@ export default function Inbox() {
       .eq('client_id', tenant.clientId)
     if (data) setTeamMembers(data)
   }
+
+  
+  const handleSaveName = async () => {
+    if (!selectedConv) return;
+    try {
+      const { error } = await supabase.from('conversations').update({ name: editedName }).eq('id', selectedConv.id);
+      if (error) throw error;
+      selectedConv.name = editedName;
+      setConversationsList([...conversationsList]);
+      setIsEditingName(false);
+    } catch(err) {
+      console.error(err);
+      alert('Error guardando nombre');
+    }
+  };
+
+  const saveClientType = async (type) => {
+    if (!selectedConv) return;
+    try {
+      setEditedClientType(type);
+      const { error } = await supabase.from('conversations').update({ client_type: type }).eq('id', selectedConv.id);
+      if (error) throw error;
+      selectedConv.client_type = type;
+      setConversationsList([...conversationsList]);
+    } catch(err) {
+      console.error(err);
+      alert('Error guardando tipo de cliente');
+    }
+  };
 
   const assignAdvisor = async (conversationId, userId) => {
     const { error } = await supabase
