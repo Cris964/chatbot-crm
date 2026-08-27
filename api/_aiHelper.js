@@ -152,7 +152,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   if (finalMessages.length >= 2) {
       const lastUserMsg = finalMessages[finalMessages.length - 1];
       const prevMsg = finalMessages[finalMessages.length - 2];
-      if (lastUserMsg.role === 'user' && prevMsg.role === 'agent' && (prevMsg.content || '').includes('[DIFUSION]')) {
+      if (lastUserMsg.role === 'user' && prevMsg.role === 'agent' && ( (prevMsg.content || '').includes('[DIFUSION]') || (prevMsg.content || '').includes('[Plantilla Enviada:') )) {
           const contentLower = (lastUserMsg.content || '').toLowerCase().trim();
           const positiveWords = ['si', 'sí', 's', 'claro', 'info', 'interesa', 'precio', 'quiero', 'mas', 'más', 'dale', 'porfa', 'favor', 'muestrame', 'sii', 'siii', 'bueno', 'hágale', 'hagale', 'ok', 'okay'];
           const negativeWords = ['no', 'nunca', 'jamas', 'jamás', 'deja', 'dejen', 'cancelar', 'stop'];
