@@ -121,6 +121,8 @@ export default function Inbox() {
   const [templateVariable, setTemplateVariable] = useState('')
   const [templateMediaFile, setTemplateMediaFile] = useState(null)
   const [templateMediaUrl, setTemplateMediaUrl] = useState('')
+    const [aiContextMedia, setAiContextMedia] = useState([])
+    const aiContextFileInputRef = useRef(null)
   const [templateLanguage, setTemplateLanguage] = useState('es')
   const [teamMembers, setTeamMembers] = useState([])
   const [activeInfoTab, setActiveInfoTab] = useState('Contact')
@@ -585,12 +587,28 @@ export default function Inbox() {
     }
   }
 
-  const handleSendTemplate = async (e) => {
+  const handleAiContextUpload = (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      if (aiContextMedia.length + files.length > 5) {
+        alert("Máximo 4 imágenes y 1 video.");
+        return;
+      }
+      const newMedia = files.map(f => ({
+        blob: f,
+        type: f.type,
+        name: f.name
+      }));
+      setAiContextMedia(prev => [...prev, ...newMedia]);
+    };
+    
+    const handleSendTemplate = async (e) => {
     e.preventDefault()
     if (!templateName.trim() || !selectedConv) return
     setIsLoading(true)
     
     let mediaUrlToSend = templateMediaUrl.trim();
+      let finalAiContextUrls = [];
     
     try {
       if (templateMediaFile) {
@@ -648,8 +666,9 @@ export default function Inbox() {
              channel: selectedConv.channel,
              variable: templateVariable.trim(),
              mediaUrl: mediaUrlToSend,
-             languageCode: templateLanguage
-           })
+             languageCode: templateLanguage,
+               aiContextUrls: finalAiContextUrls
+             })
          });
          const apiData = await res.json();
          if (apiData.meta_message_id) {
@@ -1849,7 +1868,7 @@ const res = await fetch('/api/upload', {
                    <FileText size={20} className="text-primary-400" />
                    <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>Enviar Plantilla</h3>
                  </div>
-                 <button className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(false)}><Close size={20} /></button>
+                 <button className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(false); setAiContextMedia([]); setTemplateMediaUrl(''); setTemplateMediaFile(null); }><Close size={20} /></button>
               </div>
               <form onSubmit={handleSendTemplate} style={{ padding: '20px' }}>
                  <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
@@ -1894,7 +1913,27 @@ const res = await fetch('/api/upload', {
                       />
                  </div>
                  <div className="form-group" style={{ marginBottom: 20 }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Archivo de Imagen/Video (Opcional)</label>
+                    <div style={{ marginBottom: 20 }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Archivos Adicionales (Fotos IA / Video)</label>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '8px' }}>Sube hasta 4 fotos y 1 video para que el bot responda automáticamente cuando el cliente interactúe.</p>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => aiContextFileInputRef.current?.click()} disabled={aiContextMedia.length >= 5}>
+                        <Paperclip size={16} /> Subir Fotos/Video Ocultos
+                      </button>
+                      <input type="file" ref={aiContextFileInputRef} style={{ display: 'none' }} onChange={handleAiContextUpload} accept="image/*,video/*" multiple />
+                      {aiContextMedia.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                          {aiContextMedia.map((media, idx) => (
+                            <div key={idx} style={{ position: 'relative', width: '50px', height: '50px', borderRadius: '4px', border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
+                              <img src={URL.createObjectURL(media.blob)} alt={media.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <button type="button" style={{ position: 'absolute', top: 0, right: 0, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', cursor: 'pointer', padding: '2px' }} onClick={() => setAiContextMedia(prev => prev.filter((_, i) => i !== idx))}>
+                                <Close size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                   </div>
+                   <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Header (Cabecera) de Imagen/Video (Opcional)</label>
                     <input 
                       type="file" 
                       className="form-control" 
