@@ -1465,13 +1465,8 @@ const res = await fetch('/api/upload', {
                      <div className="flex gap-1">
                         <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
                         <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
-                          <button 
-                             className="btn btn-secondary btn-sm mobile-hidden"
-                             title={showRightPanel ? "Ocultar panel" : "Mostrar panel"}
-                             onClick={() => setShowRightPanel(!showRightPanel)}
-                          >
-                             {showRightPanel ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
-                          </button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setShowContactSettings(true)} title="Configuración de Cliente"><Settings size={14} /></button>
+                          
                         <button 
                            className="btn btn-secondary btn-sm"
                            title={selectedConv?.archived ? "Desarchivar" : "Archivar"}
