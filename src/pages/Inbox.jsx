@@ -1,4 +1,4 @@
-import { Building2, Settings,  useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useOutletContext, useLocation } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
@@ -6,7 +6,7 @@ import {
   Mail, MapPin, Calendar, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
   Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
-, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu  } from 'lucide-react'
+, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 
@@ -1121,7 +1121,7 @@ const res = await fetch('/api/upload', {
         }
       `}</style>
 
-      <div className="inbox-layout" style={{ gridTemplateColumns: showRightPanel ? '220px 320px 1fr 340px' : '220px 320px 1fr', transition: 'grid-template-columns 0.3s ease' }}>
+      <div className="inbox-layout" style={{ gridTemplateColumns: '220px 320px 1fr', transition: 'grid-template-columns 0.3s ease' }}>
 
           
           {/* Left Sidebar (Folders) */}
@@ -1408,37 +1408,7 @@ const res = await fetch('/api/upload', {
         <div className={`chat-area inbox-panel-container ${mobileView !== 'chat' ? 'mobile-hidden' : ''}`} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           {selectedConv ? (
             <>
-              {/* Floating Toggle Button for Contact Panel */}
-              <button 
-                 type="button"
-                 className="floating-panel-toggle shadow-lg"
-                 onClick={() => setShowRightPanel(!showRightPanel)}
-                 style={{ 
-                    position: 'absolute', 
-                    right: 0, 
-                    top: '50%', 
-                    transform: 'translateY(-50%)',
-                    zIndex: 50,
-                    background: 'var(--primary-color)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    width: '28px',
-                    height: '48px',
-                    borderTopLeftRadius: '8px',
-                    borderBottomLeftRadius: '8px',
-                    borderTopRightRadius: '0',
-                    borderBottomRightRadius: '0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'right 0.3s ease, background 0.2s ease',
-                    boxShadow: '-2px 0 10px rgba(0,0,0,0.2)'
-                 }}
-                 title={showRightPanel ? "Ocultar panel derecho" : "Mostrar panel derecho"}
-              >
-                 {showRightPanel ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-              </button>
+              
               <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center' }}>
                  <button 
                    className="mr-3 p-2 rounded-full mobile-only"
