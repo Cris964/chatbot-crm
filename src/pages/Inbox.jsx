@@ -394,6 +394,7 @@ export default function Inbox() {
       
       const { data, error } = await query.order('updated_at', { ascending: false })
       
+      if (error) { setDebugError(error.message); return; }
       if (!error && data) {
         const mapped = data.map((conv) => {
           const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
@@ -469,6 +470,7 @@ export default function Inbox() {
       }
     } catch (err) {
       console.error("Error fetching conversations:", err)
+      setDebugError(err.message || String(err))
     } finally {
       setIsLoading(false)
     }
