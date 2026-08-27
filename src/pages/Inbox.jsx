@@ -1192,34 +1192,21 @@ const res = await fetch('/api/upload', {
                </span>
              </div>
 
-             <h2 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800, opacity: 0.5, marginTop: '24px', marginBottom: '12px', paddingLeft: '12px', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsListsExpanded(!isListsExpanded)}>
-                Difusiones
-                <ChevronDown size={16} style={{ transform: isListsExpanded ? 'rotate(180deg)' : 'none', transition: '0.3s' }} />
-             </h2>
              
-             {isListsExpanded && (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', maxHeight: '300px', paddingRight: '4px' }}>
-                 {broadcastLists.map(list => {
-                   const fId = 'broadcast_' + list.id;
-                   const isActive = activeFolder === fId;
-                   const count = conversationsList.filter(c => getConversationFolder(c) === fId).length;
-                   return (
-                     <div 
-                       key={list.id}
-                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', background: isActive ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent', color: isActive ? 'var(--primary-color)' : 'var(--text-secondary)' }}
-                       onClick={() => { setActiveFolder(fId); setMobileView('list'); }}
-                     >
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         <Megaphone size={14} opacity={isActive ? 1 : 0.6} />
-                         <span style={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{list.name}</span>
-                       </div>
-                       {count > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, background: isActive ? 'var(--primary-color)' : 'rgba(var(--overlay-rgb), 0.1)', color: isActive ? '#fff' : 'inherit', padding: '2px 6px', borderRadius: '10px' }}>{count}</span>}
-                     </div>
-                   )
-                 })}
-                 {broadcastLists.length === 0 && <div style={{ fontSize: '0.8rem', opacity: 0.5, padding: '8px', textAlign: 'center' }}>No hay listas</div>}
+             <div className="folder-divider" style={{ margin: '16px 0', borderBottom: '1px solid var(--glass-border)', opacity: 0.5 }}></div>
+             <div 
+               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'difusiones' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'difusiones' ? '#fff' : 'var(--text-primary)' }}
+               onClick={() => { setActiveFolder('difusiones'); setMobileView('list'); }}
+             >
+               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                 <Megaphone size={16} opacity={activeFolder === 'difusiones' ? 1 : 0.7} />
+                 <span style={{ fontWeight: activeFolder === 'difusiones' ? 600 : 500, fontSize: '0.9rem' }}>Difusiones</span>
                </div>
-             )}
+               <span style={{ fontSize: '0.7rem', fontWeight: 700, background: activeFolder === 'difusiones' ? 'rgba(255,255,255,0.25)' : 'rgba(var(--overlay-rgb), 0.1)', color: activeFolder === 'difusiones' ? '#fff' : 'var(--text-primary)', padding: '2px 8px', borderRadius: '12px' }}>
+                 {conversationsList.filter(c => getConversationFolder(c).startsWith('broadcast_')).length}
+               </span>
+             </div>
+
           </div>
   
           {/* Sidebar */}
@@ -1308,7 +1295,13 @@ const res = await fetch('/api/upload', {
                      if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
                    if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
                    if (activeFolder === 'pending') return c.unread && !c.archived;
+                   
+                   if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
+                   if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
+                   if (activeFolder === 'difusiones') return fId.startsWith('broadcast_');
                    if (activeFolder === 'resolved') return c.archived;
+                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
+
                    if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
                    return fId === 'inbox' && !c.archived;
                 })
