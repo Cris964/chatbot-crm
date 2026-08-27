@@ -10,6 +10,7 @@ export default function Lists() {
   const [contacts, setContacts] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [progressMsg, setProgressMsg] = useState(null)
   
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignText, setCampaignText] = useState('')
@@ -247,6 +248,7 @@ export default function Lists() {
     
     try {
       let mediaUrl = null;
+      setProgressMsg('Preparando archivos...');
       let finalMediaType = null;
       
       if (pendingMedia) {
@@ -296,6 +298,7 @@ export default function Lists() {
          for (const lId of Object.keys(grouped)) {
             const lContacts = grouped[lId];
             for (let i = 0; i < lContacts.length; i += 15) {
+               setProgressMsg(`Enviando (${globalSuccesses} enviados)...`);
                const chunk = lContacts.slice(i, i + 15);
                const res = await fetch('/api/broadcast', {
                  method: 'POST',
@@ -323,6 +326,8 @@ export default function Lists() {
          
          setTimeout(() => {
            setIsSending(false)
+      setProgressMsg(null)
+      setProgressMsg(null)
            setShowCampaignModal(false)
            setCampaignText('')
            setPendingMedia(null)
@@ -766,7 +771,7 @@ export default function Lists() {
                 Cancelar
               </button>
               <button className="btn btn-primary" onClick={handleSendCampaign} disabled={isSending || (campaignMode === 'free' && !campaignText.trim() && !pendingMedia)}>
-                {isSending ? 'Enviando...' : (isGlobalCampaign ? 'Lanzar a Todas las Listas' : `Lanzar a ${selectedContacts.length} contactos`)}
+                {isSending ? (progressMsg || 'Enviando...') : (isGlobalCampaign ? 'Lanzar a Todas las Listas' : `Lanzar a ${selectedContacts.length} contactos`)}
               </button>
             </div>
           </div>
