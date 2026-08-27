@@ -454,7 +454,8 @@ export default function Inbox() {
               needs_human: conv.needs_human,
               assigned_to: conv.assigned_to,
               department: conv.department,
-              archived: conv.archived
+              archived: conv.archived,
+              client_type: conv.client_type || 'detal'
             }
           })
           setConversationsList(mapped)
