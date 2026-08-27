@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Convert base64 back to buffer
-    const base64Data = base64.replace(/^data:([A-Za-z-+/]+);base64,/, '');
+    const base64Data = base64.replace(/^data:.*?;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
     const { data, error } = await supabase.storage

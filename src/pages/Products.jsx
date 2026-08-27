@@ -36,7 +36,10 @@ const EMPTY_PRODUCT = {
   stock: 0,
   min_stock: 0,
   image_url_1: '',
-  image_url_2: ''
+  image_url_2: '',
+  image_url_3: '',
+  image_url_4: '',
+  image_url_5: ''
 }
 
 export default function Products() {
@@ -90,7 +93,10 @@ export default function Products() {
       stock: product.stock || 0,
       min_stock: product.min_stock || 0,
       image_url_1: urls[0] ? urls[0].trim() : '',
-      image_url_2: urls[1] ? urls[1].trim() : ''
+      image_url_2: urls[1] ? urls[1].trim() : '',
+      image_url_3: urls[2] ? urls[2].trim() : '',
+      image_url_4: urls[3] ? urls[3].trim() : '',
+      image_url_5: urls[4] ? urls[4].trim() : ''
     })
     setShowModal(true)
   }
@@ -134,14 +140,14 @@ export default function Products() {
     const fileName = `${tenant.clientId}-${Date.now()}.${fileExt}`
     
     const { data, error } = await supabase.storage
-      .from('product-images')
+      .from('whatsapp_media')
       .upload(fileName, file)
 
     if (error) {
       alert('Error al subir imagen: ' + error.message)
     } else {
       const { data: publicUrlData } = supabase.storage
-        .from('product-images')
+        .from('whatsapp_media')
         .getPublicUrl(fileName)
       
       setForm({ ...form, [fieldName]: publicUrlData.publicUrl })
@@ -153,7 +159,7 @@ export default function Products() {
     e.preventDefault()
     setIsSaving(true)
 
-    const combinedUrls = [form.image_url_1, form.image_url_2].map(u => u?.trim()).filter(Boolean).join(',') || null;
+    const combinedUrls = [form.image_url_1, form.image_url_2, form.image_url_3, form.image_url_4, form.image_url_5].map(u => u?.trim()).filter(Boolean).join(',') || null;
 
     const payload = {
       name: form.name.trim(),
@@ -478,58 +484,38 @@ export default function Products() {
                     La IA mencionará esta promo cuando recomiende el producto.
                   </p>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
-                    Foto del Producto (Suelto)
-                  </label>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    {form.image_url_1 && (
-                      <img src={form.image_url_1} alt="Producto" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="url"
-                        className="form-input"
-                        placeholder="https://..."
-                        value={form.image_url_1}
-                        onChange={e => setForm({ ...form, image_url_1: e.target.value })}
-                        style={{ marginBottom: 8 }}
-                      />
-                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex' }}>
-                        <Upload size={14} style={{ marginRight: 6 }} /> 
-                        {isSaving ? 'Subiendo...' : 'Subir Imagen desde el PC'}
-                        <input type="file" hidden accept="image/*" onChange={e => handleImageUpload(e, 'image_url_1')} disabled={isSaving} />
-                      </label>
+                {[1, 2, 3, 4, 5].map(num => (
+                  <div key={num} style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                      Archivo Multimedia {num} {num === 5 ? '(Permite MP4)' : ''}
+                    </label>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      {form[`image_url_${num}`] && (
+                        form[`image_url_${num}`].endsWith('.mp4') ?
+                          <video src={form[`image_url_${num}`]} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} muted /> :
+                          <img src={form[`image_url_${num}`]} alt={`Media ${num}`} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="url"
+                          className="form-input"
+                          placeholder="https://..."
+                          value={form[`image_url_${num}`]}
+                          onChange={e => setForm({ ...form, [`image_url_${num}`]: e.target.value })}
+                          style={{ marginBottom: 8 }}
+                        />
+                        <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                          <Upload size={14} style={{ marginRight: 6 }} /> 
+                          {isSaving ? 'Subiendo...' : 'Subir Archivo'}
+                          <input type="file" hidden accept="image/*,video/mp4" onChange={e => handleImageUpload(e, `image_url_${num}`)} disabled={isSaving} />
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
-
+                ))}
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
-                    Foto de Instalación (Ambiente)
-                  </label>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    {form.image_url_2 && (
-                      <img src={form.image_url_2} alt="Ambiente" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--glass-border)' }} />
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="url"
-                        className="form-input"
-                        placeholder="https://..."
-                        value={form.image_url_2}
-                        onChange={e => setForm({ ...form, image_url_2: e.target.value })}
-                        style={{ marginBottom: 8 }}
-                      />
-                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex' }}>
-                        <Upload size={14} style={{ marginRight: 6 }} /> 
-                        {isSaving ? 'Subiendo...' : 'Subir Imagen desde el PC'}
-                        <input type="file" hidden accept="image/*" onChange={e => handleImageUpload(e, 'image_url_2')} disabled={isSaving} />
-                      </label>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
-                    La IA enviará AMBAS fotos automáticamente por WhatsApp cuando le pidan catálogo.
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 0 }}>
+                    La IA enviará TODOS los archivos configurados. Sube fotos o videos MP4 (máx 16MB).
                   </p>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>

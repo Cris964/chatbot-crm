@@ -13,6 +13,10 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
       mediaId = messageObj.voice.id;
     }
 
+    if (type === 'reaction' && messageObj.reaction) {
+      return `[El cliente reaccionó con el emoji: ${messageObj.reaction.emoji}]`;
+    }
+
     if (!mediaId) return `[Multimedia no soportado. Tipo: ${type}]`;
 
     // 1. Get Media URL from Meta Graph API

@@ -77,6 +77,16 @@ export default async function handler(req, res) {
           if (!changes || !changes.messages || changes.messages.length === 0) return res.status(200).send('No message payload');
           messageObj = changes.messages[0];
           senderPhone = messageObj.from;
+          if (!senderPhone && messageObj.id) {
+              try {
+                  const decodedId = Buffer.from(messageObj.id.replace('wamid.', ''), 'base64').toString('utf-8');
+                  const match = decodedId.match(/([A-Z]{2}\.\d+|\d{10,16})/);
+                  if (match) senderPhone = match[1];
+              } catch(e) {
+                  console.error('[WAMID DECODE ERROR]', e);
+              }
+          }
+          if (senderPhone) senderPhone = senderPhone.replace(/^[A-Z]{2}\./, '');
           senderName = changes.contacts?.[0]?.profile?.name || 'Cliente';
           recipientId = changes.metadata?.phone_number_id;
           channel = 'whatsapp';
@@ -260,14 +270,18 @@ export default async function handler(req, res) {
         }
 
         finalMessages = [...(chat.messages || []), newMsgNode];
-        await supabase.from('conversations').update({
+        const updateData = {
              messages: finalMessages,
              updated_at: new Date().toISOString()
-        }).eq('id', chat.id);
+        };
+        if (senderName && senderName !== 'Cliente') {
+            updateData.user_name = senderName;
+        }
+        await supabase.from('conversations').update(updateData).eq('id', chat.id);
         conversationId = chat.id;
       } else {
         finalMessages = [newMsgNode];
-        const { data: insertedChat } = await supabase.from('conversations').insert([{
+        const { data: insertedChat, error: insertErr } = await supabase.from('conversations').insert([{
           user_phone: senderPhone,
           user_name: senderName,
           messages: finalMessages,
@@ -275,6 +289,9 @@ export default async function handler(req, res) {
           user_id: userId,
           channel: channel
         }]).select('id').single();
+        if (insertErr) {
+            try { await supabase.from('processed_messages').insert([{ id: 'INSERT_ERR_' + String(insertErr.message).substring(0, 50) }]); } catch(e){}
+        }
         conversationId = insertedChat?.id;
       }
 
@@ -347,10 +364,14 @@ export default async function handler(req, res) {
       for (const msg of messageQueue) {
           if (channel === 'whatsapp' && WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
               if (msg.type === 'text') {
+                  const payload = { messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: msg.content } };
+                  if (senderPhone.length > 14 && messageId) {
+                      payload.context = { message_id: messageId };
+                  }
                   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: msg.content } })
+                    body: JSON.stringify(payload)
                   }).then(async r => {
                       const data = await r.json();
                       if (!r.ok) {
@@ -362,6 +383,9 @@ export default async function handler(req, res) {
               } else if (msg.type === 'image' || msg.type === 'video') {
                   const payload = { messaging_product: 'whatsapp', to: senderPhone, type: msg.type };
                   payload[msg.type] = { link: msg.content };
+                  if (senderPhone.length > 14 && messageId) {
+                      payload.context = { message_id: messageId };
+                  }
                   
                   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                     method: 'POST',

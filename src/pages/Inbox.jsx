@@ -1868,7 +1868,7 @@ const res = await fetch('/api/upload', {
                    <FileText size={20} className="text-primary-400" />
                    <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>Enviar Plantilla</h3>
                  </div>
-                 <button className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(false); setAiContextMedia([]); setTemplateMediaUrl(''); setTemplateMediaFile(null); }><Close size={20} /></button>
+                 <button className="btn btn-ghost btn-sm" onClick={() => { setShowTemplateModal(false); setAiContextMedia([]); setTemplateMediaUrl(''); setTemplateMediaFile(null); }}><Close size={20} /></button>
               </div>
               <form onSubmit={handleSendTemplate} style={{ padding: '20px' }}>
                  <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
