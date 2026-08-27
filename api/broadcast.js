@@ -232,33 +232,7 @@ export default async function handler(req, res) {
           successes++;
           if (isListMode) {
             await supabase.from('broadcast_contacts').update({ status: 'messaged' }).eq('id', lead.id);
-            if (listId) {
-              const { data: existingChats } = await supabase.from('conversations').select('id, messages').eq('client_id', clientId).eq('user_phone', cleanPhone).limit(1);
-              const newMsgNode = {
-                 role: 'agent',
-                 content: `[DIFUSIÓN]: ${campaignText ? campaignText : 'Plantilla ' + templateName}`,
-                 timestamp: new Date().toISOString(),
-                 is_broadcast: true,
-                 list_id: listId
-              };
-              if (existingChats && existingChats.length > 0) {
-                 const chat = existingChats[0];
-                 await supabase.from('conversations').update({
-                     messages: [...(chat.messages || []), newMsgNode],
-                     updated_at: new Date().toISOString(),
-                     needs_human: false
-                 }).eq('id', chat.id);
-              } else {
-                 await supabase.from('conversations').insert([{
-                     client_id: clientId,
-                     user_phone: cleanPhone,
-                     user_name: lead.name || lead.full_name || 'Cliente',
-                     channel: 'whatsapp',
-                     messages: [newMsgNode],
-                     needs_human: false
-                 }]);
-              }
-            }
+            // Not updating conversations table to save DB connections & memory
           }
         } else {
           console.error(`Error enviando a ${cleanPhone}:`, data);
