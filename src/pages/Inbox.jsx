@@ -653,12 +653,7 @@ export default function Inbox() {
     try {
       if (templateMediaFile) {
         // Upload the file first
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(templateMediaFile);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = error => reject(error);
-        });
+        
 
         const fileName = `template_${Date.now()}_${templateMediaFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
         
@@ -858,12 +853,7 @@ export default function Inbox() {
     setIsLoading(true)
     try {
       // Read file as base64
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
+      
 
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
       
