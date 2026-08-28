@@ -392,7 +392,7 @@ export default function Inbox() {
          query = query.eq('assigned_to', tenant.session.user.id)
       }
       
-      const { data, error } = await query.order('updated_at', { ascending: false })
+      const { data, error } = await query.order('updated_at', { ascending: false }).limit(300)
       
       if (error) { setDebugError(error.message); return; }
       if (!error && data) {
