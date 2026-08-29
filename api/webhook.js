@@ -282,7 +282,20 @@ export default async function handler(req, res) {
         conversationId = chat.id;
       } else {
         finalMessages = [newMsgNode];
+        
+        // Auto-assign to an asesor in round-robin order
+        let assignedUserId = null;
+        if (clientId) {
+            const { data: members } = await supabase.from('team_members').select('user_id').eq('client_id', clientId).eq('status', 'activo').neq('role', 'admin').order('id', { ascending: true });
+            if (members && members.length > 0) {
+                const { count } = await supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('client_id', clientId);
+                const idx = (count || 0) % members.length;
+                assignedUserId = members[idx].user_id;
+            }
+        }
+        
         const { data: insertedChat, error: insertErr } = await supabase.from('conversations').insert([{
+          assigned_to: assignedUserId,
           user_phone: senderPhone,
           user_name: senderName,
           messages: finalMessages,
