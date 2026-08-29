@@ -108,5 +108,79 @@ export default async function handler(req, res) {
         await new Promise(r => setTimeout(r, 200));
     }
     
-        return res.status(200).json({ message: "Cron Hourly completado.", processed: totalProcessed });
+        
+    // ------------------------------------------------------------
+    // LOGICA 2: REASIGNACIÓN AUTOMÁTICA (Agentes inactivos > 2 horas)
+    // ------------------------------------------------------------
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+    
+    // Obtenemos conversaciones activas que requieren humano y están asignadas
+    const { data: reassignmentConvs } = await supabase
+        .from('conversations')
+        .select('id, client_id, assigned_to, messages, updated_at')
+        .eq('archived', false)
+        .eq('needs_human', true)
+        .not('assigned_to', 'is', null)
+        .lte('updated_at', twoHoursAgo);
+
+    if (reassignmentConvs && reassignmentConvs.length > 0) {
+        // Agrupar por client_id para optimizar carga de team_members
+        const clientMembersMap = {};
+        let reassignCount = 0;
+        
+        for (const c of reassignmentConvs) {
+            const msgs = c.messages || [];
+            if (msgs.length === 0) continue;
+            
+            const lastMsg = msgs[msgs.length - 1];
+            
+            // Si el último mensaje NO es del usuario, el agente SÍ respondió o fue un bot
+            if (lastMsg.role !== 'user') continue;
+            
+            // Verificamos el tiempo exacto del último mensaje del usuario
+            const lastMsgTime = new Date(lastMsg.timestamp || lastMsg.time || 0);
+            const hoursPassed = (now - lastMsgTime) / (1000 * 60 * 60);
+            
+            if (hoursPassed > 2) {
+                // Hay que reasignar
+                if (!clientMembersMap[c.client_id]) {
+                    const { data: members } = await supabase.from('team_members')
+                        .select('user_id')
+                        .eq('client_id', c.client_id)
+                        .eq('status', 'activo')
+                        .neq('role', 'admin')
+                        .order('id', { ascending: true });
+                    clientMembersMap[c.client_id] = members || [];
+                }
+                
+                const members = clientMembersMap[c.client_id];
+                if (members.length > 1) {
+                    // Evitamos asignar al mismo agente. Escogemos otro aleatoriamente o al azar simple.
+                    const otherMembers = members.filter(m => m.user_id !== c.assigned_to);
+                    if (otherMembers.length > 0) {
+                        const nextMember = otherMembers[Math.floor(Math.random() * otherMembers.length)].user_id;
+                        
+                        msgs.push({
+                            role: 'system',
+                            content: '[SISTEMA]: Chat reasignado automáticamente por inactividad del agente anterior (> 2 horas).',
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        await supabase.from('conversations').update({
+                            assigned_to: nextMember,
+                            messages: msgs,
+                            updated_at: new Date().toISOString()
+                        }).eq('id', c.id);
+                        
+                        reassignCount++;
+                        console.log(`Chat ${c.id} reasignado de ${c.assigned_to} a ${nextMember}`);
+                    }
+                }
+            }
+        }
+        console.log(`Total chats reasignados por inactividad: ${reassignCount}`);
+    }
+    // ------------------------------------------------------------
+
+    return res.status(200).json({ message: "Cron Hourly completado.", processed: totalProcessed });
 }
