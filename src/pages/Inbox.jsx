@@ -266,6 +266,31 @@ export default function Inbox() {
         filter: `client_id=eq.${tenant.clientId}`
       }, (payload) => {
         console.log('Realtime conversation list update', payload)
+        
+        if (payload.new && (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE')) {
+            const isForMe = !tenant.isAdmin && payload.new.assigned_to === tenant.session?.user?.id;
+            const isForAdmin = tenant.isAdmin;
+            
+            if (isForMe || isForAdmin) {
+               const msgs = payload.new.messages || [];
+               if (msgs.length > 0 && msgs[msgs.length - 1].role === 'user') {
+                   const msgTime = new Date(msgs[msgs.length - 1].timestamp || payload.new.updated_at).getTime();
+                   const now = new Date().getTime();
+                   if (now - msgTime < 45000) {
+                       if (window.Notification && Notification.permission === 'granted') {
+                           new Notification('Nuevo Mensaje de ' + (payload.new.user_name || payload.new.user_phone || 'Cliente'), {
+                               body: (msgs[msgs.length - 1].content || 'Mensaje multimedia')
+                           });
+                       }
+                       try {
+                           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                           audio.volume = 0.5;
+                           audio.play().catch(e => console.log('Autoplay bloqueado'));
+                       } catch(e){}
+                   }
+               }
+            }
+        }
         fetchConversations(true)
       })
       .subscribe()
