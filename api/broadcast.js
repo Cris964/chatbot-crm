@@ -232,6 +232,8 @@ export default async function handler(req, res) {
           successes++;
           if (isListMode) {
             await supabase.from('broadcast_contacts').update({ status: 'messaged' }).eq('id', lead.id);
+            // Auto-reactivate AI for this client so they can reply to the broadcast
+            await supabase.from('conversations').update({ needs_human: false }).eq('client_id', clientId).eq('user_phone', cleanPhone);
             // Not updating conversations table to save DB connections & memory
           }
         } else {
