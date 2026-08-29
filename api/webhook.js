@@ -203,6 +203,7 @@ export default async function handler(req, res) {
       }
 
       // 2. Gestionar Conversación
+      await new Promise(res => setTimeout(res, Math.random() * 2500));
       let { data: existingChats, error: chatErr } = await supabase
         .from('conversations')
         .select('id, messages, needs_human')
