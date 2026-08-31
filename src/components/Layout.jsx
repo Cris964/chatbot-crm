@@ -303,7 +303,7 @@ export default function Layout({ session }) {
                              <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Nexus AI Assistant</h2>
                              <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Inteligencia Artificial para tu negocio</p>
                           </div>
-                          <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setShowAIModal(false)}><X /></button>
+                          <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setShowAIModal(false)}><span style={{fontSize: 18}}>✕</span></button>
                        </div>
                     </div>
                     <div style={{ padding: '24px' }}>

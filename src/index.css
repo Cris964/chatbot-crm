@@ -2413,3 +2413,434 @@ select.form-input option {
   border-color: var(--primary-500) !important;
   background: rgba(255,255,255,0.05) !important;
 }
+
+/* =========================================================
+   NEXUS CRM REDESIGN - GLASSMORPHISM THEME OVERRIDES
+   ========================================================= */
+
+[data-theme="dark"] {
+  --bg-primary: #020617; /* Deep Slate Background */
+  --bg-secondary: rgba(15, 23, 42, 0.65); /* Translucent Slate for Glass */
+  --bg-tertiary: rgba(30, 41, 59, 0.65);
+  --bg-elevated: rgba(30, 41, 59, 0.8);
+  
+  --border-color: rgba(255, 255, 255, 0.05);
+  --border-light: rgba(255, 255, 255, 0.08);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+/* Base Body Background */
+body, .app-layout {
+  background-color: var(--bg-primary) !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* Global Glassmorphism Elements */
+.sidebar, 
+.inbox-sidebar, 
+.inbox-detail-sidebar,
+.inbox-header,
+.top-nav {
+  background: var(--bg-secondary) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Specific Sidebar Adjustments */
+.sidebar {
+  border-right: 1px solid var(--border-color) !important;
+  box-shadow: 1px 0 15px rgba(0,0,0,0.1);
+}
+
+/* Cards & Modals */
+.card, .stat-card, .kanban-column, .kanban-card, .modal-content {
+  background: var(--bg-secondary) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: all 0.3s ease;
+}
+
+.card:hover, .kanban-card:hover {
+  border-color: rgba(255,255,255,0.15) !important;
+  box-shadow: var(--shadow-lg), var(--shadow-glow) !important;
+  transform: translateY(-2px);
+}
+
+/* Inbox Enhancements */
+.inbox-layout {
+  background: transparent !important;
+}
+
+.chat-list-item {
+  border-radius: 12px !important;
+  margin: 4px 8px !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.chat-list-item:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.chat-list-item.active {
+  background: rgba(99, 102, 241, 0.1) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: inset 4px 0 0 var(--primary-500) !important;
+}
+
+/* Chat Bubbles */
+.chat-bubble {
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.chat-bubble.agent {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom-right-radius: 4px !important;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2) !important;
+}
+
+.chat-bubble.user {
+  background: var(--bg-tertiary) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--border-light) !important;
+  border-bottom-left-radius: 4px !important;
+}
+
+/* Input Areas */
+.chat-input-area, .message-input-container {
+  background: var(--bg-secondary) !important;
+  backdrop-filter: blur(24px) !important;
+  border-top: 1px solid var(--border-color) !important;
+  border-radius: 0 0 16px 0 !important;
+}
+
+.chat-input {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 20px !important;
+}
+
+.chat-input:focus {
+  border-color: var(--primary-500) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(to bottom, var(--primary-500), var(--primary-600)) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3) !important;
+  border-radius: 8px !important;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(to bottom, var(--primary-400), var(--primary-500)) !important;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
+}
+
+/* =========================================================
+   NEXUS CRM REDESIGN - LIGHT THEME (EAZYBE / ILOVELEADS)
+   ========================================================= */
+
+[data-theme="light"] {
+  /* Fondo principal ultra limpio */
+  --bg-primary: #f8fafc; /* Slate 50 */
+  --bg-secondary: #ffffff; /* White */
+  --bg-tertiary: #f1f5f9; /* Slate 100 */
+  
+  /* Color de marca fuerte para el Sidebar (Estilo Nexus / ILoveLeads) */
+  --sidebar-bg: #2e1065; /* Violet 900 - Deep Indigo/Purple */
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: #c4b5fd; /* Violet 300 */
+  
+  /* Bordes suaves */
+  --border-color: #e2e8f0; /* Slate 200 */
+  --border-light: #f1f5f9;
+  
+  /* Textos nítidos */
+  --text-primary: #0f172a; /* Slate 900 */
+  --text-secondary: #475569; /* Slate 600 */
+  --text-tertiary: #94a3b8;
+  
+  /* Sombras limpias */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Forzar la paleta en modo claro a los componentes clave */
+[data-theme="light"] body, 
+[data-theme="light"] .app-layout {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .sidebar {
+  background-color: var(--sidebar-bg) !important;
+  border-right: none !important;
+}
+
+/* Color específico de textos para que no se pierdan en la barra oscura */
+[data-theme="light"] .sidebar * {
+  color: var(--sidebar-text) !important;
+}
+
+/* Navegación y texto en sidebar */
+[data-theme="light"] .sidebar .nav-item {
+  color: var(--sidebar-text-muted) !important;
+}
+[data-theme="light"] .sidebar .nav-item.active, 
+[data-theme="light"] .sidebar .nav-item:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: var(--sidebar-text) !important;
+  border-radius: 8px !important;
+}
+
+/* Contenedores Principales de la vista */
+[data-theme="light"] .main-content,
+[data-theme="light"] .inbox-container {
+  background: var(--bg-primary) !important;
+}
+
+/* Modificadores de la bandeja de chat */
+[data-theme="light"] .inbox-sidebar,
+[data-theme="light"] .inbox-detail-sidebar {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] .inbox-list {
+  background: var(--bg-secondary) !important;
+}
+
+/* Elementos de la lista de chats */
+[data-theme="light"] .chat-list-item {
+  background: var(--bg-secondary) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 16px 20px !important;
+}
+
+[data-theme="light"] .chat-list-item:hover {
+  background: var(--bg-primary) !important;
+}
+
+[data-theme="light"] .chat-list-item.active {
+  background: var(--bg-tertiary) !important;
+  border-left: 4px solid var(--primary-500) !important;
+}
+
+[data-theme="light"] .chat-list-item .chat-name {
+  color: var(--text-primary) !important;
+}
+[data-theme="light"] .chat-list-item .chat-preview {
+  color: var(--text-secondary) !important;
+}
+
+/* Burbujas de Chat */
+[data-theme="light"] .chat-bubble.agent {
+  background: var(--sidebar-bg) !important; /* Mismo morado de la barra lateral */
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px 12px 0 12px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+[data-theme="light"] .chat-bubble.user {
+  background: #ffffff !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px 12px 12px 0 !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Área de conversación activa */
+[data-theme="light"] .chat-history {
+  background: #f0f2f5 !important; /* Fondo WhatsApp Web */
+}
+
+[data-theme="light"] .chat-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .message-input-container {
+  background: #ffffff !important;
+  border-top: 1px solid var(--border-color) !important;
+}
+
+[data-theme="light"] .chat-input {
+  background: #ffffff !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  border-radius: 24px !important;
+}
+
+/* Tarjetas y Kanban (Dashboard/Pipeline) */
+[data-theme="light"] .card, 
+[data-theme="light"] .stat-card, 
+[data-theme="light"] .kanban-card {
+  background: #ffffff !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-radius: 12px !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .kanban-column {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="light"] h1, 
+[data-theme="light"] h2, 
+[data-theme="light"] h3, 
+[data-theme="light"] h4, 
+[data-theme="light"] h5, 
+[data-theme="light"] h6 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] p, 
+[data-theme="light"] span {
+  color: var(--text-secondary); /* No !important here to let specific text overrides win */
+}
+
+/* =========================================================
+   NEXUS CRM - BUG FIXES (LIGHT THEME & Z-INDEX)
+   ========================================================= */
+
+/* 1. Arreglar el Sidebar Colapsado (Ancho y centrado de iconos) */
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed, 80px) !important;
+}
+.sidebar.collapsed .nav-item {
+  justify-content: center !important;
+  padding: 12px !important;
+}
+.sidebar.collapsed .sidebar-header {
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+/* 2. Arreglar los Iconos Invisibles en los menús internos (Ej. Inbox Sidebar) */
+/* El parche anterior aplicaba color blanco muy genéricamente. Lo limitamos: */
+[data-theme="light"] .inbox-sidebar,
+[data-theme="light"] .inbox-detail-sidebar,
+[data-theme="light"] .inbox-sidebar * {
+  color: var(--text-primary) !important;
+}
+
+/* 3. Arreglar Notificaciones "Por detrás" y Modal z-index */
+.notifications-wrapper,
+.notifications-panel,
+.notifications-dropdown {
+  z-index: 9999 !important;
+}
+
+/* 4. Arreglar función de IA (Botón bloqueado por elementos superpuestos) */
+.chat-header {
+  position: relative;
+  z-index: 50 !important;
+}
+.ai-toggle-container,
+.ai-toggle-btn {
+  z-index: 51 !important;
+  pointer-events: auto !important;
+}
+
+/* Asegurar que los iconos de la barra principal (Morada) sigan siendo blancos */
+[data-theme="light"] .sidebar .nav-item svg {
+  color: #ffffff !important;
+}
+[data-theme="light"] .sidebar .sidebar-user * {
+  color: #ffffff !important;
+}
+
+/* Ajuste fino al Light Theme - Botones fantasma */
+[data-theme="light"] .btn-ghost {
+  color: var(--text-secondary) !important;
+}
+[data-theme="light"] .btn-ghost:hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* =========================================================
+   NEXUS CRM - BUG FIXES 2 (TEXT COLOR & Z-INDEX)
+   ========================================================= */
+
+/* 1. Arreglar Notificaciones por detrás (Garantizar z-index en la cabecera) */
+.top-header {
+  position: relative !important;
+  z-index: 999999 !important;
+}
+.notifications-dropdown, 
+.notifications-panel,
+.notifications-wrapper {
+  position: absolute !important;
+  z-index: 9999999 !important;
+  /* Asegurar que el fondo sea sólido para que no se traslapen las letras */
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* 2. Arreglar texto oscuro y feo en los mensajes del bot (Modo Claro) */
+/* Forzamos que cualquier texto (p, span, div, strong, a) dentro de la burbuja del agente sea blanco puro */
+[data-theme="light"] .chat-bubble.agent,
+[data-theme="light"] .chat-bubble.agent p,
+[data-theme="light"] .chat-bubble.agent span,
+[data-theme="light"] .chat-bubble.agent div,
+[data-theme="light"] .chat-bubble.agent * {
+  color: #ffffff !important;
+}
+
+/* Y para las notas internas o sistema, asegurar contraste */
+[data-theme="light"] .chat-bubble.system p,
+[data-theme="light"] .chat-bubble.system span {
+  color: var(--text-primary) !important;
+}
+
+/* 3. Ajustar el color de fondo de la burbuja del bot para que no sea TAN oscuro, 
+   usando el color primario de Nexus para mejor estética (Estilo iLoveLeads) */
+[data-theme="light"] .chat-bubble.agent {
+  background: var(--primary-600) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+}
+
+
+/* =========================================================
+   NEXUS CRM - BUG FIXES 3 (SOLID NOTIFICATIONS & AI CRASH)
+   ========================================================= */
+
+/* Forzar fondo sólido en notificaciones sin importar si es modo claro u oscuro */
+.notifications-dropdown, 
+.notifications-panel {
+  background: #1e1b4b !important; /* Morado muy oscuro y sólido por defecto */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme="light"] .notifications-dropdown, 
+[data-theme="light"] .notifications-panel {
+  background: #ffffff !important; /* Blanco sólido en modo claro */
+}
+
