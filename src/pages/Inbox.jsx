@@ -97,6 +97,7 @@ export default function Inbox() {
   const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
   const [activeTab, setActiveTab] = useState('all');
+    const [agentFilter, setAgentFilter] = useState('all');
   const [activeFolder, setActiveFolder] = useState('inbox');
   const [broadcastLists, setBroadcastLists] = useState([]);
   const [isListsExpanded, setIsListsExpanded] = useState(false);
@@ -1300,9 +1301,39 @@ const { error: uploadError } = await supabase.storage
                       {tab === 'all' ? 'Todos' : tab === 'archived' ? 'Archivados' : tab}
                    </button>
                 ))}
-             </div>
-              
-              {selectedChats.length > 0 && (
+             
+               </div>
+               
+               {/* Asesor Filter (visible if teamMembers > 1) */}
+               {tenant.teamMembers && tenant.teamMembers.length > 1 && (
+                  <div style={{ marginTop: 12 }}>
+                     <select 
+                        value={agentFilter}
+                        onChange={(e) => setAgentFilter(e.target.value)}
+                        style={{
+                           width: '100%',
+                           padding: '8px 12px',
+                           borderRadius: '12px',
+                           background: 'rgba(var(--overlay-rgb), 0.05)',
+                           border: '1px solid var(--glass-border)',
+                           color: 'var(--text-secondary)',
+                           fontSize: '0.8rem',
+                           outline: 'none',
+                           cursor: 'pointer'
+                        }}
+                     >
+                        <option value="all">Filtro: Todos los chats</option>
+                        <option value="unassigned">Sin asignar</option>
+                        {tenant.teamMembers.map(member => (
+                           <option key={member.user_id} value={member.user_id}>
+                              Asignado a: {member.full_name || member.email}
+                           </option>
+                        ))}
+                     </select>
+                  </div>
+               )}
+
+               {selectedChats.length > 0 && (
                  <div style={{ marginTop: 12, padding: '8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-400)', textAlign: 'center' }}>
                        {selectedChats.length} chat(s) seleccionados
@@ -1344,6 +1375,11 @@ const { error: uploadError } = await supabase.storage
               </div>
             ) : conversationsList
                 .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
+                  .filter(c => {
+                     if (agentFilter === 'all') return true;
+                     if (agentFilter === 'unassigned') return !c.assigned_to;
+                     return c.assigned_to === agentFilter;
+                  })
                 .filter(c => {
                      if (searchQuery) return true; // BYPASS folder filter if searching globally
                      const fId = getConversationFolder(c);
