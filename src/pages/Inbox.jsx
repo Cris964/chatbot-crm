@@ -1304,8 +1304,8 @@ const { error: uploadError } = await supabase.storage
              
                </div>
                
-               {/* Asesor Filter (visible if teamMembers > 1) */}
-               {tenant.teamMembers && tenant.teamMembers.length > 1 && (
+               {/* Asesor Filter (visible if teamMembers > 1 and only for admins) */}
+               {tenant.isAdmin && teamMembers && teamMembers.length > 0 && (
                   <div style={{ marginTop: 12 }}>
                      <select 
                         value={agentFilter}
@@ -1324,7 +1324,7 @@ const { error: uploadError } = await supabase.storage
                      >
                         <option value="all">Filtro: Todos los chats</option>
                         <option value="unassigned">Sin asignar</option>
-                        {tenant.teamMembers.map(member => (
+                        {teamMembers.map(member => (
                            <option key={member.user_id} value={member.user_id}>
                               Asignado a: {member.full_name || member.email}
                            </option>
