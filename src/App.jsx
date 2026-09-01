@@ -21,6 +21,7 @@ import Calendar from './pages/Calendar'
 import Marketing from './pages/Marketing'
 import Products from './pages/Products'
 import SuperAdmin from './pages/SuperAdmin'
+import Billing from './pages/Billing'
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, isLoading, session }) => {
@@ -103,6 +104,7 @@ function App() {
         <Route path="marketing" element={<Marketing />} />
         
         <Route path="usuarios" element={<UsersPage />} />
+        <Route path="pagos" element={<Billing />} />
         
         <Route path="configuracion" element={<Settings />} />
         <Route path="settings" element={<Navigate to="/configuracion" replace />} />
