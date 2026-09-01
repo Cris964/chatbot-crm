@@ -711,7 +711,7 @@ export default function Inbox() {
         .update({ 
           messages: [...selectedConv.rawMessages, messageObj],
           updated_at: new Date().toISOString(),
-          needs_human: true
+          needs_human: false
         })
         .eq('id', selectedConv.id)
 
