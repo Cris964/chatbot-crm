@@ -8,8 +8,16 @@ export default function Billing() {
   const [loading, setLoading] = useState(true)
   const [clientData, setClientData] = useState(null)
   
-  // Base price in COP if not defined in DB
-  const DEFAULT_PRICE_COP = 150000
+  // Base prices in COP for specific clients
+  const PRICING_MAP = {
+    'c91119cc-5451-4a64-b0e8-6b53d33d5563': 1650000, // Activo Morrales
+    'f920ca15-badb-4492-a344-e8d04f9f8c02': 600000,  // Samaritana
+    'c90f532b-0b32-4614-9c21-bbf664213468': 600000,  // Trazzos
+    '281db48e-b43b-4399-8d7d-d629fe936944': 1800000, // Importaller
+  }
+
+  // Base price in COP if not defined in DB or PRICING_MAP
+  const DEFAULT_PRICE_COP = PRICING_MAP[tenant.clientId] || 150000
 
   useEffect(() => {
     const fetchBillingData = async () => {
