@@ -297,9 +297,13 @@ export default function Login({ onLogin }) {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1rem' }}>
             <a href="#" style={{ color: '#6366f1', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
               Olvidaste tu contraseña?
+            </a>
+            <span style={{ color: '#cbd5e1', margin: '0 10px' }}>|</span>
+            <a href="#" onClick={(e) => { e.preventDefault(); alert('Por tu seguridad, inicia sesión primero para calcular automáticamente el valor exacto de tu suscripción en la pasarela.'); }} style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Pagar mi Suscripción
             </a>
           </div>
 
