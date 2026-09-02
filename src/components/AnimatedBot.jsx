@@ -16,7 +16,7 @@ export default function AnimatedBot({ emailLength, isPasswordFocused, isEmailFoc
           position: relative;
           width: 150px;
           height: 150px;
-          margin: 0 auto -20px auto;
+          margin: 0 auto 60px auto;
         }
         
         .bot-head {

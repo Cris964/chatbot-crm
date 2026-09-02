@@ -245,69 +245,62 @@ function DashboardContent() {
       )}
       <div className="flex justify-between items-end mb-8 animate-slideUp">
         <div>
-          <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(to right, white, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Resumen General
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+            ¡Buenos días, {tenant.membership?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0] || 'Usuario'}!
           </h1>
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.95rem' }}>Visualización de métricas clave para {tenant.clientName}</p>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '1rem', marginTop: 8 }}>
+            Aquí está el resumen de tu negocio.
+          </p>
         </div>
         <div className="flex gap-3">
-          <button className="btn btn-secondary"><Activity size={16} /> Reportes</button>
-          <button className="btn btn-primary"><TrendingUp size={16} /> Analizar con IA</button>
+          <button style={{ background: '#4318FF', color: 'white', borderRadius: '12px', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 8, border: 'none', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 15px rgba(67, 24, 255, 0.3)' }}>
+            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span> Crear Nuevo
+          </button>
         </div>
       </div>
 
-      <div className="stats-grid animate-slideUp">
-        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.1s' }}>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-             <div className="ai-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><DollarSign size={18} /></div>
-             <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800 }}>+15%</span>
+      <div className="stats-grid animate-slideUp" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
+        
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#FFF1F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F43F5E' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </div>
-          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Ventas Totales</div>
-          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>
-            ${stats?.revenue >= 1000000 ? `${(stats?.revenue / 1000000).toFixed(1)}M` : `${(stats?.revenue / 1000).toFixed(1)}k`}
-          </div>
-          <div className="sparkline-container">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={sparklineData}>
-                <Area type="monotone" dataKey="pv" stroke="#10b981" fill="rgba(16, 185, 129, 0.1)" strokeWidth={2} dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{stats?.salesCount || 0}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Ventas (Órdenes)</div>
           </div>
         </div>
 
-        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.2s' }}>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-             <div className="ai-icon-wrapper" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}><Activity size={18} /></div>
-             <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 800 }}>{stats?.salesCount} ord.</span>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           </div>
-          <div className="relative z-10" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Atendidos por IA</div>
-          <div className="relative z-10" style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats?.aiChats || 0}</div>
-          <div className="sparkline-container">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={sparklineData}>
-                <Area type="monotone" dataKey="pv" stroke="#6366f1" fill="rgba(99, 102, 241, 0.1)" strokeWidth={2} dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{stats?.aiChats || 0}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Chats de IA</div>
           </div>
         </div>
 
-        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.3s' }}>
-          <div className="flex justify-between items-start mb-4">
-             <div className="ai-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Target size={18} /></div>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#ECFEFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06B6D4' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Chats Pendientes</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats?.pendingChats || 0}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Esperando asesor humano</div>
+          <div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{stats?.pendingChats || 0}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Chats Pendientes</div>
+          </div>
         </div>
 
-        <div className="stat-card animate-slideUp" style={{ animationDelay: '0.4s' }}>
-          <div className="flex justify-between items-start mb-4">
-             <div className="ai-icon-wrapper" style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899' }}><Zap size={18} /></div>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10B981' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Nuevos Leads (30d)</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, margin: '8px 0' }}>{stats?.newLeads}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Crecimiento constante</div>
+          <div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>${stats?.revenue >= 1000000 ? `${(stats?.revenue / 1000000).toFixed(1)}M` : `${(stats?.revenue / 1000).toFixed(1)}k`}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Ingresos Totales</div>
+          </div>
         </div>
+
       </div>
 
       <div className="charts-grid">
