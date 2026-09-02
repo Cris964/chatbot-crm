@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { ArrowRight, AlertCircle, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import NexusLogo from '../components/NexusLogo'
+import AnimatedBot from '../components/AnimatedBot'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -9,6 +10,14 @@ export default function Login({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showPassword, setShowPassword] = useState(false)
+  
+  // States for animation
+  const [isEmailFocused, setIsEmailFocused] = useState(false)
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false)
+
+  // State for reset password
+  const [isResetting, setIsResetting] = useState(false)
+  const [resetSuccess, setResetSuccess] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -30,6 +39,30 @@ export default function Login({ onLogin }) {
       setError(err.message)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Por favor, ingresa tu correo electrnico para restablecer la contrasea.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    setResetSuccess(false);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      if (error) throw error;
+      setResetSuccess(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -140,7 +173,8 @@ export default function Login({ onLogin }) {
         }
 
         .login-right-header {
-          margin-bottom: 2.5rem;
+          margin-bottom: 1rem;
+          text-align: center;
         }
 
         .login-right-header h2 {
@@ -258,7 +292,7 @@ export default function Login({ onLogin }) {
           <div className="brand-content">
             <h1>El futuro del CRM.</h1>
             <p>
-              Automatiza la atencin, centraliza tus ventas y domina la omnicanalidad con IA, todo en una plataforma con un diseo espectacular.
+              Automatiza la atención, centraliza tus ventas y domina la omnicanalidad con IA, todo en una plataforma con un diseño espectacular.
             </p>
           </div>
 
@@ -274,71 +308,108 @@ export default function Login({ onLogin }) {
 
         {/* RIGHT COLUMN */}
         <div className="login-right">
+          
+          <AnimatedBot 
+            emailLength={email.length} 
+            isEmailFocused={isEmailFocused}
+            isPasswordFocused={isPasswordFocused && !showPassword} 
+          />
+
           <div className="login-right-header">
-            <h2>Welcome back</h2>
-            <p>Please enter your details to sign in.</p>
+            <h2>Bienvenido</h2>
+            <p>Ingresa tus datos para continuar.</p>
           </div>
 
           {error && (
             <div style={{ padding: '14px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '12px', fontSize: '0.9rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
               <AlertCircle size={18} />
-              {error === 'Invalid login credentials' ? 'Correo o contrasea incorrectos' : error}
+              {error === 'Invalid login credentials' ? 'Correo o contraseña incorrectos' : error}
+            </div>
+          )}
+          
+          {resetSuccess && (
+            <div style={{ padding: '14px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '12px', fontSize: '0.9rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircle size={18} />
+              Se ha enviado un enlace de recuperación a tu correo.
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
             <div className="input-group">
-              <label>Email</label>
+              <label>Correo Electrónico</label>
               <div className="input-wrapper">
                 <input 
                   type="email" 
                   className="clean-input" 
-                  placeholder="name@company.com" 
+                  placeholder="admin@empresa.com" 
                   value={email}
                   onChange={e => setEmail(e.target.value)}
+                  onFocus={() => setIsEmailFocused(true)}
+                  onBlur={() => setIsEmailFocused(false)}
                   required
                 />
               </div>
             </div>
 
-            <div className="input-group">
-              <label>Password</label>
-              <div className="input-wrapper">
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  className="clean-input" 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
+            {!isResetting && (
+              <div className="input-group">
+                <label>Contraseña</label>
+                <div className="input-wrapper">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    className="clean-input" 
+                    placeholder="••••••••" 
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
+                    required
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isResetting && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', color: '#64748b', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ width: 16, height: 16, accentColor: '#4318FF' }} />
+                  Recordarme
+                </label>
                 <button 
-                  type="button" 
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
+                  type="button"
+                  onClick={() => setIsResetting(true)} 
+                  style={{ color: '#4318FF', fontSize: '0.9rem', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  ¿Olvidaste tu contraseña?
                 </button>
               </div>
-            </div>
+            )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', color: '#64748b', cursor: 'pointer' }}>
-                <input type="checkbox" style={{ width: 16, height: 16, accentColor: '#4318FF' }} />
-                Remember for 30 days
-              </label>
-              <a href="#" style={{ color: '#4318FF', fontSize: '0.9rem', fontWeight: 600, textDecoration: 'none' }}>
-                Forgot password?
-              </a>
-            </div>
-
-            <button type="submit" className="btn-submit" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Log in'}
-            </button>
+            {isResetting ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <button type="button" onClick={handleResetPassword} className="btn-submit" disabled={isLoading}>
+                  {isLoading ? 'Enviando...' : 'Enviar link de recuperación'}
+                </button>
+                <button type="button" onClick={() => { setIsResetting(false); setError(null); setResetSuccess(false); }} style={{ background: 'transparent', color: '#64748b', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+                  Volver al inicio de sesión
+                </button>
+              </div>
+            ) : (
+              <button type="submit" className="btn-submit" disabled={isLoading}>
+                {isLoading ? 'Verificando...' : 'Ingresar a Nexus'}
+              </button>
+            )}
 
             <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-              <a href="#" onClick={(e) => { e.preventDefault(); alert('Por tu seguridad, inicia sesin primero para calcular automǭticamente el valor exacto de tu suscripcin en la pasarela.'); }} style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 600, textDecoration: 'none' }}>
-                Pagar mi Suscripcin
+              <a href="#" onClick={(e) => { e.preventDefault(); alert('Por tu seguridad, inicia sesión primero para calcular automáticamente el valor exacto de tu suscripción en la pasarela.'); }} style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 600, textDecoration: 'none' }}>
+                Pagar mi Suscripción
               </a>
             </div>
           </form>
