@@ -125,11 +125,21 @@ function DashboardContent() {
       let totalRevenue = 0;
       let totalSalesCount = 0;
       let aiChatsCount = 0;
+      let answeredChatsCount = 0;
       let pendingChatsCount = 0;
 
       if (convs) {
+        answeredChatsCount = convs.filter(c => {
+           const unread = c.messages && c.messages.length > 0 && (c.messages[c.messages.length - 1].role === 'user' || c.messages[c.messages.length - 1].role === 'customer');
+           return !unread;
+        }).length;
+        
         aiChatsCount = convs.filter(c => c.needs_human === false || c.needs_human == null).length;
-        pendingChatsCount = convs.filter(c => c.needs_human === true && !c.assigned_to).length;
+        
+        pendingChatsCount = convs.filter(c => {
+           const unread = c.messages && c.messages.length > 0 && (c.messages[c.messages.length - 1].role === 'user' || c.messages[c.messages.length - 1].role === 'customer');
+           return unread && !c.archived;
+        }).length;
       }
 
       const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -153,7 +163,7 @@ function DashboardContent() {
         const active = leads.filter(l => !['Gano', 'Perdio'].includes(l.stage)).length
         const wonLeads = leads.filter(l => l.stage === 'Gano')
         const won = wonLeads.length
-        const convRate = leads.length > 0 ? `${((won / leads.length) * 100).toFixed(1)}%` : '0%'
+        const convRate = convs && convs.length > 0 ? `${((aiChatsCount / convs.length) * 100).toFixed(0)}%` : '0%'
 
         const parseVal = (v) => {
            if(!v) return 0;
@@ -200,6 +210,7 @@ function DashboardContent() {
           newLeads: leads.filter(l => new Date(l.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
           conversion: convRate,
           aiChats: aiChatsCount,
+          answeredChats: answeredChatsCount,
           pendingChats: pendingChatsCount
         }))
         setRecentDealsList(recent)
@@ -212,6 +223,7 @@ function DashboardContent() {
               
               let chatsHandled = 0;
               if (convs) {
+        answeredChatsCount = convs.filter(c => !c.unread).length;
                  chatsHandled = convs.filter(c => c.assigned_to === member.user_id || c.assigned_to === member.id).length;
               }
 
@@ -274,13 +286,14 @@ function DashboardContent() {
         <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.1s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
               <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tiempo de Respuesta</h3>
+              <select style={{ background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '4px', fontSize: '0.65rem', color: 'var(--text-tertiary)', padding: '2px 4px' }}><option>Hoy</option><option>Semana</option><option>Mes</option></select>
               <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Reporte</span>
            </div>
            <div className="flex items-center gap-4 mb-2">
               <div className="flex items-center gap-2">
-                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>2m 34s</span>
+                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{stats?.answeredChats || 0}</span>
                  <div style={{ width: 12, height: 4, borderRadius: 2, background: '#10b981' }}></div>
-                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Promedio IA</span>
+                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Chats Contestados</span>
               </div>
            </div>
            <div style={{ height: 110 }}>
