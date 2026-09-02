@@ -134,192 +134,91 @@ export default function Layout({ session }) {
   const displayRole = roleLabels[tenant.role] || tenant.role || 'Usuario'
 
   return (
-    <div className="app-layout">
-      {/* Mobile Backdrop */}
-      <div 
-        className={`sidebar-backdrop ${mobileOpen ? 'show' : ''}`} 
-        onClick={() => setMobileOpen(false)}
-      ></div>
+    <div className="app-layout" style={{ flexDirection: 'column' }}>
+      <style>{`
+        .app-layout { display: flex; flex-direction: column !important; height: 100vh; overflow: hidden; background-color: var(--bg-primary); }
+        .top-navbar { display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 85px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-default); flex-shrink: 0; z-index: 100; }
+        .top-nav-links { display: flex; gap: 12px; align-items: center; overflow-x: auto; flex: 1; margin: 0 40px; padding: 8px 0; }
+        .top-nav-links::-webkit-scrollbar { display: none; }
+        .top-nav-item { display: flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 30px; color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: all 0.2s ease-in-out; white-space: nowrap; border: 1px solid transparent; }
+        .top-nav-item:hover { background: rgba(var(--overlay-rgb), 0.05); color: var(--text-primary); }
+        .top-nav-item.active { background: var(--primary-500); color: #ffffff; box-shadow: 0 4px 20px 0 rgba(67, 24, 255, 0.4); }
+        .sidebar { display: none !important; }
+        .top-header { display: none !important; }
+        .main-content { flex: 1; overflow-y: auto; padding: 32px; background: var(--bg-primary); }
+        .header-actions { display: flex; align-items: center; gap: 16px; }
+        .header-action-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border); background: transparent; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative; }
+        .header-action-btn:hover { background: rgba(var(--overlay-rgb), 0.05); color: var(--text-primary); }
+        .profile-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #10b981); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3); }
+      `}</style>
 
-      <aside className={`sidebar ${isSidebarCollapsed && !mobileOpen ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="nexus-logo-wrapper">
-             <NexusLogo size={isSidebarCollapsed ? 36 : 40} />
-             {!isSidebarCollapsed && (
-               <div className="logo-text">
-                 <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.03em' }}>NexusCRM</h1>
-                   <span style={{ fontSize: '0.65rem', color: tenant.error ? 'var(--accent-rose)' : 'var(--text-tertiary)', fontWeight: 700, letterSpacing: '0.1em', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                     {tenant.error ? `Error: ${tenant.error}` : (tenant.clientName || 'Cargando...')}
-                   </span>
-               </div>
-             )}
-          </div>
+      <header className="top-navbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <NexusLogo size={36} />
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.03em', margin: 0 }}>Nexus<span style={{color: 'var(--primary-500)'}}>CRM</span></h1>
         </div>
 
-        <nav className="sidebar-nav">
-          {navItems.map((section) => (
-            <div key={section.label}>
-              {!isSidebarCollapsed && <div className="nav-section-label" style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', paddingLeft: 24, marginBottom: 8 }}>{section.label}</div>}
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                  <item.icon size={20} />
-                  {!isSidebarCollapsed && <span className="nav-label">{item.label}</span>}
-                </NavLink>
-              ))}
-            </div>
+        <nav className="top-nav-links">
+          {navItems.flatMap(s => s.items).map((item) => (
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => `top-nav-item ${isActive ? 'active' : ''}`}>
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
           ))}
         </nav>
 
-        <div className="sidebar-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: '16px 12px' }}>
-          <NavLink to="/settings" className="sidebar-user" style={{ 
-            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit',
-            background: 'rgba(var(--overlay-rgb), 0.02)', borderRadius: 16, padding: '10px 12px',
-            border: '1px solid rgba(var(--overlay-rgb), 0.05)', transition: 'all 0.2s',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.08)'; e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb), 0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--overlay-rgb), 0.02)'; e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb), 0.05)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-          >
-            <div className="avatar md" style={{ background: 'linear-gradient(135deg, #6366f1, #10b981)', fontSize: 12, boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)', flexShrink: 0 }}>
-              {tenant.membership?.full_name?.substring(0, 2).toUpperCase() || session?.user?.email?.substring(0, 2).toUpperCase()}
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="user-info" style={{ flex: 1, minWidth: 0 }}>
-                <div className="user-name" style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                   {tenant.membership?.full_name || session?.user?.email?.split('@')[0]}
-                </div>
-                <div className="user-role" style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>{displayRole}</div>
-              </div>
-            )}
-          </NavLink>
-        </div>
-      </aside>
-
-      <div className="main-content">
-        <header className="top-header">
-          <button className="header-toggle" onClick={() => {
-            if (window.innerWidth <= 768) {
-              setMobileOpen(!mobileOpen)
-            } else {
-              setIsSidebarCollapsed(!isSidebarCollapsed)
-            }
-          }}>
-            <Menu size={20} />
+        <div className="header-actions">
+          <button className="header-action-btn" onClick={() => setShowNotifications(!showNotifications)}>
+            <Bell size={20} />
+            {notifications.length > 0 && <span style={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, background: 'var(--accent-rose)', borderRadius: '50%' }}></span>}
           </button>
 
-          <div className="header-search" style={{ display: 'none' }}>
-            <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-            <input type="text" placeholder="Search for deals, tasks or clients... (⌘K)" />
-            <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4 }}>
-               <div style={{ background: 'rgba(var(--overlay-rgb), 0.05)', border: '1px solid var(--glass-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'var(--text-tertiary)' }}>⌘</div>
-               <div style={{ background: 'rgba(var(--overlay-rgb), 0.05)', border: '1px solid var(--glass-border)', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'var(--text-tertiary)' }}>K</div>
-            </div>
-          </div>
-
-          <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="header-action-btn" onClick={() => setShowNotifications(!showNotifications)}>
-                <Bell size={20} />
-                {notifications.length > 0 && <span className="notification-dot"></span>}
-              </button>
-
-              {showNotifications && (
-                <div className="card" style={{ 
-                  position: 'absolute', top: '100%', right: 0, width: 320, 
-                  zIndex: 1000, marginTop: 12, padding: 0, overflow: 'hidden',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-                }}>
-                  <div className="card-header" style={{ padding: '12px 16px', borderBottom: '1px solid var(--glass-border)' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Notificaciones</h4>
-                  </div>
-                  <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                    {notifications.length === 0 ? (
-                      <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-                        No hay alertas pendientes
-                      </div>
-                    ) : (
-                      notifications.map(n => (
-                        <div key={n.id} style={{ 
-                          padding: '12px 16px', borderBottom: '1px solid var(--border-default)',
-                          background: n.type === 'escalation' ? 'rgba(244, 63, 94, 0.05)' : 'transparent'
-                        }}>
-                          <div className="flex items-start gap-3">
-                            <AlertCircle size={16} style={{ color: 'var(--accent-rose)', marginTop: 2 }} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Asistencia Humana</div>
-                              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0' }}>
-                                <strong>{n.conversations?.user_name || 'Cliente'}</strong> necesita ayuda con un asesor.
-                              </p>
-                              <div className="flex justify-between items-center" style={{ marginTop: 8 }}>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                                  {new Date(n.created_at).toLocaleTimeString()}
-                                </span>
-                                <button 
-                                  className="btn btn-ghost btn-sm" 
-                                  style={{ padding: '2px 8px', fontSize: '0.7rem' }}
-                                  onClick={() => {
-                                    markAsRead(n.id)
-                                    window.location.href = `/inbox?id=${n.conversation_id}`
-                                  }}
-                                >
-                                  Ver Chat
-                                </button>
-                              </div>
-                            </div>
+          {showNotifications && (
+            <div className="card" style={{ position: 'absolute', top: 75, right: 24, width: 320, zIndex: 1000, padding: 0, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+              <div className="card-header" style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)' }}>
+                <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Notificaciones</h4>
+              </div>
+              <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No hay alertas pendientes</div>
+                ) : (
+                  notifications.map(n => (
+                    <div key={n.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-default)', background: n.type === 'escalation' ? 'rgba(244, 63, 94, 0.05)' : 'transparent' }}>
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={16} style={{ color: 'var(--accent-rose)', marginTop: 2 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Asistencia Humana</div>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0' }}><strong>{n.conversations?.user_name || 'Cliente'}</strong> necesita ayuda.</p>
+                          <div className="flex justify-between items-center" style={{ marginTop: 8 }}>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{new Date(n.created_at).toLocaleTimeString()}</span>
+                            <button className="btn btn-ghost btn-sm" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => { markAsRead(n.id); window.location.href = `/inbox?id=${n.conversation_id}`; }}>Ver Chat</button>
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button className="header-action-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-            <button className="header-action-btn" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-400)' }} onClick={() => setShowAIModal(true)}>
-              <Sparkles size={20} />
-            </button>
-            <div style={{ width: 1, height: 24, background: 'var(--glass-border)', margin: '0 8px' }} />
-            <button className="header-action-btn" onClick={handleLogout}>
-              <LogOut size={20} />
-            </button>
-
-
-
-            {/* AI Assistant Modal */}
-            {showAIModal && (
-              <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAIModal(false)}>
-                <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 500, padding: 0 }} onClick={e => e.stopPropagation()}>
-                    <div className="card-header" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), transparent)', padding: '24px' }}>
-                       <div className="flex items-center gap-3">
-                          <div className="ai-icon-wrapper large"><Sparkles /></div>
-                          <div>
-                             <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Nexus AI Assistant</h2>
-                             <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Inteligencia Artificial para tu negocio</p>
-                          </div>
-                          <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setShowAIModal(false)}><span style={{fontSize: 18}}>✕</span></button>
-                       </div>
+                      </div>
                     </div>
-                    <div style={{ padding: '24px' }}>
-                       <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Hola, soy Nexus AI. Puedo ayudarte a generar respuestas automáticas, calificar tus leads y programar campañas de re-marketing.</p>
-                       <div className="flex gap-2 mt-6">
-                          <button className="btn btn-primary" style={{ flex: 1 }}>Analizar Leads</button>
-                          <button className="btn btn-secondary" style={{ flex: 1 }}>Ayuda</button>
-                       </div>
-                    </div>
-                </div>
+                  ))
+                )}
               </div>
-            )}
-          </div>
-        </header>
+            </div>
+          )}
 
+          <button className="header-action-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          
+          <button className="header-action-btn" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-500)', borderColor: 'transparent' }} onClick={() => setShowAIModal(true)}>
+            <Sparkles size={20} />
+          </button>
+
+          <div style={{ width: 1, height: 24, background: 'var(--glass-border)', margin: '0 8px' }} />
+          
+          <div className="profile-avatar" onClick={handleLogout} title="Cerrar sesión">
+            {tenant.membership?.full_name?.substring(0, 2).toUpperCase() || session?.user?.email?.substring(0, 2).toUpperCase() || 'U'}
+          </div>
+        </div>
+      </header>
+
+      <div className="main-content">
         <Outlet context={{ session, tenant }} />
       </div>
     </div>

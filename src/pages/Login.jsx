@@ -1,21 +1,17 @@
 import { useState } from 'react'
 import { ArrowRight, AlertCircle, Bot, Zap, Globe, Layers, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import AnimatedBot from '../components/AnimatedBot'
 import { supabase } from '../lib/supabase'
 import NexusLogo from '../components/NexusLogo'
-import AnimatedBot from '../components/AnimatedBot'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-  
-  // Animation states
+  const [showPassword, setShowPassword] = useState(false)
   const [isEmailFocused, setIsEmailFocused] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-
-  // Reset states
   const [isResetting, setIsResetting] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
 
@@ -23,17 +19,12 @@ export default function Login({ onLogin }) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-
       if (data.user) {
-        onLogin(data.user)
+        if(onLogin) onLogin(data.user)
+        else window.location.href = '/';
       }
     } catch (err) {
       setError(err.message)
@@ -48,67 +39,121 @@ export default function Login({ onLogin }) {
       setError('Por favor, ingresa tu correo electrónico para restablecer la contraseña.');
       return;
     }
-    
-    setIsLoading(true);
-    setError(null);
-    setResetSuccess(false);
-
+    setIsLoading(true); setError(null); setResetSuccess(false);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/reset-password',
       });
       if (error) throw error;
       setResetSuccess(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { setError(err.message); } finally { setIsLoading(false); }
   }
 
+  const networkSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000' viewBox='0 0 1000 1000'%3E%3Cg stroke='rgba(99, 102, 241, 0.25)' stroke-width='1.5' fill='none'%3E%3Cpath d='M100 100L300 250L200 500Z'/%3E%3Cpath d='M300 250L600 200L550 550L200 500Z'/%3E%3Cpath d='M600 200L850 150L800 450L550 550'/%3E%3Cpath d='M200 500L150 800L450 750L550 550'/%3E%3Cpath d='M450 750L750 850L800 450'/%3E%3Cpath d='M300 250L500 50'/%3E%3Cpath d='M100 100L50 400L200 500'/%3E%3Cpath d='M850 150L950 300L800 450'/%3E%3Cpath d='M750 850L900 700L800 450'/%3E%3C/g%3E%3Cg fill='rgba(129, 140, 248, 0.7)'%3E%3Ccircle cx='100' cy='100' r='4'/%3E%3Ccircle cx='300' cy='250' r='6'/%3E%3Ccircle cx='200' cy='500' r='5'/%3E%3Ccircle cx='600' cy='200' r='7'/%3E%3Ccircle cx='550' cy='550' r='6'/%3E%3Ccircle cx='850' cy='150' r='4'/%3E%3Ccircle cx='800' cy='450' r='5'/%3E%3Ccircle cx='150' cy='800' r='4'/%3E%3Ccircle cx='450' cy='750' r='6'/%3E%3Ccircle cx='750' cy='850' r='5'/%3E%3Ccircle cx='500' cy='50' r='4'/%3E%3Ccircle cx='50' cy='400' r='3'/%3E%3Ccircle cx='950' cy='300' r='3'/%3E%3Ccircle cx='900' cy='700' r='4'/%3E%3C/g%3E%3C/svg%3E";
+
   return (
-    <div className="login-wrapper">
+    <div className="login-split-container">
+      
       <style>{`
-        .login-wrapper {
+        .login-split-container {
           display: flex;
-          min-height: 100vh;
+          flex-direction: row;
           width: 100vw;
-          background-color: #0f172a;
-          color: white;
+          height: 100vh;
+          overflow: hidden;
+          background: #ffffff;
+          font-family: system-ui, -apple-system, sans-serif;
         }
 
         .login-left-panel {
-          flex: 1.2;
-          background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+          flex: 1.3;
           position: relative;
-          overflow: hidden;
-          padding: 4rem;
+          background: radial-gradient(circle at bottom right, #31135e 0%, #0f172a 50%, #020617 100%);
           display: flex;
           flex-direction: column;
+          padding: 6% 8%;
+          color: white;
+          overflow: hidden;
+        }
+        
+        .login-right-panel {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 0 10%;
+          background: #ffffff;
+          color: #0f172a;
+          max-width: 600px;
+          z-index: 20;
         }
 
+        /* --- RESPONSIVE MOBILE --- */
+        @media (max-width: 1024px) {
+           .login-split-container {
+              flex-direction: column;
+              overflow-y: auto;
+           }
+           
+           .login-left-panel {
+              flex: none;
+              padding: 40px 24px;
+              min-height: auto;
+              overflow: visible;
+           }
+
+           .login-right-panel {
+              flex: none;
+              max-width: 100%;
+              padding: 40px 24px;
+              background: #ffffff;
+              border-radius: 32px 32px 0 0;
+              margin-top: -30px; /* Sobreponer el formulario un poco sobre el fondo oscuro */
+              min-height: 50vh;
+              box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+           }
+           
+           /* Reducir el tamaño de los títulos en móvil */
+           .login-left-panel h1 { font-size: 2.2rem !important; }
+           .badges-container { flex-wrap: wrap; gap: 1.5rem !important; }
+        }
+
+        /* Red animada de fondo */
         .network-bg {
           position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background-image: 
-            radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+          inset: -20%;
+          background-image: url("${networkSvg}");
+          background-size: 800px 800px;
+          background-repeat: repeat;
           z-index: 1;
+          opacity: 0.8;
+          animation: panNetwork 60s linear infinite;
         }
 
+        @keyframes panNetwork {
+          0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+          50% { transform: translate(-5%, -5%) rotate(2deg) scale(1.05); }
+          100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        }
+        
         .ai-glow {
           position: absolute;
-          width: 600px;
-          height: 600px;
-          background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(0,0,0,0) 70%);
-          top: -100px;
-          left: -100px;
-          border-radius: 50%;
-          z-index: 1;
+          top: -20%;
+          right: -10%;
+          width: 800px;
+          height: 800px;
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 60%);
+          z-index: 2;
+          animation: pulseGlow 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+          0% { opacity: 0.5; transform: scale(1); }
+          100% { opacity: 1; transform: scale(1.1); }
         }
 
         .glass-feature {
-          background: rgba(30, 41, 59, 0.4);
+          background: rgba(15, 23, 42, 0.4);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -119,19 +164,8 @@ export default function Login({ onLogin }) {
           box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
 
-        .login-right-panel {
-          flex: 0.8;
-          background: #ffffff;
-          padding: 4rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          color: #0f172a;
-        }
-
         .modern-input-group {
           margin-bottom: 1.25rem;
-          position: relative;
         }
         .modern-input-group label {
           display: block;
@@ -176,22 +210,6 @@ export default function Login({ onLogin }) {
         .btn-primary:hover {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
-        }
-        .password-toggle {
-          position: absolute;
-          right: 16px;
-          top: 36px;
-          background: none;
-          border: none;
-          color: #94a3b8;
-          cursor: pointer;
-          padding: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .password-toggle:hover {
-          color: #6366f1;
         }
       `}</style>
 
@@ -260,11 +278,13 @@ export default function Login({ onLogin }) {
 
       {/* --- COLUMNA DERECHA (Login Form) --- */}
       <div className="login-right-panel">
-        <AnimatedBot 
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <AnimatedBot 
             emailLength={email.length} 
             isEmailFocused={isEmailFocused}
             isPasswordFocused={isPasswordFocused && !showPassword} 
-        />
+          />
+        </div>
         
         <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>Iniciar Sesion</h2>
@@ -281,7 +301,7 @@ export default function Login({ onLogin }) {
         )}
 
         {resetSuccess && (
-          <div style={{ padding: '14px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '12px', fontSize: '0.9rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ padding: '14px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle size={18} />
             Se ha enviado un enlace de recuperación a tu correo.
           </div>
@@ -303,7 +323,7 @@ export default function Login({ onLogin }) {
           </div>
 
           {!isResetting && (
-            <div className="modern-input-group">
+            <div className="modern-input-group" style={{ position: 'relative' }}>
               <label>Contraseña</label>
               <input 
                 type={showPassword ? "text" : "password"} 
@@ -319,6 +339,7 @@ export default function Login({ onLogin }) {
                 type="button" 
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 16, top: 38, background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -330,7 +351,7 @@ export default function Login({ onLogin }) {
               <button 
                 type="button"
                 onClick={() => setIsResetting(true)}
-                style={{ color: '#6366f1', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: '#6366f1', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
                 ¿Olvidaste tu contraseña?
               </button>
@@ -346,7 +367,7 @@ export default function Login({ onLogin }) {
               <button type="button" onClick={handleResetPassword} className="btn-primary" disabled={isLoading}>
                 {isLoading ? 'Enviando...' : 'Enviar link de recuperación'}
               </button>
-              <button type="button" onClick={() => { setIsResetting(false); setError(null); setResetSuccess(false); }} style={{ background: 'transparent', color: '#64748b', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => { setIsResetting(false); setError(null); setResetSuccess(false); }} style={{ background: 'transparent', color: '#64748b', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
                 Volver al inicio de sesión
               </button>
             </div>
