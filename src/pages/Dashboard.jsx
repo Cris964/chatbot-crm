@@ -270,23 +270,22 @@ function DashboardContent() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }} className="animate-slideUp">
         
-        {/* Card 1: Rendimiento Pendiente */}
+        {/* Card 1: Rendimiento de Respuestas */}
         <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Rendimiento Comercial</h3>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tiempo de Respuesta</h3>
               <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Reporte</span>
            </div>
            <div className="flex items-center gap-4 mb-2">
               <div className="flex items-center gap-2">
-                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{stats?.salesCount || 0}</span>
-                 <div style={{ width: 12, height: 4, borderRadius: 2, background: '#4318FF' }}></div>
-                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Chats Humanos</span>
+                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>2m 34s</span>
+                 <div style={{ width: 12, height: 4, borderRadius: 2, background: '#10b981' }}></div>
+                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Promedio IA</span>
               </div>
            </div>
            <div style={{ height: 110 }}>
               <ResponsiveContainer width="100%" height="100%">
                  <AreaChart data={chartData}>
-                    <Area type="monotone" dataKey="value" stroke="#4318FF" fill="transparent" strokeWidth={2} />
                     <Area type="monotone" dataKey="value2" stroke="#10b981" fill="transparent" strokeWidth={2} />
                  </AreaChart>
               </ResponsiveContainer>
@@ -296,18 +295,19 @@ function DashboardContent() {
            </div>
         </div>
 
-        {/* Card 2: Solid Blue Card */}
+        {/* Card 2: Chats Pendientes (Blue Card) */}
         <div style={{ background: '#4318FF', borderRadius: '20px', padding: '24px', color: 'white', boxShadow: '0 4px 20px rgba(67,24,255,0.3)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
            <div className="flex justify-between items-start">
              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#4318FF' }}></div>
              </div>
-             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600 }}>Info de Hoy</div>
+             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600 }}>Urgente</div>
            </div>
            <div>
-             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '16px 0 8px 0', letterSpacing: '-0.02em' }}>Noticias del Asistente</h3>
-             <p style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.5 }}>
-               Tu asistente de IA ha manejado {stats?.aiChats || 0} conversaciones y tienes {stats?.pendingChats || 0} chats que requieren ayuda humana de tu equipo.
+             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '16px 0 4px 0', letterSpacing: '-0.02em' }}>Chats Pendientes</h3>
+             <div style={{ fontSize: '3rem', fontWeight: 900, lineHeight: 1 }}>{stats?.pendingChats || 0}</div>
+             <p style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.4, marginTop: 8 }}>
+               Conversaciones que requieren atención humana inmediata.
              </p>
            </div>
            <div style={{ display: 'flex', gap: 4, marginTop: 12 }}>
@@ -317,14 +317,14 @@ function DashboardContent() {
            </div>
         </div>
 
-        {/* Card 3: Trend Chart */}
+        {/* Card 3: % Conversaciones Efectivas */}
         <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tasa de Conversión</h3>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Efectividad de Chats</h3>
            </div>
            <div className="flex items-end gap-2 mb-2">
               <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats?.conversion || '0%'}</div>
-              <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600, paddingBottom: 6, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 10 }}>+1.2%</div>
+              <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600, paddingBottom: 6, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 10 }}>+5.4%</div>
            </div>
            <div style={{ height: 110, marginTop: 'auto' }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -344,31 +344,55 @@ function DashboardContent() {
            </div>
         </div>
 
-        {/* Card 4: Progress */}
+        {/* Card 4: Difusiones Efectivas */}
         <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Últimos Leads</h3>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Difusiones Efectivas</h3>
            </div>
            <div className="flex flex-col gap-6 mt-4">
-              {recentDealsList.slice(0,2).map((deal, i) => (
-                 <div key={i}>
-                    <div className="flex items-center gap-3 mb-3">
-                       <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(67,24,255,0.05)', color: '#4318FF', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(67,24,255,0.1)' }}>
-                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                       </div>
-                       <div>
-                         <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{deal.lead}</div>
-                         <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
-                       </div>
+              
+              <div>
+                 <div className="flex items-center gap-3 mb-2">
+                    <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                      <span style={{ fontSize: 10, fontWeight: 'bold' }}>Hoy</span>
                     </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
-                       <div style={{ width: deal.stage==='Gano'?'100%': deal.stage==='Nuevo'?'20%':'60%', height: '100%', background: deal.color }}></div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>124 envíos</div>
                     </div>
                  </div>
-              ))}
-              {recentDealsList.length === 0 && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>No hay leads recientes.</div>
-              )}
+                 <div style={{ width: '100%', height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: '25%', height: '100%', background: '#10b981' }}></div>
+                 </div>
+              </div>
+
+              <div>
+                 <div className="flex items-center gap-3 mb-2">
+                    <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(67, 24, 255, 0.1)', color: '#4318FF', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(67, 24, 255, 0.2)' }}>
+                      <span style={{ fontSize: 10, fontWeight: 'bold' }}>Sem</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>850 envíos</div>
+                    </div>
+                 </div>
+                 <div style={{ width: '100%', height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: '65%', height: '100%', background: '#4318FF' }}></div>
+                 </div>
+              </div>
+
+              <div>
+                 <div className="flex items-center gap-3 mb-2">
+                    <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                      <span style={{ fontSize: 10, fontWeight: 'bold' }}>Mes</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>3,240 envíos</div>
+                    </div>
+                 </div>
+                 <div style={{ width: '100%', height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: '85%', height: '100%', background: '#f59e0b' }}></div>
+                 </div>
+              </div>
+
            </div>
         </div>
       </div>
