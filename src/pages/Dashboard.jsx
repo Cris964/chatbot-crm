@@ -271,7 +271,7 @@ function DashboardContent() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }} className="animate-slideUp">
         
         {/* Card 1: Rendimiento de Respuestas */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+        <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.1s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
               <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tiempo de Respuesta</h3>
               <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Reporte</span>
@@ -318,7 +318,7 @@ function DashboardContent() {
         </div>
 
         {/* Card 3: % Conversaciones Efectivas */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+        <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.2s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
               <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Efectividad de Chats</h3>
            </div>
@@ -345,7 +345,7 @@ function DashboardContent() {
         </div>
 
         {/* Card 4: Difusiones Efectivas */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+        <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.30000000000000004s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
            <div className="flex justify-between mb-4">
               <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Difusiones Efectivas</h3>
            </div>
@@ -400,7 +400,7 @@ function DashboardContent() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }} className="animate-slideUp">
         
         {/* Row 2 Card 1: Info */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 1' }}>
+        <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.4s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 1' }}>
            <div className="flex justify-between items-center mb-6">
              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Información de la Cuenta</h3>
              <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Ver Detalle</span>
@@ -440,7 +440,7 @@ function DashboardContent() {
         </div>
 
         {/* Row 2 Card 2: Bar Chart */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 2' }}>
+        <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.5s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 2' }}>
            <div className="flex justify-between items-center mb-6">
              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Reporte del Pipeline</h3>
              <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Ver Detalles</span>
@@ -475,7 +475,7 @@ function DashboardContent() {
         </div>
 
         {/* Row 2 Card 3: Agents */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 1' }}>
+        <div className="animate-slideUp" style={{ animationFillMode: 'both', animationDelay: '0.6000000000000001s', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 1' }}>
            <div className="flex justify-between items-center mb-6">
              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Mis Asesores</h3>
              <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Ver Detalle</span>
