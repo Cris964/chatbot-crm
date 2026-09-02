@@ -2,7 +2,7 @@ import React, { useState, useEffect, Component } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
   Users, DollarSign, TrendingUp, Target, ArrowUpRight, ArrowDownRight,
-  MoreHorizontal, ChevronRight, Activity, Zap
+  MoreHorizontal, ChevronRight, Activity, Zap, Search, Layers
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell
@@ -243,195 +243,238 @@ function DashboardContent() {
           <p style={{ marginTop: 16, color: 'var(--text-secondary)' }}>Cargando métricas...</p>
         </div>
       )}
-      <div className="flex justify-between items-end mb-8 animate-slideUp">
+
+      {/* Title Area */}
+      <div className="flex justify-between items-end mb-6 animate-slideUp">
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
             ¡Buenos días, {tenant.membership?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0] || 'Usuario'}!
           </h1>
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '1rem', marginTop: 8 }}>
-            Aquí está el resumen de tu negocio.
-          </p>
+          <div className="flex items-center gap-3 mt-4">
+             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-default)', borderRadius: '8px', padding: '6px 12px' }}><span className="text-xs font-semibold">Filtrar</span></button>
+             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-default)', borderRadius: '8px', padding: '6px 12px' }}><span className="text-xs font-semibold">Mensual</span></button>
+             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-default)', borderRadius: '8px', padding: '6px 12px' }}><span className="text-xs font-semibold">Descargar Datos</span></button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <button style={{ background: '#4318FF', color: 'white', borderRadius: '12px', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 8, border: 'none', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 15px rgba(67, 24, 255, 0.3)' }}>
-            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span> Crear Nuevo
+        <div className="flex flex-col items-end gap-4">
+          <button style={{ background: '#4318FF', color: 'white', borderRadius: '24px', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, border: 'none', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 15px rgba(67, 24, 255, 0.3)' }}>
+            <span>+ Nuevo Lead</span>
           </button>
+          <div className="flex gap-2">
+             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-default)', borderRadius: '8px' }}><Search size={14} /></button>
+             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-default)', borderRadius: '8px' }}><span className="text-xs font-semibold">Soporte</span></button>
+             <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-default)', borderRadius: '8px' }}><Layers size={14} /></button>
+          </div>
         </div>
       </div>
 
-      <div className="stats-grid animate-slideUp" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }} className="animate-slideUp">
         
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#FFF1F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F43F5E' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          </div>
-          <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{stats?.salesCount || 0}</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Ventas (Órdenes)</div>
-          </div>
+        {/* Card 1: Rendimiento Pendiente */}
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+           <div className="flex justify-between mb-4">
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Rendimiento Comercial</h3>
+              <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Reporte</span>
+           </div>
+           <div className="flex items-center gap-4 mb-2">
+              <div className="flex items-center gap-2">
+                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{stats?.salesCount || 0}</span>
+                 <div style={{ width: 12, height: 4, borderRadius: 2, background: '#4318FF' }}></div>
+                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Chats Humanos</span>
+              </div>
+           </div>
+           <div style={{ height: 110 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                 <AreaChart data={chartData}>
+                    <Area type="monotone" dataKey="value" stroke="#4318FF" fill="transparent" strokeWidth={2} />
+                    <Area type="monotone" dataKey="value2" stroke="#10b981" fill="transparent" strokeWidth={2} />
+                 </AreaChart>
+              </ResponsiveContainer>
+           </div>
+           <div className="flex justify-between" style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
+             <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span>
+           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          </div>
-          <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{stats?.aiChats || 0}</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Chats de IA</div>
-          </div>
+        {/* Card 2: Solid Blue Card */}
+        <div style={{ background: '#4318FF', borderRadius: '20px', padding: '24px', color: 'white', boxShadow: '0 4px 20px rgba(67,24,255,0.3)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+           <div className="flex justify-between items-start">
+             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#4318FF' }}></div>
+             </div>
+             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600 }}>Info de Hoy</div>
+           </div>
+           <div>
+             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '16px 0 8px 0', letterSpacing: '-0.02em' }}>Noticias del Asistente</h3>
+             <p style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.5 }}>
+               Tu asistente de IA ha manejado {stats?.aiChats || 0} conversaciones y tienes {stats?.pendingChats || 0} chats que requieren ayuda humana de tu equipo.
+             </p>
+           </div>
+           <div style={{ display: 'flex', gap: 4, marginTop: 12 }}>
+             <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 2 }}></div>
+             <div style={{ width: 12, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}></div>
+             <div style={{ width: 12, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}></div>
+           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#ECFEFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06B6D4' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-          </div>
-          <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{stats?.pendingChats || 0}</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Chats Pendientes</div>
-          </div>
+        {/* Card 3: Trend Chart */}
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+           <div className="flex justify-between mb-4">
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tasa de Conversión</h3>
+           </div>
+           <div className="flex items-end gap-2 mb-2">
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats?.conversion || '0%'}</div>
+              <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600, paddingBottom: 6, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 10 }}>+1.2%</div>
+           </div>
+           <div style={{ height: 110, marginTop: 'auto' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                 <AreaChart data={sparklineData}>
+                    <defs>
+                      <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4318FF" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#4318FF" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="pv" stroke="#4318FF" fill="url(#colorPv)" strokeWidth={2} dot={false} />
+                 </AreaChart>
+              </ResponsiveContainer>
+           </div>
+           <div className="flex justify-between" style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
+             <span>Lun</span><span>Mar</span><span>Mie</span><span>Jue</span>
+           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', display: 'flex', gap: '16px', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10B981' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-          </div>
-          <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>${stats?.revenue >= 1000000 ? `${(stats?.revenue / 1000000).toFixed(1)}M` : `${(stats?.revenue / 1000).toFixed(1)}k`}</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Ingresos Totales</div>
-          </div>
+        {/* Card 4: Progress */}
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)' }}>
+           <div className="flex justify-between mb-4">
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Últimos Leads</h3>
+           </div>
+           <div className="flex flex-col gap-6 mt-4">
+              {recentDealsList.slice(0,2).map((deal, i) => (
+                 <div key={i}>
+                    <div className="flex items-center gap-3 mb-3">
+                       <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(67,24,255,0.05)', color: '#4318FF', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(67,24,255,0.1)' }}>
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                       </div>
+                       <div>
+                         <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{deal.lead}</div>
+                         <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
+                       </div>
+                    </div>
+                    <div style={{ width: '100%', height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+                       <div style={{ width: deal.stage==='Gano'?'100%': deal.stage==='Nuevo'?'20%':'60%', height: '100%', background: deal.color }}></div>
+                    </div>
+                 </div>
+              ))}
+              {recentDealsList.length === 0 && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>No hay leads recientes.</div>
+              )}
+           </div>
         </div>
-
       </div>
 
-      <div className="charts-grid">
-        <div className="card animate-slideUp w-full" style={{ animationDelay: '0.5s', padding: '32px' }}>
-          <div className="flex justify-between items-center mb-8">
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rendimiento Comercial</h3>
-            <div className="flex gap-2">
-              <div className="flex items-center gap-4" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                <span className="flex items-center gap-1"><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }}></div> Chats IA</span>
-                <span className="flex items-center gap-1"><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></div> Chats Humanos</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }} className="animate-slideUp">
+        
+        {/* Row 2 Card 1: Info */}
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 1' }}>
+           <div className="flex justify-between items-center mb-6">
+             <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Información de la Cuenta</h3>
+             <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Ver Detalle</span>
+           </div>
+           <div className="flex items-center gap-3 mb-6">
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                 <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #4318FF, #8b5cf6)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                    {tenant.clientName?.substring(0,2).toUpperCase()}
+                 </div>
               </div>
-            </div>
-          </div>
-          <div style={{ height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} tickFormatter={(v) => `${v}`} />
-                <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
-                <Area type="monotone" name="Chats IA" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} />
-                <Area type="monotone" name="Chats Humanos" dataKey="value2" stroke="#10b981" strokeWidth={3} fill="url(#colorValue)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+              <div>
+                 <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{tenant.clientName}</div>
+                 <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Plan Corporativo</div>
+              </div>
+           </div>
+           
+           <div style={{ height: 1, background: 'var(--border-default)', margin: '16px 0' }}></div>
+           
+           <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+              <div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Total Leads</div>
+                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats?.newLeads} leads</div>
+              </div>
+              <div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Chats IA</div>
+                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats?.aiChats} chats</div>
+              </div>
+              <div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Ventas Activas</div>
+                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats?.salesCount} órdenes</div>
+              </div>
+              <div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Asignado A</div>
+                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Múltiples Asesores</div>
+              </div>
+           </div>
         </div>
 
-        <div className="charts-row-split">
-          <div className="card animate-slideUp" style={{ animationDelay: '0.6s' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Últimos Negocios</h3>
-            <div className="flex flex-col gap-4">
-              {recentDealsList.map((deal, i) => (
-                <div key={i} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="avatar sm" style={{ background: `${deal?.color}20`, color: deal?.color }}>{deal?.lead?.substring(0,1)}</div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{deal.lead}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.stage}</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800 }}>{deal.value}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{deal.date}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card animate-slideUp" style={{ animationDelay: '0.7s' }}>
-             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 20 }}>Estado del Pipeline</h3>
-             <div style={{ height: 260 }}>
+        {/* Row 2 Card 2: Bar Chart */}
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 2' }}>
+           <div className="flex justify-between items-center mb-6">
+             <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Reporte del Pipeline</h3>
+             <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Ver Detalles</span>
+           </div>
+           <div style={{ position: 'relative' }}>
+             <div style={{ position: 'absolute', top: 40, left: 100, background: '#1e293b', color: 'white', padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem', display: 'flex', flexDirection: 'column', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
+               <span style={{ fontWeight: 600 }}>{pipelineState[0]?.name || 'Nuevo'}</span>
+               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4318FF' }}></div> {pipelineState[0]?.value || 0} leads</span>
+             </div>
+             <div style={{ height: 220 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pipelineState} layout="vertical" margin={{ left: 10, right: 10 }}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }} width={90} />
-                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: '#fff' }} />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
-                      {pipelineState.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                   <BarChart data={pipelineState} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
+                      <Bar dataKey="value" radius={[4, 4, 4, 4]} barSize={36}>
+                        {pipelineState.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill="url(#blueGradient)" />
+                        ))}
+                      </Bar>
+                      <defs>
+                        <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#4318FF" />
+                          <stop offset="100%" stopColor="rgba(67,24,255,0.2)" />
+                        </linearGradient>
+                      </defs>
+                   </BarChart>
                 </ResponsiveContainer>
              </div>
-          </div>
+           </div>
         </div>
 
-        {/* Agent Metrics Leaderboard */}
-        <div className="card animate-slideUp w-full" style={{ animationDelay: '0.8s', padding: '32px', marginTop: '24px' }}>
-          <div className="flex justify-between items-center mb-6">
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Rendimiento por Asesor</h3>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Basado en historial de Leads</div>
-          </div>
-          <div className="table-responsive" style={{ overflowX: 'auto' }}>
-            <table className="w-full" style={{ borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
-                  <th style={{ padding: '16px 8px', fontWeight: 600 }}>Asesor</th>
-                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Asignados</th>
-                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Nuevos (Sin tocar)</th>
-                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Ganados</th>
-                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'center' }}>Perdidos</th>
-                  <th style={{ padding: '16px 8px', fontWeight: 600, textAlign: 'right' }}>Ventas Generadas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agentMetrics.length > 0 ? agentMetrics.map((agent, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--border-default)', transition: 'background 0.2s' }} className="hover:bg-white/5">
-                    <td style={{ padding: '16px 8px' }}>
-                      <div className="flex items-center gap-3">
-                         <div className="avatar sm" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>{agent?.name?.substring(0, 1).toUpperCase()}</div>
-                         <div style={{ fontWeight: 600 }}>{agent.name}</div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center', fontWeight: 600 }}>{agent.totalAssigned}</td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                       {agent.newLeads > 0 ? (
-                         <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>{agent.newLeads}</span>
-                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                       {agent.won > 0 ? (
-                         <span className="badge emerald">{agent.won}</span>
-                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                       {agent.lost > 0 ? (
-                         <span className="badge rose">{agent.lost}</span>
-                       ) : <span style={{ color: 'var(--text-tertiary)' }}>0</span>}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 800, color: agent?.revenue > 0 ? '#10b981' : 'var(--text-primary)' }}>
-                       ${agent?.revenue?.toLocaleString('es-CO')}
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No hay datos de asesores para este periodo</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        {/* Row 2 Card 3: Agents */}
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-default)', gridColumn: 'span 1' }}>
+           <div className="flex justify-between items-center mb-6">
+             <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>Mis Asesores</h3>
+             <span style={{ fontSize: '0.7rem', color: '#4318FF', fontWeight: 600 }}>Ver Detalle</span>
+           </div>
+           <div className="flex flex-col gap-5">
+              {agentMetrics.slice(0, 3).map((agent, i) => (
+                 <div key={i} className="flex items-center gap-3">
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#f8fafc', overflow: 'hidden', border: '1px solid var(--border-default)' }}>
+                       <img src={`https://ui-avatars.com/api/?name=${agent.name}&background=random`} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <div>
+                       <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{agent.name}</div>
+                       <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{agent.won} Ganados | ${agent.revenue}</div>
+                    </div>
+                 </div>
+              ))}
+              {agentMetrics.length === 0 && (
+                 <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>No hay asesores con datos.</div>
+              )}
+           </div>
         </div>
       </div>
+
     </div>
   )
 }
