@@ -150,18 +150,18 @@ export default function AnimatedBot({ emailLength, isPasswordFocused, isEmailFoc
       <div className="bot-head">
         <div className="bot-eyes-bg">
           <div className="eye">
-            <div className="pupil" style={{ left: \`calc(15% + \${pupilOffset}px)\` }}></div>
+            <div className="pupil" style={{ left: `calc(15% + ${pupilOffset}px)` }}></div>
           </div>
           <div className="eye">
-            <div className="pupil" style={{ left: \`calc(15% + \${pupilOffset}px)\` }}></div>
+            <div className="pupil" style={{ left: `calc(15% + ${pupilOffset}px)` }}></div>
           </div>
         </div>
-        <div className={\`bot-mouth \${isPasswordFocused ? 'surprised' : ''}\`}></div>
+        <div className={`bot-mouth ${isPasswordFocused ? 'surprised' : ''}`}></div>
       </div>
 
       <div className="bot-hands">
-        <div className={\`hand left \${isPasswordFocused ? 'covering' : ''}\`}></div>
-        <div className={\`hand right \${isPasswordFocused ? 'covering' : ''}\`}></div>
+        <div className={`hand left ${isPasswordFocused ? 'covering' : ''}`}></div>
+        <div className={`hand right ${isPasswordFocused ? 'covering' : ''}`}></div>
       </div>
     </div>
   );
