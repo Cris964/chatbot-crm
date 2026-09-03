@@ -254,8 +254,8 @@ export default async function handler(req, res) {
           if (aiContextUrls && aiContextUrls.length > 0) {
             const { data: existingConv } = await supabase.from('conversations').select('id, messages').eq('client_id', clientId).eq('user_phone', cleanPhone).single();
             const systemMemo = {
-              role: 'assistant',
-              content: `[SISTEMA INTERNO]: Acabas de enviarle al cliente una campaña promocional por difusión (Texto/Mensaje: ${campaignText || templateName}) con las siguientes fotos: ${aiContextUrls.join(', ')}. CRÍTICO Y OBLIGATORIO: Si el usuario responde de forma POSITIVA o muestra interés a esta difusión, OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO. RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDA INMEDIATAMENTE de las ETIQUETAS DE IMÁGENES de la promoción. FINALMENTE INCLUYE LA ETIQUETA [NEEDS_HUMAN].`,
+              role: 'system',
+              content: `[SISTEMA INTERNO]: Acabas de enviarle al cliente una campaña promocional por difusión (Texto/Mensaje: ${campaignText || templateName}) con las siguientes etiquetas para enviar las fotos: ${aiContextUrls.map(u => `[SEND_IMAGE: ${u}]`).join('\\n')}. CRÍTICO Y OBLIGATORIO: Si el usuario responde de forma POSITIVA o muestra interés a esta difusión, OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO. RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDA INMEDIATAMENTE de las ETIQUETAS DE IMÁGENES de la promoción. FINALMENTE INCLUYE LA ETIQUETA [NEEDS_HUMAN].`,
               timestamp: new Date().toISOString()
             };
             if (existingConv) {

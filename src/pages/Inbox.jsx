@@ -343,7 +343,7 @@ export default function Inbox() {
 
         return {
           id: i,
-          sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
+          sender: m.role === \'user\' ? \'client\' : (m.role === \'assistant\' ? \'bot\' : \'agent\'),
           text: finalContent,
           type: m.media_type || finalType,
           media_url: mediaUrl,
