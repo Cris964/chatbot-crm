@@ -1,45 +1,31 @@
 const fs = require('fs');
+
 let code = fs.readFileSync('api/send.js', 'utf8');
 
-const imgMatch = `        if (msgType === 'image') {
-          metaPayload.type = 'image';
-          metaPayload.image = { link: message };`;
+const replacement = `    const aiContextUrls = record.aiContextUrls || [];
+    if (aiContextUrls && aiContextUrls.length > 0) {
+      const { data: existingConv } = await supabase.from('conversations').select('id, messages').eq('client_id', clientId).eq('user_phone', phone).single();
+      const systemMemo = {
+        role: 'assistant',
+        content: \`[SISTEMA INTERNO]: Acabas de enviarle al cliente una campaña promocional por difusión con las siguientes fotos: \${aiContextUrls.join(', ')}. CRÍTICO Y OBLIGATORIO: Si el usuario responde de forma POSITIVA o muestra interés a esta difusión, OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO. RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDA INMEDIATAMENTE de las ETIQUETAS DE IMÁGENES de la promoción. FINALMENTE INCLUYE LA ETIQUETA [NEEDS_HUMAN].\`,
+        timestamp: new Date().toISOString()
+      };
+      
+      if (existingConv) {
+          const updatedMessages = [...(existingConv.messages || []), systemMemo];
+          await supabase.from('conversations').update({ messages: updatedMessages, needs_human: false }).eq('id', existingConv.id);
+      } else {
+          await supabase.from('conversations').insert([{
+              client_id: clientId,
+              user_phone: phone,
+              user_name: record.user_name || 'Cliente',
+              messages: [systemMemo],
+              needs_human: false
+          }]);
+      }
+    }`;
 
-const imgReplacement = `        if (msgType === 'image') {
-          metaPayload.type = 'image';
-          let finalImageUrl = message;
-          if (finalImageUrl.toLowerCase().includes('.webp')) {
-              finalImageUrl = 'https://wsrv.nl/?url=' + encodeURIComponent(finalImageUrl) + '&output=jpg';
-          }
-          metaPayload.image = { link: finalImageUrl };`;
-
-const igMatch = `        } else if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'document') {
-            metaPayload.message.attachment = {
-                type: msgType === 'document' ? 'file' : msgType,
-                payload: { url: message, is_reusable: true }
-            };`;
-
-const igReplacement = `        } else if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'document') {
-            let finalUrl = message;
-            if (msgType === 'image' && finalUrl.toLowerCase().includes('.webp')) {
-                finalUrl = 'https://wsrv.nl/?url=' + encodeURIComponent(finalUrl) + '&output=jpg';
-            }
-            metaPayload.message.attachment = {
-                type: msgType === 'document' ? 'file' : msgType,
-                payload: { url: finalUrl, is_reusable: true }
-            };`;
-
-if (code.includes(imgMatch)) {
-    code = code.replace(imgMatch, imgReplacement);
-} else {
-    console.log("Could not find imgMatch");
-}
-
-if (code.includes(igMatch)) {
-    code = code.replace(igMatch, igReplacement);
-} else {
-    console.log("Could not find igMatch");
-}
+code = code.replace(/const aiContextUrls = record\.aiContextUrls \|\| \[\];\s*if \(aiContextUrls && aiContextUrls\.length > 0\) \{[\s\S]*?\}\s*\}/, replacement);
 
 fs.writeFileSync('api/send.js', code);
-console.log("Patched send.js");
+console.log('patched send.js');

@@ -1,58 +1,51 @@
 import re
 
 with open('src/pages/Inbox.jsx', 'r', encoding='utf-8') as f:
-    content = f.read()
+    code = f.read()
 
-# 1. Message Mapper Function definition (insert before Inbox component return)
-old_mapping = r"""        return \{
-          id: i,
-          sender: m\.role === 'user' \? 'client' : \(m\.role === 'assistant' \? 'bot' : 'agent'\),
-          text: m\.content \|\| m\.text \|\| m\.media_url \|\| m\.url \|\| '',
-          type: m\.type \|\| m\.message_type \|\| inferredType,
-          time: dateObj\.toLocaleString\('es-CO', \{ weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' \}\)
-        \};"""
+# 1. Replace difusiones logic
+regex = re.compile(r"<h2 style=\{\{\s*fontSize: '0\.75rem'.*?Difusiones[\s\S]*?\{\s*isListsExpanded && \([\s\S]*?<\/div>\s*\)\}", re.DOTALL)
 
-new_mapping = """        let finalContent = m.content || m.text || m.media_url || m.url || '';
-        let finalType = m.type || m.message_type || inferredType;
-        if (finalContent.includes('[IMAGEN_BASE64_URL]:')) {
-            finalType = 'image';
-            finalContent = finalContent.replace('[IMAGEN_BASE64_URL]:', '').trim();
-        } else if (finalContent.includes('[Multimedia:')) {
-            finalContent = '🖼️ [Multimedia no disponible]';
-        }
+difusionesFolder = """
+             <div className="folder-divider" style={{ margin: '16px 0', borderBottom: '1px solid var(--glass-border)', opacity: 0.5 }}></div>
+             <div 
+               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'difusiones' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'difusiones' ? '#fff' : 'var(--text-primary)' }}
+               onClick={() => { setActiveFolder('difusiones'); setMobileView('list'); }}
+             >
+               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                 <Megaphone size={16} opacity={activeFolder === 'difusiones' ? 1 : 0.7} />
+                 <span style={{ fontWeight: activeFolder === 'difusiones' ? 600 : 500, fontSize: '0.9rem' }}>Difusiones</span>
+               </div>
+               <span style={{ fontSize: '0.7rem', fontWeight: 700, background: activeFolder === 'difusiones' ? 'rgba(255,255,255,0.25)' : 'rgba(var(--overlay-rgb), 0.1)', color: activeFolder === 'difusiones' ? '#fff' : 'var(--text-primary)', padding: '2px 8px', borderRadius: '12px' }}>
+                 {conversationsList.filter(c => getConversationFolder(c).startsWith('broadcast_')).length}
+               </span>
+             </div>
+"""
+code = regex.sub(difusionesFolder, code)
 
-        const dateStr = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const timeStr = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+# 2. Add Settings Button
+btnStart = code.find('<button className="btn btn-ghost btn-sm" onClick={() => setBotActive(!botActive)}')
+if btnStart != -1 and 'setShowContactSettings(true)' not in code:
+    new_btn = '<button className="btn btn-ghost btn-sm" onClick={() => setShowContactSettings(true)} title="Configuración de Cliente"><Settings size={18} /></button>\n                           '
+    code = code[:btnStart] + new_btn + code[btnStart:]
 
-        return {
-          id: i,
-          sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
-          text: finalContent,
-          type: finalType,
-          time: `${dateStr} ${timeStr}`
-        };"""
+# 3. Grid
+code = re.sub(r"gridTemplateColumns: showRightPanel \? '220px 320px 1fr 340px' : '220px 320px 1fr'", "gridTemplateColumns: '220px 320px 1fr'", code)
 
-content = re.sub(old_mapping, new_mapping, content)
+# 4. Floating Toggle
+code = re.sub(r"\{\/\*\s*Floating Toggle Button for Contact Panel\s*\*\/\}\s*<button[\s\S]*?<\/button>", "", code)
 
-# 2. Avatar URL in fetchConversations
-old_avatar_gen = r"avatar: displayName\.substring\(0, 2\)\.toUpperCase\(\),"
-new_avatar_gen = "avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,"
-content = re.sub(old_avatar_gen, new_avatar_gen, content)
-
-# 3. Avatar rendering in Sidebar
-old_sidebar_avatar = r"""                 <div className="avatar sm" style={{ background: c\.bg, position: 'relative', flexShrink: 0 }}>
-                    \{c\.avatar\}"""
-new_sidebar_avatar = """                 <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
-                    {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}"""
-content = re.sub(old_sidebar_avatar, new_sidebar_avatar, content)
-
-# 4. Avatar rendering in Header
-old_header_avatar = r"""                 <div className="avatar md" style={{ background: selectedConv\.bg, width: 36, height: 36, flexShrink: 0 }}>\{selectedConv\.avatar\}</div>"""
-new_header_avatar = """                 <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0, overflow: 'hidden' }}>
-                    {selectedConv.avatar?.startsWith('http') ? <img src={selectedConv.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : selectedConv.avatar}
-                 </div>"""
-content = re.sub(old_header_avatar, new_header_avatar, content)
+# 5. Filter logic
+filterLogic = """
+                   if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
+                   if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
+                   if (activeFolder === 'difusiones') return fId.startsWith('broadcast_');
+                   if (activeFolder === 'resolved') return c.archived;
+                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
+"""
+code = code.replace("if (activeFolder === 'resolved') return c.archived;", filterLogic)
 
 with open('src/pages/Inbox.jsx', 'w', encoding='utf-8') as f:
-    f.write(content)
-print("Inbox.jsx patched")
+    f.write(code)
+
+print("Python patch applied!")
