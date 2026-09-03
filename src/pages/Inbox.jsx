@@ -8,6 +8,7 @@ import {
   Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
 , PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/apiFetch'
 import { useTenant } from '../lib/useTenant'
 
 const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
@@ -219,7 +220,7 @@ export default function Inbox() {
 
         // TRIGGER THE AI!
         try {
-          fetch('/api/simulate', {
+          apiFetch('/api/simulate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ conversationId: conv.id, clientId: effectiveClientId })
@@ -609,7 +610,7 @@ export default function Inbox() {
        
        if (isSim) {
          try {
-           await fetch('/api/simulate', {
+           await apiFetch('/api/simulate', {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
@@ -629,7 +630,7 @@ export default function Inbox() {
 
          // Call Vercel API to actually send the WhatsApp message
          try {
-           const res = await fetch('/api/send', {
+           const res = await apiFetch('/api/send', {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
@@ -717,7 +718,7 @@ export default function Inbox() {
 
       if (!error) {
          setShowTemplateModal(false)
-         const res = await fetch('/api/send', {
+         const res = await apiFetch('/api/send', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({
@@ -838,7 +839,7 @@ export default function Inbox() {
       if (!dbError) {
         // Enviar a la API de WhatsApp
         try {
-          const apiRes = await fetch('/api/send', {
+          const apiRes = await apiFetch('/api/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -952,7 +953,7 @@ const { error: uploadError } = await supabase.storage
       if (!dbError) {
         // Enviar a la API de WhatsApp
         try {
-          const apiRes = await fetch('/api/send', {
+          const apiRes = await apiFetch('/api/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

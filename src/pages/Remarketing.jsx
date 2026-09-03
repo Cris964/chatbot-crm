@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/apiFetch'
 import { useTenant } from '../lib/useTenant'
 import {
   Users, Search, Filter, Mail, Phone, Calendar, 
@@ -64,7 +65,7 @@ export default function Remarketing() {
     setIsSending(true)
     
     try {
-      const response = await fetch('/api/broadcast', {
+      const response = await apiFetch('/api/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

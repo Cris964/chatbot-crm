@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/apiFetch'
 import { useTenant } from '../lib/useTenant'
 import { Users, Plus, Trash2, ArrowLeft, Megaphone, CheckCircle2, Circle, Paperclip, Mic } from 'lucide-react'
 
@@ -50,7 +51,7 @@ export default function Lists() {
     setIsLoading(true)
     setErrorMsg(null)
     try {
-      const response = await fetch('/api/broadcast?action=get_lists&clientId=' + tenant.clientId)
+      const response = await apiFetch('/api/broadcast?action=get_lists&clientId=' + tenant.clientId)
       const data = await response.json()
       if (response.ok && data.lists) {
         setLists(data.lists)
@@ -68,7 +69,7 @@ export default function Lists() {
     setSelectedList(list)
     setIsLoading(true)
     try {
-      const response = await fetch('/api/broadcast?action=get_contacts&listId=' + list.id)
+      const response = await apiFetch('/api/broadcast?action=get_contacts&listId=' + list.id)
       const data = await response.json()
       if (response.ok && data.contacts) {
         setContacts(data.contacts)
@@ -83,7 +84,7 @@ export default function Lists() {
     if (!newListName.trim()) return;
     setIsLoading(true);
     try {
-      const res = await fetch('/api/broadcast', {
+      const res = await apiFetch('/api/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create_list', clientId: tenant.clientId, name: newListName.trim() })
@@ -106,7 +107,7 @@ export default function Lists() {
     if (!newContactPhone.trim() || !selectedList) return;
     setIsLoading(true);
     try {
-      const res = await fetch('/api/broadcast', {
+      const res = await apiFetch('/api/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'add_contact', listId: selectedList.id, phone: newContactPhone.trim(), name: newContactName.trim() })
@@ -300,7 +301,7 @@ export default function Lists() {
             for (let i = 0; i < lContacts.length; i += 15) {
                setProgressMsg(`Enviando (${globalSuccesses} enviados)...`);
                const chunk = lContacts.slice(i, i + 15);
-               const res = await fetch('/api/broadcast', {
+               const res = await apiFetch('/api/broadcast', {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({
@@ -342,7 +343,7 @@ export default function Lists() {
 
         for (let i = 0; i < selectedContacts.length; i += 15) {
           const chunk = selectedContacts.slice(i, i + 15);
-          const response = await fetch('/api/broadcast', {
+          const response = await apiFetch('/api/broadcast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

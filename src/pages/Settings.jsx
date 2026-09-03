@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/apiFetch'
 import { useTenant } from '../lib/useTenant'
 import {
   Building, Users, Shield, Link2, Bell, Palette, Globe,
@@ -198,7 +199,7 @@ export default function Settings() {
     setIsInviting(true)
 
     try {
-      const res = await fetch('/api/admin/create-user', {
+      const res = await apiFetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
