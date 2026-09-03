@@ -88,14 +88,14 @@ export async function dispatchToAI({
               if (pideCeramica && esCeramica) score += 5;
               if (pideMadera && esMadera) score += 10;
               
-              if (p.name === 'PROMO_ACTUAL') score += 1000;
+              if (false) score += 1000;
 
               return { ...p, score };
           });
           scoredProducts.sort((a, b) => b.score - a.score);
           companyProducts = scoredProducts.filter(p => p.score > 0).slice(0, 15);
       } else {
-          companyProducts = companyProducts.filter(p => p.name === 'PROMO_ACTUAL');
+          companyProducts = companyProducts.filter(p => false);
       }
   }
 
@@ -109,7 +109,7 @@ CARACTERÍSTICAS: ${p.name}. ${p.description || 'Sin descripción'}
 PRECIO: ${p.price > 0 ? '$' + p.price : 'Consultar'}`;
       if (p.promo_text) line += `\nPROMOCIÓN: ${p.promo_text}`;
       const isActivo = clientSetup.name && clientSetup.name.toLowerCase().includes('activo');
-      if (p.image_url && (!isActivo || p.name === 'PROMO_ACTUAL')) {
+      if (p.image_url && (!isActivo || false)) {
           const urls = p.image_url.split(',').map(u => u.trim()).filter(Boolean);
           line += `\nFOTOS DEL PRODUCTO (COPIA Y PEGA ESTAS ETIQUETAS EXACTAS PARA MOSTRARLAS AL CLIENTE):\n` + urls.map(u => `[SEND_IMAGE: ${u}]`).join('\n');
       }
@@ -132,7 +132,6 @@ REGLAS DE FOTOS (MUY IMPORTANTE):
 "Mira, aquí te paso unas fotos para que lo veas mejor:"
 [SEND_IMAGE: https://url_real_de_supabase_aqui.jpg]
 "¿Qué te parece ese estilo?"
-REGLA ESPECIAL DE DIFUSIÓN: Si en tu inventario existe una opción llamada "PROMO_ACTUAL", significa que el cliente acaba de recibir una campaña publicitaria. Si el cliente responde afirmativamente (ej. "Si", "Sí", "Me interesa", o hace clic en un botón de respuesta rápida), DEBES enviarle OBLIGATORIAMENTE todas las fotos asociadas a "PROMO_ACTUAL" de inmediato. EXCEPCIÓN CRÍTICA: En este caso específico de responder a una difusión con "Si", DEBES OMITIR por completo el "Saludo inicial OBLIGATORIO". No envíes el saludo largo, simplemente envía una frase corta y amigable junto con las fotos de la promoción.
 SI EL CLIENTE PIDE HABLAR CON UN ASESOR O HUMANO, INCLUYE '[NEEDS_HUMAN]' AL FINAL.
 REGLA SOBRE ASESORES: NUNCA uses la frase "asesor humano". Si vas a transferir el chat o alguien pide ayuda de un asesor, di EXACTAMENTE: "Para finalizar con tu orden, el área encargada ya se pondrá en contacto contigo, ¡muchas gracias!" y nada más.
 INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBES INCLUIR LA ETIQUETA EXACTA: [LEAD_STATE: Etapa | Score]
@@ -165,10 +164,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
 
   const aiMessages = [
       { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", hour12: true })}]\n\n${inventoryContext}` },
-      ...(isRespondingToDifusion && companyProducts && companyProducts.some(p => p.name === 'PROMO_ACTUAL') ? [{
-          role: 'system',
-          content: 'CRÍTICO Y OBLIGATORIO: El usuario acaba de responder de forma POSITIVA a una [DIFUSION]. OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO. RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDO INMEDIATAMENTE POR LAS ETIQUETAS DE IMÁGENES DE [PROMO_ACTUAL]. FINALMENTE, INCLUYE DE FORMA OBLIGATORIA LA ETIQUETA [NEEDS_HUMAN] AL FINAL DE TU MENSAJE PARA TRANSFERIR A UN ASESOR.'
-      }] : []),
+      
       ...finalMessages.slice(-30).map(m => {
 
           let cleanContent = m.content || "";

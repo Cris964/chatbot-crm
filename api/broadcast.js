@@ -245,11 +245,37 @@ export default async function handler(req, res) {
         
         if (response.ok) {
           successes++;
+          
           if (isListMode) {
             await supabase.from('broadcast_contacts').update({ status: 'messaged' }).eq('id', lead.id);
           }
-          // Auto-reactivate AI for this client so they can reply to the broadcast
-          await supabase.from('conversations').update({ needs_human: false }).eq('client_id', clientId).eq('user_phone', cleanPhone);
+          
+          // --- NUEVO: INYECTAR MEMORIA DE CAMPAÑA INDIVIDUAL ---
+          if (aiContextUrls && aiContextUrls.length > 0) {
+            const { data: existingConv } = await supabase.from('conversations').select('id, messages').eq('client_id', clientId).eq('user_phone', cleanPhone).single();
+            const systemMemo = {
+              role: 'assistant',
+              content: `[SISTEMA INTERNO]: Acabas de enviarle al cliente una campaña promocional por difusión con las siguientes fotos: ${aiContextUrls.join(', ')}. CRÍTICO Y OBLIGATORIO: Si el usuario responde de forma POSITIVA o muestra interés a esta difusión, OMITE COMPLETAMENTE TU SALUDO INICIAL LARGO. RESPONDE ÚNICAMENTE CON UNA FRASE CORTA Y NATURAL (ej. "¡Claro que sí! Mira las fotos:") SEGUIDA INMEDIATAMENTE de las ETIQUETAS DE IMÁGENES de la promoción. FINALMENTE INCLUYE LA ETIQUETA [NEEDS_HUMAN].`,
+              timestamp: new Date().toISOString()
+            };
+            if (existingConv) {
+                const updatedMessages = [...(existingConv.messages || []), systemMemo];
+                await supabase.from('conversations').update({ messages: updatedMessages, needs_human: false }).eq('id', existingConv.id);
+            } else {
+                await supabase.from('conversations').insert([{
+                    client_id: clientId,
+                    user_phone: cleanPhone,
+                    user_name: lead.full_name || lead.name || 'Cliente',
+                    messages: [systemMemo],
+                    needs_human: false
+                }]);
+            }
+          } else {
+             // Auto-reactivate AI for this client so they can reply to the broadcast normally
+             await supabase.from('conversations').update({ needs_human: false }).eq('client_id', clientId).eq('user_phone', cleanPhone);
+          }
+          // ---------------------------------------------------
+
         } else {
           console.error(`Error enviando a ${cleanPhone}:`, data);
           failures++; 
