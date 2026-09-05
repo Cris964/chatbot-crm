@@ -694,7 +694,7 @@ export default function Inbox() {
         if (uploadError) throw uploadError;
         
         const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
+          .from('whatsapp_media')
           .getPublicUrl(fileName);
           
         mediaUrlToSend = publicUrlData.publicUrl;
@@ -902,9 +902,8 @@ export default function Inbox() {
             setSelectedConv(prev => { if(!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), tempMsg] } });
         }
         
-const bucketName = (file.type && file.type.startsWith('application/')) ? 'documents' : 'whatsapp_media';
-          const { error: uploadError } = await supabase.storage
-          .from(bucketName)
+const { error: uploadError } = await supabase.storage
+          .from('whatsapp_media')
           .upload(fileName, file, {
           contentType: file.type,
           upsert: true
@@ -913,7 +912,7 @@ const bucketName = (file.type && file.type.startsWith('application/')) ? 'docume
       if (uploadError) throw uploadError;
       
       const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
+          .from('whatsapp_media')
           .getPublicUrl(fileName);
         
       const fileUrl = publicUrlData.publicUrl;
