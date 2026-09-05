@@ -114,6 +114,16 @@ export default async function handler(req, res) {
       const supabase = createClient(supabaseUrl, supabaseKey);
 
       let textResponse = messageObj.text?.body;
+      if (messageObj.referral) {
+          const headline = messageObj.referral.headline ? ` "${messageObj.referral.headline}"` : '';
+          textResponse = (textResponse || '') + `
+
+[SISTEMA: El cliente viene de un Anuncio${headline}]`;
+          if (messageObj.referral.image_url) {
+              messageObj._mediaUrl = messageObj.referral.image_url;
+              messageObj._mediaType = 'image';
+          }
+      }
       
       // Manejo Multimedia (Audio / Imagen / Video)
       if (!textResponse && messageObj.type !== 'text') {
