@@ -254,7 +254,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
               if (p.trim()) messageQueue.push({ type: 'text', content: p.trim() });
           }
       }
-      let url = (extractionMatch[3] || extractionMatch[4] || extractionMatch[5]).trim().replace(/[\)\]\.,]+$/, '');
+      let url = (extractionMatch[3] || extractionMatch[4] || extractionMatch[5]).trim().replace(/[\)\]\.,\"']+$/, '');
       let isVideo = extractionMatch[2] === 'SEND_VIDEO' || url.toLowerCase().match(/\.(mp4|mov|webm|avi|mkv)(\?.*)?$/);
       let isDocument = extractionMatch[2] === 'SEND_DOCUMENT' || url.toLowerCase().match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$/);
         let msgType = isVideo ? 'video' : (isDocument ? 'document' : 'image');
