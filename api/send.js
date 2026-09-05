@@ -150,7 +150,7 @@ export default async function handler(req, res) {
           metaPayload.audio = { link: message };
         } else if (msgType === 'document' || msgType === 'file') {
           metaPayload.type = 'document';
-          metaPayload.document = { link: message };
+          metaPayload.document = { link: message, filename: 'Archivo.pdf' };
         } else if (msgType === 'template') {
           if (phone.length > 14) {
               return res.status(400).json({ error: 'No puedes enviar plantillas a usuarios de anuncios (Click-to-WhatsApp) por políticas de Meta. Solo puedes responderles con texto/multimedia.' });
