@@ -221,7 +221,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   let clientNameExtracted = nameMatch ? nameMatch[1].trim() : null;
 
   const messageQueue = [];
-  const extractionRegex = /(\[(SEND_IMAGE|SEND_VIDEO):\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\)|(https?:\/\/.*?supabase\.co\/storage\S+))/gi;
+  const extractionRegex = /(\[(SEND_IMAGE|SEND_VIDEO|SEND_DOCUMENT):\s*(https?:\/\/[^\]]+)\]|\[.*?\]\((https?:\/\/.*?supabase\.co\/storage.*?)\)|(https?:\/\/.*?supabase\.co\/storage\S+))/gi;
   let lastIndex = 0;
   let extractionMatch;
 
@@ -256,7 +256,8 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
       }
       let url = (extractionMatch[3] || extractionMatch[4] || extractionMatch[5]).trim().replace(/[\)\]\.,]+$/, '');
       let isVideo = extractionMatch[2] === 'SEND_VIDEO' || url.toLowerCase().match(/\.(mp4|mov|webm|avi|mkv)(\?.*)?$/);
-      let msgType = isVideo ? 'video' : 'image';
+      let isDocument = extractionMatch[2] === 'SEND_DOCUMENT' || url.toLowerCase().match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$/);
+        let msgType = isVideo ? 'video' : (isDocument ? 'document' : 'image');
       let finalMediaUrl = url;
       if (msgType === 'image' && url.toLowerCase().endsWith('.webp')) {
           finalMediaUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;

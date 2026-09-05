@@ -394,9 +394,12 @@ export default async function handler(req, res) {
                           sentWamids.push({ id: data.messages[0].id, type: msg.type, content: msg.content });
                       }
                   });
-              } else if (msg.type === 'image' || msg.type === 'video') {
+              } else if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document') {
                   const payload = { messaging_product: 'whatsapp', to: senderPhone, type: msg.type };
                   payload[msg.type] = { link: msg.content };
+                  if (msg.type === 'document') {
+                      payload[msg.type].filename = 'Documento.pdf';
+                  }
                   if (senderPhone.length > 14 && messageId) {
                       payload.context = { message_id: messageId };
                   }
@@ -423,7 +426,7 @@ export default async function handler(req, res) {
               let payload = { recipient: { id: senderPhone }, message: {} };
               if (msg.type === 'text') {
                   payload.message.text = msg.content;
-              } else if (msg.type === 'image' || msg.type === 'video') {
+              } else if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document') {
                   payload.message.attachment = {
                       type: msg.type,
                       payload: { url: msg.content, is_reusable: true }
