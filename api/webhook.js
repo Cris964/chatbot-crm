@@ -428,8 +428,8 @@ export default async function handler(req, res) {
                   payload.message.text = msg.content;
               } else if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document') {
                   payload.message.attachment = {
-                      type: msg.type,
-                      payload: { url: msg.content, is_reusable: true }
+                      type: msg.type === 'document' ? 'file' : msg.type,
+                        payload: { url: msg.content, is_reusable: true }
                   };
               }
               
