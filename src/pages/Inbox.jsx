@@ -913,8 +913,8 @@ const bucketName = (file.type && file.type.startsWith('application/')) ? 'docume
       if (uploadError) throw uploadError;
       
       const { data: publicUrlData } = supabase.storage
-        .from('whatsapp_media')
-        .getPublicUrl(fileName);
+          .from(bucketName)
+          .getPublicUrl(fileName);
         
       const fileUrl = publicUrlData.publicUrl;
       
