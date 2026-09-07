@@ -767,7 +767,15 @@ export default function Inbox() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
+      const types = ['audio/mp4', 'audio/aac', 'audio/webm'];
+      let options = {};
+      for (const t of types) {
+          if (MediaRecorder.isTypeSupported(t)) {
+              options = { mimeType: t };
+              break;
+          }
+      }
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -819,10 +827,10 @@ export default function Inbox() {
     if (!selectedConv) return
     setIsLoading(true)
     try {
-      const fileName = `voice_${Date.now()}.ogg`
+      const fileName = `voice_${Date.now()}.mp4`
       const { data, error } = await supabase.storage
         .from('whatsapp_media')
-        .upload(fileName, audioBlob, { contentType: 'audio/ogg' })
+        .upload(fileName, audioBlob, { contentType: 'audio/mp4' })
         
       if (error) throw error
 
