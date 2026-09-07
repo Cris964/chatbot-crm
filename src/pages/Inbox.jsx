@@ -564,7 +564,12 @@ export default function Inbox() {
     }
   }
 
-  const handleSendMessage = async (e) => {
+  const getSenderName = () => {
+        if (!session?.user?.id) return '';
+        const me = teamMembers.find(m => m.user_id === session.user.id);
+        return me ? me.full_name : 'Admin';
+    };
+    const handleSendMessage = async (e) => {
     e.preventDefault()
     if (!newMessage.trim() && !pendingFile) return
     if (!selectedConv) return
@@ -702,7 +707,7 @@ export default function Inbox() {
       
       const textMsg = `[Plantilla Enviada: ${templateName}]`
       const messageObj = {
-        role: 'agent',
+        role: 'agent', sender_name: getSenderName(),
         content: textMsg,
         timestamp: new Date().toISOString()
       }
@@ -821,7 +826,7 @@ export default function Inbox() {
       const audioUrl = publicUrlData.publicUrl
       
       const messageObj = {
-        role: 'agent',
+        role: 'agent', sender_name: getSenderName(),
         content: audioUrl,
         type: 'audio',
         timestamp: new Date().toISOString()
@@ -898,7 +903,7 @@ export default function Inbox() {
         const mType = getMedia(file.type, file.name);
         let tempMsg = null;
         if (mType === 'image' || mType === 'video') {
-            tempMsg = { role: 'agent', content: URL.createObjectURL(file), type: mType, timestamp: new Date().toISOString(), isUploading: true };
+            tempMsg = { role: 'agent', sender_name: getSenderName(), content: URL.createObjectURL(file), type: mType, timestamp: new Date().toISOString(), isUploading: true };
             setSelectedConv(prev => { if(!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), tempMsg] } });
         }
         
@@ -935,7 +940,7 @@ const { error: uploadError } = await supabase.storage
       const mediaType = getMediaType(file.type, file.name);
 
       const messageObj = {
-        role: 'agent',
+        role: 'agent', sender_name: getSenderName(),
         content: fileUrl,
         type: mediaType,
         timestamp: new Date().toISOString()
@@ -1655,8 +1660,13 @@ const { error: uploadError } = await supabase.storage
                           </div>
                         )}
                         <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
-                          {m.sender === 'agent' && (
-                            <>
+                          {m.sender === 'agent' && m.sender_name && (
+        <span style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.8, marginRight: 'auto', background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+            {m.sender_name}
+        </span>
+    )}
+    {m.sender === 'agent' && (
+      <>
                               <span title="Editar en CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleEditMessage(messages.indexOf(m), m.text || m.content || '')}>✏️</span>
                               {tenant.isAdmin && (
                                 <span title="Eliminar del CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleDeleteMessage(messages.indexOf(m))}>🗑️</span>

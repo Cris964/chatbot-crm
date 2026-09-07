@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     
     const now = new Date();
     // Buscamos chats que no se han actualizado en 12 horas, con un margen hasta 48 horas (para cron diario).
-    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString();
+    const twelveHoursAgo = new Date(now.getTime() - 11 * 60 * 60 * 1000).toISOString();
     const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
 
     console.log(`Ejecutando Cron Diario para Trazzos. Rango: ${fortyEightHoursAgo} a ${twelveHoursAgo}`);
@@ -110,9 +110,9 @@ export default async function handler(req, res) {
     
         
     // ------------------------------------------------------------
-    // LOGICA 2: REASIGNACIÓN AUTOMÁTICA (Agentes inactivos > 2 horas)
+    // LOGICA 2: REASIGNACIÓN AUTOMÁTICA (Agentes inactivos > 1 hora)
     // ------------------------------------------------------------
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+    const oneHourAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
     
     // Obtenemos conversaciones activas que requieren humano y están asignadas
     const { data: reassignmentConvs } = await supabase
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
         .eq('archived', false)
         .eq('needs_human', true)
         .not('assigned_to', 'is', null)
-        .lte('updated_at', twoHoursAgo);
+        .lte('updated_at', oneHourAgo);
 
     if (reassignmentConvs && reassignmentConvs.length > 0) {
         // Agrupar por client_id para optimizar carga de team_members
@@ -134,14 +134,36 @@ export default async function handler(req, res) {
             
             const lastMsg = msgs[msgs.length - 1];
             
+            
             // Si el último mensaje NO es del usuario, el agente SÍ respondió o fue un bot
             if (lastMsg.role !== 'user') continue;
+            
+            // 2. No hacer reasignacion automatica cuando ya el asesor respondio a ese chat (hay registro)
+            const agentHasReplied = msgs.some(m => m.role === 'agent');
+            if (agentHasReplied) continue;
+            
+            // 1. La reasignacion automatica de chats a los asesores despues de 1 hora, no hacerlo cuando no estan en horario laboral
+            if (c.client_id === '281db48e-b43b-4399-8d7d-d629fe936944') {
+                const bogotaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+                const day = bogotaTime.getDay(); // 0 = Sun, 1 = Mon ... 6 = Sat
+                const hour = bogotaTime.getHours();
+                
+                let isWorkingHours = false;
+                if (day >= 1 && day <= 5) {
+                    if (hour >= 8 && hour < 17) isWorkingHours = true;
+                } else if (day === 6) {
+                    if (hour >= 8 && hour < 12) isWorkingHours = true;
+                }
+                
+                if (!isWorkingHours) continue; // Si no están en horario laboral, salta la reasignación
+            }
+
             
             // Verificamos el tiempo exacto del último mensaje del usuario
             const lastMsgTime = new Date(lastMsg.timestamp || lastMsg.time || 0);
             const hoursPassed = (now - lastMsgTime) / (1000 * 60 * 60);
             
-            if (hoursPassed > 2) {
+            if (hoursPassed >= 1) {
                 // Hay que reasignar
                 if (!clientMembersMap[c.client_id]) {
                     const { data: members } = await supabase.from('team_members')
