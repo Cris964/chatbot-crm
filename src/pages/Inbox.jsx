@@ -366,14 +366,21 @@ export default function Inbox() {
       }, (payload) => {
         console.log('Realtime active conversation update', payload)
         if (payload.new && payload.new.messages) {
-          const updatedConv = payload.new
-          setSelectedConv(prev => {
-             if (prev && prev.id === updatedConv.id) {
-                return { ...prev, ...updatedConv, rawMessages: updatedConv.messages }
-             }
-             return prev
-          })
-        }
+            const updatedConv = payload.new
+            
+            // Si el chat fue reasignado a otro asesor y no somos admin, cerrarlo
+            if (!tenant.isAdmin && tenant.session?.user?.id && updatedConv.assigned_to !== tenant.session.user.id) {
+                setSelectedConv(null);
+                return;
+            }
+
+            setSelectedConv(prev => {
+               if (prev && prev.id === updatedConv.id) {
+                  return { ...prev, ...updatedConv, rawMessages: updatedConv.messages }
+               }
+               return prev
+            })
+          }
       })
       .subscribe()
 
