@@ -655,9 +655,15 @@ export default function Inbox() {
            });
            const apiData = await res.json();
            if (apiData.meta_message_id) {
-               const updatedMsgs = [...selectedConv.rawMessages, messageObj];
-               updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: 'text', content: textMsg }];
-               await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+               const { data: latest } = await supabase.from('conversations').select('messages').eq('id', selectedConv.id).single();
+                 if (latest && latest.messages) {
+                     const msgs = latest.messages;
+                     const idx = msgs.findLastIndex(m => m.timestamp === messageObj.timestamp && m.content === messageObj.content);
+                     if (idx !== -1) {
+                         msgs[idx].sent_meta = [{ id: apiData.meta_message_id, type: 'text', content: textMsg }];
+                         await supabase.from('conversations').update({ messages: msgs }).eq('id', selectedConv.id);
+                     }
+                 }
            }
          } catch (apiErr) {
            console.error('Error sending message via API:', apiErr);
@@ -872,9 +878,15 @@ export default function Inbox() {
           });
           const apiData = await apiRes.json();
           if (apiData.meta_message_id) {
-              const updatedMsgs = [...selectedConv.rawMessages, messageObj];
-              updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: 'audio', content: audioUrl }];
-              await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+              const { data: latest } = await supabase.from('conversations').select('messages').eq('id', selectedConv.id).single();
+                 if (latest && latest.messages) {
+                     const msgs = latest.messages;
+                     const idx = msgs.findLastIndex(m => m.timestamp === messageObj.timestamp);
+                     if (idx !== -1) {
+                         msgs[idx].sent_meta = [{ id: apiData.meta_message_id, type: 'audio', content: audioUrl }];
+                         await supabase.from('conversations').update({ messages: msgs }).eq('id', selectedConv.id);
+                     }
+                 }
           }
         } catch (apiErr) {
           console.error('Error sending audio via API:', apiErr);
@@ -986,9 +998,15 @@ const { error: uploadError } = await supabase.storage
           });
           const apiData = await apiRes.json();
           if (apiData.meta_message_id) {
-              const updatedMsgs = [...selectedConv.rawMessages, messageObj];
-              updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: mediaType, content: fileUrl }];
-              await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+              const { data: latest } = await supabase.from('conversations').select('messages').eq('id', selectedConv.id).single();
+                 if (latest && latest.messages) {
+                     const msgs = latest.messages;
+                     const idx = msgs.findLastIndex(m => m.timestamp === messageObj.timestamp);
+                     if (idx !== -1) {
+                         msgs[idx].sent_meta = [{ id: apiData.meta_message_id, type: mediaType, content: fileUrl }];
+                         await supabase.from('conversations').update({ messages: msgs }).eq('id', selectedConv.id);
+                     }
+                 }
           }
         } catch (apiErr) {
           console.error('Error sending file via API:', apiErr);
