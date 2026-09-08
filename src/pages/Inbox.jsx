@@ -1299,24 +1299,413 @@ const { error: uploadError } = await supabase.storage
              </div>
              <div className="search-bar" style={{ padding: '8px 12px' }}>
                <Search size={16} />
-               <textarea 
-                          placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem', resize: 'none', minHeight: '36px', maxHeight: '120px', overflowY: 'auto', lineHeight: '20px', alignSelf: 'center', fontFamily: 'inherit' }} 
-                          rows={1}
-                          value={newMessage} 
-                          onChange={e => {
-                              setNewMessage(e.target.value);
-                              e.target.style.height = 'auto';
-                              e.target.style.height = (e.target.scrollHeight) + 'px';
-                          }}
-                          onKeyDown={e => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  if (newMessage.trim()) {
-                                      handleSendMessage(e);
-                                      e.target.style.height = 'auto';
-                                  }
+               <input 
+                  type="text" 
+                  placeholder="Buscar..." 
+                  style={{ fontSize: '0.85rem' }} 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+               />
+             </div>
+             <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
+                {['all', 'whatsapp', 'instagram', 'messenger', 'archived'].map(tab => (
+                   <button 
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      style={{ 
+                         background: activeTab === tab ? 'var(--primary-600)' : 'rgba(var(--overlay-rgb), 0.05)',
+                         border: 'none', borderRadius: 12, padding: '4px 10px', fontSize: '0.7rem',
+                         color: activeTab === tab ? 'white' : 'var(--text-secondary)', cursor: 'pointer',
+                         textTransform: 'capitalize', whiteSpace: 'nowrap'
+                      }}
+                   >
+                      {tab === 'all' ? 'Todos' : tab === 'archived' ? 'Archivados' : tab}
+                   </button>
+                ))}
+             
+               </div>
+               
+               {/* Asesor Filter (visible if teamMembers > 1 and only for admins) */}
+               {tenant.isAdmin && teamMembers && teamMembers.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                     <select 
+                        value={agentFilter}
+                        onChange={(e) => setAgentFilter(e.target.value)}
+                        style={{
+                           width: '100%',
+                           padding: '8px 12px',
+                           borderRadius: '12px',
+                           background: 'rgba(var(--overlay-rgb), 0.05)',
+                           border: '1px solid var(--glass-border)',
+                           color: 'var(--text-secondary)',
+                           fontSize: '0.8rem',
+                           outline: 'none',
+                           cursor: 'pointer'
+                        }}
+                     >
+                        <option value="all">Filtro: Todos los chats</option>
+                        <option value="unassigned">Sin asignar</option>
+                        {teamMembers.map(member => (
+                           <option key={member.user_id} value={member.user_id}>
+                              Asignado a: {member.full_name || member.email}
+                           </option>
+                        ))}
+                     </select>
+                  </div>
+               )}
+
+               {selectedChats.length > 0 && (
+                 <div style={{ marginTop: 12, padding: '8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-400)', textAlign: 'center' }}>
+                       {selectedChats.length} chat(s) seleccionados
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                       <button className="btn btn-secondary btn-sm" style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }} onClick={handleExportChats}>
+                          <Download size={14} style={{ marginRight: 4 }} /> Exportar
+                       </button>
+                       <button className="btn btn-primary btn-sm" style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }} onClick={handleMoveToRemarketing}>
+                          <Megaphone size={14} style={{ marginRight: 4 }} /> Re-marketing
+                       </button>
+                    </div>
+                 </div>
+              )}
+             <button 
+               className="btn btn-primary btn-sm" 
+               style={{ 
+                 width: '100%', 
+                 marginTop: 12, 
+                 background: isSelectMode ? 'rgba(var(--overlay-rgb), 0.1)' : 'var(--primary-600)',
+                 color: isSelectMode ? 'var(--text-secondary)' : 'white',
+                 fontWeight: 700,
+                 border: isSelectMode ? '1px solid var(--glass-border)' : 'none'
+               }}
+               onClick={() => {
+                 setIsSelectMode(!isSelectMode);
+                 if (isSelectMode) setSelectedChats([]); // clear selection when canceling
+               }}
+             >
+               {isSelectMode ? <Close size={14} /> : <CheckSquare size={14} />} {isSelectMode ? 'Cancelar selección' : 'Seleccionar chats'}
+             </button>
+          </div>
+          
+          <div className="conversation-list" style={{ padding: '0 12px 12px', flex: 1, overflowY: 'auto' }}>
+            {isLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                 <div className="spinner" style={{ margin: '0 auto 12px' }} />
+                 <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
+              </div>
+            ) : conversationsList
+                .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
+                  .filter(c => {
+                     if (agentFilter === 'all') return true;
+                     if (agentFilter === 'unassigned') return !c.assigned_to;
+                     return c.assigned_to === agentFilter;
+                  })
+                .filter(c => {
+                     if (searchQuery) return true; // BYPASS folder filter if searching globally
+                     const fId = getConversationFolder(c);
+                     if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
+                   if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
+                   if (activeFolder === 'pending') return c.unread && !c.archived;
+                   
+                   if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
+                   if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
+                   if (activeFolder === 'difusiones') return fId.startsWith('broadcast_');
+                   if (activeFolder === 'resolved') return c.archived;
+                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
+
+                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
+                   return fId === 'inbox' && !c.archived;
+                })
+                .filter(c => {
+                   if (!searchQuery) return true;
+                   const q = searchQuery.toLowerCase();
+                   if (c.name && c.name.toLowerCase().includes(q)) return true;
+                   if (c.phone && c.phone.includes(q)) return true;
+                   if (c.preview && c.preview.toLowerCase().includes(q)) return true;
+                   if (c.rawMessages && c.rawMessages.some(m => (m.content || m.text || '').toLowerCase().includes(q))) return true;
+                     const fId = getConversationFolder(c);
+                     if (fId.startsWith('broadcast_')) {
+                        const lId = fId.replace('broadcast_', '');
+                        const bl = broadcastLists.find(b => b.id === lId);
+                        if (bl && bl.name && bl.name.toLowerCase().includes(q)) return true;
+                     }
+                     return false;
+                })
+                .map(c => (
+              <div 
+                key={c.id} 
+                className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
+                onClick={() => { setSelectedConv(c); setMobileView('chat'); }}
+                style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
+              >
+                 {isSelectMode && (
+                   <div 
+                     style={{ 
+                       marginRight: 10, 
+                       display: 'flex', 
+                       alignItems: 'center', 
+                       justifyContent: 'center',
+                       width: 20, 
+                       height: 20, 
+                       borderRadius: '50%',
+                       border: `2px solid ${selectedChats.includes(c.id) ? 'var(--primary-400)' : 'var(--glass-border)'}`,
+                       background: selectedChats.includes(c.id) ? 'var(--primary-400)' : 'transparent',
+                       cursor: 'pointer',
+                       flexShrink: 0,
+                       transition: 'all 0.2s ease'
+                     }}
+                     onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedChats.includes(c.id)) setSelectedChats(selectedChats.filter(id => id !== c.id));
+                        else setSelectedChats([...selectedChats, c.id]);
+                     }}
+                   >
+                     {selectedChats.includes(c.id) && <Check size={12} color="white" strokeWidth={3} />}
+                   </div>
+                 )}
+                 <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
+                    {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}
+                    {c.assigned_to && (
+                       <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: "var(--text-primary)" }}>
+                          {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
+                       </div>
+                    )}
+                 </div>
+                 <div className="conv-content" style={{ marginLeft: 12, minWidth: 0, flex: 1 }}>
+                    <div className="flex justify-between items-center">
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                          {c.unreadCount > 0 && (
+                             <div style={{ minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: 'var(--accent-emerald)', color: '#000', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                               {c.unreadCount}
+                             </div>
+                           )}
+                       </div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: c.unread ? 'var(--accent-emerald)' : 'var(--text-tertiary)', fontWeight: c.unread ? 700 : 400, flexShrink: 0 }}>
+                         {c.channel === 'instagram' ? <Instagram size={12} /> : c.channel === 'facebook' ? <Facebook size={12} /> : <MessageCircle size={12} />}
+                         <span>{c.time}</span>
+                       </div>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview?.includes('supabase.co/storage') ? ( (c.preview.includes('.mp4') || c.preview.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : c.preview}</p>
+                    {c.tags && c.tags.length > 0 && (
+                      <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+                         {c.tags.map((t, i) => {
+                            const isString = typeof t === 'string';
+                            const label = isString ? t : t.label;
+                            const color = isString ? '#f59e0b' : (t.color || '#f59e0b');
+                            
+                            return (
+                              <span key={i} className="badge" style={{ fontSize: '0.6rem', backgroundColor: `${color}20`, color: color, borderColor: `${color}40`, border: '1px solid' }}>
+                                 {label === 'Asignado' ? `Asignado a: ${teamMembers.find(m => m.user_id === c.assigned_to)?.full_name || 'Asesor'}` : label}
+                              </span>
+                            );
+                         })}
+                      </div>
+                    )}
+                  </div>
+               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Chat Area */}
+        <div className={`chat-area inbox-panel-container ${mobileView !== 'chat' ? 'mobile-hidden' : ''}`} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          {selectedConv ? (
+            <>
+              
+              <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center' }}>
+                 <button 
+                   className="mr-3 p-2 rounded-full mobile-only"
+                   onClick={() => { setSelectedConv(null); setMobileView('list'); }}
+                   style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                 >
+                   <ChevronRight size={24} style={{ transform: 'rotate(180deg)' }} />
+                 </button>
+                 <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0, overflow: 'hidden' }}>
+                    {selectedConv.avatar?.startsWith('http') ? <img src={selectedConv.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : selectedConv.avatar}
+                 </div>
+                 <div style={{ marginLeft: 12, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv.name}</span>
+                      <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
+                    </div>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4, textTransform: 'capitalize' }}>
+                      {selectedConv.channel === 'instagram' ? <Instagram size={10} /> : selectedConv.channel === 'facebook' ? <Facebook size={10} /> : <MessageCircle size={10} />}
+                      {selectedConv.channel} | Cliente
+                    </p>
+                 </div>
+                  <div className="ml-auto flex items-center gap-3">
+                     <div className="hidden sm:flex" style={{ alignItems: 'center' }}>
+                         <select 
+                             className="badge-select"
+                             value={selectedConv.assigned_to || ''} 
+                             onChange={async (e) => {
+                                 const val = e.target.value || null;
+                                 assignAdvisor(selectedConv.id, val);
+                             }}
+                             style={{ 
+                                 background: 'rgba(var(--overlay-rgb), 0.05)', 
+                                 border: '1px solid var(--glass-border)',
+                                 color: "var(--text-secondary)",
+                                 borderRadius: 8,
+                                 fontSize: '0.75rem',
+                                 padding: '4px 8px',
+                                 fontWeight: 600,
+                                 marginRight: '8px'
+                             }}
+                         >
+                             <option value="" style={{ background: '#111' }}>Asignar Asesor...</option>
+                             {teamMembers.map(m => (
+                                 <option key={m.user_id} value={m.user_id} style={{ background: '#111' }}>{m.full_name}</option>
+                             ))}
+                         </select>
+                     </div>
+                     <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
+                        <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>AI</span>
+                        <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={async () => {
+                          const newState = !botActive;
+                          setBotActive(newState);
+                          if (selectedConv) {
+                            selectedConv.needs_human = !newState;
+                            const { error } = await supabase.from('conversations').update({ needs_human: !newState }).eq('id', selectedConv.id);
+                            if (error) console.error("Error updating AI status", error);
+                          }
+                        }} />
+                     </div>
+                     <div className="flex gap-1">
+                        <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
+                        <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setShowContactSettings(true)} title="Configuración de Cliente"><Settings size={14} /></button>
+                          
+                        <button 
+                           className="btn btn-secondary btn-sm"
+                           title={selectedConv?.archived ? "Desarchivar" : "Archivar"}
+                           onClick={async () => {
+                              const newArchivedState = !selectedConv.archived;
+                              const { error } = await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', selectedConv.id);
+                              if (!error) {
+                                  setSelectedConv({...selectedConv, archived: newArchivedState});
+                                  fetchConversations(true);
                               }
-                          }}
+                           }}
+                        >
+                           <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-amber)' : 'inherit' }} />
+                        </button>
+                        {tenant.isAdmin && (
+                          <button 
+                             className="btn btn-secondary btn-sm"
+                             title="Eliminar Chat Completo"
+                             style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
+                             onClick={() => {
+                                setChatToDelete(selectedConv);
+                                setShowDeleteModal(true);
+                             }}
+                          >
+                             <Trash2 size={14} />
+                          </button>
+                        )}
+                     </div>
+                  </div>
+              </div>
+
+              <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {messages.map(m => (
+                    <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`} style={{ opacity: m.isUploading ? 0.6 : 1 }}>
+                        {m.type === 'image' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
+                          <div>
+                            <img src={m.media_url || m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                            {m.media_url && m.text && m.text !== m.media_url && m.text !== '📷 Imagen recibida' && (
+                              <p style={{ margin: '4px 0 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>{m.text}</p>
+                            )}
+                          </div>
+                        ) : m.type === 'audio' || m.type === 'voice' ? (
+                          <div>
+                            {m.media_url && <VoiceNotePlayer src={m.media_url} sender={m.sender} durationText="Audio" avatar={m.sender === 'client' ? selectedConv?.avatar : null} />}
+                            <p style={{ margin: 0, wordBreak: 'break-word', fontStyle: 'italic', opacity: 0.8, fontSize: '0.8rem' }}>{m.text?.startsWith('http') ? '' : m.text?.replace(/^\[Nota de Voz del Cliente\]:\s*/, '')}</p>
+                          </div>
+                        ) : m.type === 'video' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(mp4|webm|ogg)/i)) ? (
+                          <div>
+                            <video controls src={m.media_url || m.text} style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
+                            {m.text && m.text !== m.media_url && m.text.replace(/\[Video recibido:.*?\]/gi, '').trim() && (
+                              <p style={{ margin: '4px 0 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>
+                                {m.text.replace(/\[Video recibido:.*?\]/gi, '').trim()}
+                              </p>
+                            )}
+                          </div>
+                        ) : m.type === 'document' ? (
+                          <a href={m.media_url || m.text} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Ver Documento</a>
+                        ) : (
+                          <div>
+                            {(() => {
+                              // Extract all image URLs
+                              const imgMatches = [];
+                              const imgRegex = /\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi;
+                              let match;
+                              while ((match = imgRegex.exec(m.text || '')) !== null) {
+                                imgMatches.push(match[1]);
+                              }
+
+                              // Extract all video URLs
+                              const vidMatches = [];
+                              const vidRegex = /\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/gi;
+                              let vMatch;
+                              while ((vMatch = vidRegex.exec(m.text || '')) !== null) {
+                                vidMatches.push(vMatch[1]);
+                              }
+
+                              const cleanMsgText = m.text
+                                ?.replace(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/gi, '')
+                                ?.replace(/\[SEND_VIDEO:\s*(https?:\/\/[^\]]+)\]/gi, '')
+                                ?.trim();
+                              
+                              return (
+                                <>
+                                  {cleanMsgText && <p style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{cleanMsgText.includes('supabase.co/storage') && cleanMsgText.startsWith('http') && !cleanMsgText.includes(' ') ? ((cleanMsgText.includes('.mp4') || cleanMsgText.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : cleanMsgText}</p>}
+                                  {imgMatches.map((url, idx) => (
+                                    <img key={idx} src={url} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8, display: 'block' }} />
+                                  ))}
+                                  {vidMatches.map((url, idx) => (
+                                    <video key={idx} controls src={url} style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8, display: 'block' }} />
+                                  ))}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
+                          {m.sender === 'agent' && m.sender_name && (
+        <span style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.8, marginRight: 'auto', background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+            {m.sender_name}
+        </span>
+    )}
+    {m.sender === 'agent' && (
+      <>
+                              <span title="Editar en CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleEditMessage(messages.indexOf(m), m.text || m.content || '')}>✏️</span>
+                              {tenant.isAdmin && (
+                                <span title="Eliminar del CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleDeleteMessage(messages.indexOf(m))}>🗑️</span>
+                              )}
+                            </>
+                          )}
+                          {m.time}
+                        </div>
+                    </div>
+                  ))}
+                 <div ref={messagesEndRef} />
+              </div>
+
+              <div className="chat-input-area" style={{ padding: '12px 0', background: 'rgba(0,0,0,0.2)', width: '100%' }}>
+                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(var(--overlay-rgb), 0.03)', border: '1px solid var(--glass-border)', borderRadius: '0', padding: '4px 16px', display: 'flex', alignItems: 'center', width: '100%' }}>
+                     {isRecording ? (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
+                           <div className="pulse-red" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+                           <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>Grabando... {formatTime(recordingTime)}</span>
+                        </div>
+                     ) : (
+                        <input 
+                          type="text" placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem' }} 
+                          value={newMessage} onChange={e => setNewMessage(e.target.value)}
                           onPaste={(e) => {
                             const items = e.clipboardData?.items;
                             if (items) {
