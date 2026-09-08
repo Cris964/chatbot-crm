@@ -1703,10 +1703,25 @@ const { error: uploadError } = await supabase.storage
                            <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>Grabando... {formatTime(recordingTime)}</span>
                         </div>
                      ) : (
-                        <input 
-                          type="text" placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem' }} 
-                          value={newMessage} onChange={e => setNewMessage(e.target.value)}
-                          onPaste={(e) => {
+                          <textarea 
+                            placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem', resize: 'none', minHeight: '36px', maxHeight: '120px', overflowY: 'auto', lineHeight: '20px', alignSelf: 'center', fontFamily: 'inherit' }} 
+                            rows={1}
+                            value={newMessage} 
+                            onChange={e => {
+                                setNewMessage(e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = (e.target.scrollHeight) + 'px';
+                            }}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (newMessage.trim()) {
+                                        handleSendMessage(e);
+                                        e.target.style.height = 'auto';
+                                    }
+                                }
+                            }}
+                            onPaste={(e) => {
                             const items = e.clipboardData?.items;
                             if (items) {
                               for (let i = 0; i < items.length; i++) {
