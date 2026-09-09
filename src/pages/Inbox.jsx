@@ -928,6 +928,21 @@ export default function Inbox() {
           return 'document';
         };
         const mType = getMedia(file.type, file.name);
+        if (mType === 'video' && file.size > 16 * 1024 * 1024) {
+            alert('❌ WhatsApp no permite videos mayores a 16 MB.\n\nEste video pesa ' + (file.size / (1024*1024)).toFixed(1) + ' MB.');
+            setIsLoading(false);
+            return;
+        }
+        if (mType === 'image' && file.size > 5 * 1024 * 1024) {
+            alert('❌ WhatsApp no permite imágenes mayores a 5 MB.\n\nEsta imagen pesa ' + (file.size / (1024*1024)).toFixed(1) + ' MB.');
+            setIsLoading(false);
+            return;
+        }
+        if (mType === 'document' && file.size > 100 * 1024 * 1024) {
+            alert('❌ WhatsApp no permite documentos mayores a 100 MB.');
+            setIsLoading(false);
+            return;
+        }
         let tempMsg = null;
         if (mType === 'image' || mType === 'video') {
             tempMsg = { role: 'agent', sender_name: getSenderName(), content: URL.createObjectURL(file), type: mType, timestamp: new Date().toISOString(), isUploading: true };
