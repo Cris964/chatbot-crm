@@ -773,22 +773,31 @@ export default function Inbox() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContext();
+      const sourceNode = audioCtx.createMediaStreamSource(stream);
+      
       const recorder = new Recorder({
           encoderPath: '/opus-recorder/encoderWorker.min.js',
           numberOfChannels: 1,
-          encoderSampleRate: 48000
+          encoderSampleRate: 48000,
+          sourceNode: sourceNode
       })
 
       recorder.ondataavailable = async (arrayBuffer) => {
         const audioBlob = new Blob([arrayBuffer], { type: 'audio/ogg' })
         stream.getTracks().forEach(track => track.stop())
+        if (audioCtx.state !== 'closed') {
+          audioCtx.close();
+        }
         await uploadAudio(audioBlob)
       }
 
       mediaRecorderRef.current = recorder
       mediaRecorderRef.current.stream = stream
+      mediaRecorderRef.current.audioCtx = audioCtx
 
-      await recorder.start(stream)
+      await recorder.start()
       
       setIsRecording(true)
       setRecordingTime(0)
