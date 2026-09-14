@@ -1,3 +1,4 @@
+import Recorder from 'opus-recorder';
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useOutletContext, useLocation } from 'react-router-dom'
 import {
@@ -806,7 +807,7 @@ export default function Inbox() {
       }, 1000)
     } catch (err) {
       console.error("Microphone access denied or recorder error:", err)
-      alert("Para grabar audios, por favor permite el acceso al micrófono en tu navegador.")
+      alert("Error al grabar: " + (err.message || err.toString() || JSON.stringify(err)))
     }
   }
 
