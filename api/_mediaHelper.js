@@ -11,6 +11,8 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
       mediaId = messageObj.video.id;
     } else if (type === 'voice' && messageObj.voice) {
       mediaId = messageObj.voice.id;
+    } else if (type === 'document' && messageObj.document) {
+      mediaId = messageObj.document.id;
     }
 
     if (type === 'reaction' && messageObj.reaction) {
@@ -152,6 +154,36 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
       };
     }
 
+    } else if (type === 'document') {
+      let ext = 'pdf';
+      if (mimeType.includes('pdf')) ext = 'pdf';
+      else if (mimeType.includes('word')) ext = 'docx';
+      else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) ext = 'xlsx';
+      
+      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+      let docUrl = null;
+      try {
+        const { data: uploadData, error: uploadErr } = await supabase.storage.from('whatsapp_media').upload(fileName, buffer, {
+           contentType: mimeType,
+           upsert: true
+        });
+        if (!uploadErr && uploadData) {
+           const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+           docUrl = publicUrlData.publicUrl;
+        }
+      } catch (err) {
+        console.error('Error uploading document to supabase storage:', err);
+      }
+      
+      const caption = messageObj.document?.caption || '';
+      const docName = messageObj.document?.filename || 'Documento adjunto';
+      return {
+          text: (caption ? caption + '\n\n' : '') + '[Documento recibido: ' + docName + ']',
+          mediaUrl: docUrl,
+          mediaType: 'document'
+      };
+    }
+    
     return `[Archivo Multimedia tipo ${type}]`;
   } catch (err) {
     return `[EXCEPCION MEDIA]: ${err.message}`;

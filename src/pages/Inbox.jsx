@@ -773,38 +773,30 @@ export default function Inbox() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const types = ['audio/mp4', 'audio/aac', 'audio/webm'];
-      let options = {};
-      for (const t of types) {
-          if (MediaRecorder.isTypeSupported(t)) {
-              options = { mimeType: t };
-              break;
-          }
-      }
-      const mediaRecorder = new MediaRecorder(stream, options);
-      mediaRecorderRef.current = mediaRecorder
-      audioChunksRef.current = []
+      const recorder = new Recorder({
+          encoderPath: '/opus-recorder/encoderWorker.min.js',
+          numberOfChannels: 1,
+          encoderSampleRate: 48000
+      })
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+      recorder.ondataavailable = async (arrayBuffer) => {
+        const audioBlob = new Blob([arrayBuffer], { type: 'audio/ogg' })
         stream.getTracks().forEach(track => track.stop())
         await uploadAudio(audioBlob)
       }
 
-      mediaRecorder.start()
+      mediaRecorderRef.current = recorder
+      mediaRecorderRef.current.stream = stream
+
+      await recorder.start(stream)
+      
       setIsRecording(true)
       setRecordingTime(0)
       recordingTimerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1)
       }, 1000)
     } catch (err) {
-      console.error("Microphone access denied:", err)
+      console.error("Microphone access denied or recorder error:", err)
       alert("Para grabar audios, por favor permite el acceso al micrófono en tu navegador.")
     }
   }
@@ -812,7 +804,7 @@ export default function Inbox() {
   const stopRecording = (cancel = false) => {
     if (mediaRecorderRef.current && isRecording) {
       if (cancel) {
-        mediaRecorderRef.current.onstop = () => {
+        mediaRecorderRef.current.ondataavailable = () => {
           mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop())
         }
       }
@@ -833,10 +825,10 @@ export default function Inbox() {
     if (!selectedConv) return
     setIsLoading(true)
     try {
-      const fileName = `voice_${Date.now()}.mp4`
+      const fileName = `voice_${Date.now()}.ogg`
       const { data, error } = await supabase.storage
         .from('whatsapp_media')
-        .upload(fileName, audioBlob, { contentType: 'audio/mp4' })
+        .upload(fileName, audioBlob, { contentType: 'audio/ogg' })
         
       if (error) throw error
 
