@@ -136,22 +136,48 @@ export default async function handler(req, res) {
 
         const msgType = record.type || 'text';
 
-        if (msgType === 'image') {
-          metaPayload.type = 'image';
+        if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'document' || msgType === 'file') {
+          const typeMap = { 'image': 'image', 'video': 'video', 'audio': 'audio', 'document': 'document', 'file': 'document' };
+          const actualType = typeMap[msgType];
+          metaPayload.type = actualType;
+          
           let finalImageUrl = message;
-            if (finalImageUrl.toLowerCase().includes('.webp')) {
-                finalImageUrl = 'https://wsrv.nl/?url=' + encodeURIComponent(finalImageUrl) + '&output=jpg';
-            }
-            metaPayload.image = { link: finalImageUrl };
-        } else if (msgType === 'video') {
-          metaPayload.type = 'video';
-          metaPayload.video = { link: message };
-        } else if (msgType === 'audio') {
-          metaPayload.type = 'audio';
-          metaPayload.audio = { link: message };
-        } else if (msgType === 'document' || msgType === 'file') {
-          metaPayload.type = 'document';
-          metaPayload.document = { link: message, filename: 'Archivo.pdf' };
+          if (actualType === 'image' && finalImageUrl.toLowerCase().includes('.webp')) {
+              finalImageUrl = 'https://wsrv.nl/?url=' + encodeURIComponent(finalImageUrl) + '&output=jpg';
+          }
+          
+          try {
+              const mediaRes = await fetch(finalImageUrl);
+              if (mediaRes.ok) {
+                  const blob = await mediaRes.blob();
+                  const formData = new FormData();
+                  formData.append('messaging_product', 'whatsapp');
+                  let ext = 'jpg';
+                  if (actualType === 'video') ext = 'mp4';
+                  if (actualType === 'audio') ext = 'ogg';
+                  if (actualType === 'document') ext = 'pdf';
+                  formData.append('file', blob, 'file.' + ext);
+                  
+                  const uploadRes = await fetch('https://graph.facebook.com/v21.0/' + PHONE_NUMBER_ID + '/media', {
+                      method: 'POST',
+                      headers: { 'Authorization': 'Bearer ' + WHATSAPP_TOKEN },
+                      body: formData
+                  });
+                  const uploadData = await uploadRes.json();
+                  
+                  if (uploadData.id) {
+                      metaPayload[actualType] = { id: uploadData.id };
+                      if (actualType === 'document') metaPayload[actualType].filename = 'Archivo.' + ext;
+                  } else {
+                      metaPayload[actualType] = { link: finalImageUrl };
+                  }
+              } else {
+                  metaPayload[actualType] = { link: finalImageUrl };
+              }
+          } catch(e) {
+              console.error('[MEDIA UPLOAD FALLBACK]', e);
+              metaPayload[actualType] = { link: finalImageUrl };
+          }
         } else if (msgType === 'template') {
           if (phone.length > 14) {
               return res.status(400).json({ error: 'No puedes enviar plantillas a usuarios de anuncios (Click-to-WhatsApp) por políticas de Meta. Solo puedes responderles con texto/multimedia.' });
@@ -166,14 +192,40 @@ export default async function handler(req, res) {
              // Smart inference from URL if frontend didn't pass it
              let inferredType = 'image';
              if (record.mediaUrl.toLowerCase().endsWith('.mp4')) inferredType = 'video';
+             if (record.mediaUrl.toLowerCase().endsWith('.pdf')) inferredType = 'document';
              
              const mType = record.mediaType || inferredType; 
+             
+             let uploadedId = null;
+             try {
+                  const mediaRes = await fetch(record.mediaUrl);
+                  if (mediaRes.ok) {
+                      const blob = await mediaRes.blob();
+                      const formData = new FormData();
+                      formData.append('messaging_product', 'whatsapp');
+                      let ext = 'jpg';
+                      if (mType === 'video') ext = 'mp4';
+                      if (mType === 'document') ext = 'pdf';
+                      formData.append('file', blob, 'template.' + ext);
+                      
+                      const uploadRes = await fetch('https://graph.facebook.com/v21.0/' + PHONE_NUMBER_ID + '/media', {
+                          method: 'POST',
+                          headers: { 'Authorization': 'Bearer ' + WHATSAPP_TOKEN },
+                          body: formData
+                      });
+                      const uploadData = await uploadRes.json();
+                      if (uploadData.id) uploadedId = uploadData.id;
+                  }
+             } catch(e) {
+                  console.error('[TEMPLATE MEDIA UPLOAD FALLBACK]', e);
+             }
+
              components.push({
                type: "header",
                parameters: [
                  {
                    type: mType,
-                   [mType]: { link: record.mediaUrl }
+                   [mType]: uploadedId ? { id: uploadedId } : { link: record.mediaUrl }
                  }
                ]
              });
@@ -285,9 +337,27 @@ export default async function handler(req, res) {
         }
     }
 
+    const sentWamid = metaResult.messages?.[0]?.id;
+    if (sentWamid) {
+        try {
+            const { data: conv } = await supabase.from('conversations').select('messages').eq('client_id', clientId).eq('user_phone', phone).single();
+            if (conv && conv.messages) {
+                const searchContent = metaPayload.type === 'template' ? (record.message || 'template') : message;
+                let msgs = conv.messages;
+                const idx = msgs.findLastIndex(m => m.role === 'agent' && (!m.sent_meta) && (m.content === searchContent || (m.content && m.content.includes(searchContent))));
+                if (idx !== -1) {
+                    msgs[idx].sent_meta = [{ id: sentWamid, type: metaPayload.type || 'text', content: searchContent }];
+                    await supabase.from('conversations').update({ messages: msgs }).eq('client_id', clientId).eq('user_phone', phone);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to save sent_meta in backend', e);
+        }
+    }
+
     return res.status(200).json({
       success: true,
-      meta_message_id: metaResult.messages?.[0]?.id,
+      meta_message_id: sentWamid,
       recipient: phone
     });
 
