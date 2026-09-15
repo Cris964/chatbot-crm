@@ -56,20 +56,19 @@ export default async function handler(req, res) {
                   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
                   
                   // Find the conversation by recipient
-                  supabaseAdmin.from('conversations').select('id, messages').eq('user_phone', recipient).limit(1).then(({ data }) => {
-                      if (data && data.length > 0) {
-                          const chat = data[0];
-                          const errorNode = {
-                              role: 'agent',
-                              content: `[SISTEMA]: ⚠️ Error de Meta al entregar el mensaje anterior a este cliente. Código: ${errorCode}. Motivo: ${errorTitle}. (Probablemente faltaron variables o la plantilla fue rechazada)`,
-                              timestamp: new Date().toISOString()
-                          };
-                          supabaseAdmin.from('conversations').update({
-                              messages: [...(chat.messages || []), errorNode],
-                              updated_at: new Date().toISOString()
-                          }).eq('id', chat.id).then();
-                      }
-                  });
+                  const { data } = await supabaseAdmin.from('conversations').select('id, messages').eq('user_phone', recipient).limit(1);
+                  if (data && data.length > 0) {
+                      const chat = data[0];
+                      const errorNode = {
+                          role: 'agent',
+                          content: `[SISTEMA]: ❌ Error de Meta al entregar el mensaje anterior a este cliente. Código: ${errorCode}. Motivo: ${errorTitle}. (Probablemente faltaron variables o la plantilla fue rechazada)`,
+                          timestamp: new Date().toISOString()
+                      };
+                      await supabaseAdmin.from('conversations').update({
+                          messages: [...(chat.messages || []), errorNode],
+                          updated_at: new Date().toISOString()
+                      }).eq('id', chat.id);
+                  }
               }
               return res.status(200).send('Status received');
           }
@@ -389,9 +388,7 @@ export default async function handler(req, res) {
           if (channel === 'whatsapp' && WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
               if (msg.type === 'text') {
                   const payload = { messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: msg.content } };
-                  if (senderPhone.length > 14 && messageId) {
-                      payload.context = { message_id: messageId };
-                  }
+                  
                   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
@@ -410,9 +407,7 @@ export default async function handler(req, res) {
                   if (msg.type === 'document') {
                       payload[msg.type].filename = 'Documento.pdf';
                   }
-                  if (senderPhone.length > 14 && messageId) {
-                      payload.context = { message_id: messageId };
-                  }
+                  
                   
                   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                     method: 'POST',
