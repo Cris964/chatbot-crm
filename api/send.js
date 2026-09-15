@@ -124,7 +124,15 @@ export default async function handler(req, res) {
         
         // CTWA Context workaround: Always reply to the last user message
         // This prevents Error 131026 (Message Undeliverable) for Click-to-WhatsApp ads
-        // Removed CTWA context workaround as it breaks normal delivery
+        // CTWA Context workaround: Always reply to the last user message for Click-to-WhatsApp ads
+        const { data: convData } = await supabase.from('conversations').select('messages').eq('client_id', clientId).eq('user_phone', phone).single();
+        if (convData && convData.messages && convData.messages.length > 0 && phone.length > 14) {
+            const userMsgs = convData.messages.filter(m => m.role === 'user' && m.meta_id);
+            if (userMsgs.length > 0) {
+                const lastWamid = userMsgs[userMsgs.length - 1].meta_id;
+                metaPayload.context = { message_id: lastWamid };
+            }
+        }
 
         const msgType = record.type || 'text';
 

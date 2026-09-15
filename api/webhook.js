@@ -388,6 +388,9 @@ export default async function handler(req, res) {
           if (channel === 'whatsapp' && WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
               if (msg.type === 'text') {
                   const payload = { messaging_product: 'whatsapp', to: senderPhone, type: 'text', text: { body: msg.content } };
+                  if (senderPhone.length > 14 && messageId) {
+                      payload.context = { message_id: messageId };
+                  }
                   
                   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                     method: 'POST',
@@ -407,7 +410,9 @@ export default async function handler(req, res) {
                   if (msg.type === 'document') {
                       payload[msg.type].filename = 'Documento.pdf';
                   }
-                  
+                  if (senderPhone.length > 14 && messageId) {
+                      payload.context = { message_id: messageId };
+                  }
                   
                   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
                     method: 'POST',
