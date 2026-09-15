@@ -152,7 +152,6 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
           mediaUrl: videoUrl,
           mediaType: 'video'
       };
-    }
 
     } else if (type === 'document') {
       let ext = 'pdf';
