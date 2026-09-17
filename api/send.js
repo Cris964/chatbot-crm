@@ -340,6 +340,7 @@ export default async function handler(req, res) {
     const sentWamid = metaResult.messages?.[0]?.id;
     if (sentWamid) {
         try {
+            await new Promise(r => setTimeout(r, 800)); // Delay to allow frontend DB update to propagate
             const { data: conv } = await supabase.from('conversations').select('messages').eq('client_id', clientId).eq('user_phone', phone).single();
             if (conv && conv.messages) {
                 const searchContent = metaPayload.type === 'template' ? (record.message || 'template') : message;
