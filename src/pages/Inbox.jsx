@@ -2057,34 +2057,34 @@ const { error: uploadError } = await supabase.storage
                 
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto del Inventario</label>
-                  <select className="input" value={newSale.product_dropdown} onChange={e => {
-                      const selected = productsList.find(p => p.name === e.target.value);
+                  <select className="input" value={newSale.product_dropdown || ''} onChange={e => {
+                      const selected = (productsList || []).find(p => p && p.name === e.target.value);
                       setNewSale({...newSale, product_dropdown: e.target.value, custom_product: '', unit_price: selected ? selected.price : newSale.unit_price});
                   }}>
                     <option value="">-- Seleccionar o escribir otro --</option>
-                    {productsList.map((p, i) => <option key={i} value={p.name}>{p.name}</option>)}
+                    {(productsList || []).map((p, i) => <option key={i} value={p?.name || ''}>{p?.name || 'Producto sin nombre'}</option>)}
                   </select>
                 </div>
 
                 {(!newSale.product_dropdown) && (
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto Personalizado</label>
-                    <input type="text" required className="input" placeholder="Nombre del producto..." value={newSale.custom_product} onChange={e => setNewSale({...newSale, custom_product: e.target.value})} />
+                    <input type="text" required className="input" placeholder="Nombre del producto..." value={newSale.custom_product || ''} onChange={e => setNewSale({...newSale, custom_product: e.target.value})} />
                   </div>
                 )}
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cantidad</label>
-                  <input type="number" required min="1" className="input" value={newSale.quantity} onChange={e => setNewSale({...newSale, quantity: parseInt(e.target.value) || 1})} />
+                  <input type="number" required min="1" className="input" value={newSale.quantity || 1} onChange={e => setNewSale({...newSale, quantity: parseInt(e.target.value) || 1})} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Unitario ($)</label>
-                  <input type="number" required min="0" className="input" value={newSale.unit_price} onChange={e => setNewSale({...newSale, unit_price: parseFloat(e.target.value) || 0})} />
+                  <input type="number" required min="0" className="input" value={newSale.unit_price || 0} onChange={e => setNewSale({...newSale, unit_price: parseFloat(e.target.value) || 0})} />
                 </div>
 
                 <div style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                    <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Total Automático:</span>
-                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${(newSale.quantity * newSale.unit_price).toLocaleString('es-CO')}</span>
+                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${((newSale.quantity * newSale.unit_price) || 0).toLocaleString('es-CO')}</span>
                 </div>
 
                 <div>
