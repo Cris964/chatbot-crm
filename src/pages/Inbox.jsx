@@ -700,7 +700,42 @@ export default function Inbox() {
       setAiContextMedia(prev => [...prev, ...newMedia]);
     };
     
-    const handleSendTemplate = async (e) => {
+    useEffect(() => {
+    if (showSaleModal) {
+       supabase.from('products').select('name, price').eq('client_id', tenant?.clientId).then(({data}) => {
+          if (data) setProductsList(data);
+       });
+       setNewSale(prev => ({ ...prev, user_name: selectedConv?.name || '' }));
+    }
+  }, [showSaleModal, selectedConv, tenant]);
+
+  const handleRegisterSale = async (e) => {
+    e.preventDefault();
+    setIsSavingSale(true);
+    const finalProduct = newSale.custom_product.trim() || newSale.product_dropdown;
+    const formattedProduct = `${finalProduct} (x${newSale.quantity}) [${newSale.client_type}]`;
+    const finalTotal = newSale.quantity * newSale.unit_price;
+
+    const { error } = await supabase.from('orders').insert({
+        client_id: tenant.clientId,
+        user_phone: selectedConv.phone,
+        user_name: newSale.user_name,
+        product: formattedProduct,
+        total: finalTotal,
+        sale_type: newSale.channel,
+        status: 'pagado',
+        created_at: new Date().toISOString()
+    });
+    setIsSavingSale(false);
+    if (!error) {
+       setShowSaleModal(false);
+       alert('Venta registrada con éxito.');
+    } else {
+       alert('Error registrando venta: ' + error.message);
+    }
+  };
+
+  const handleSendTemplate = async (e) => {
     e.preventDefault()
     if (!templateName.trim() || !selectedConv) return
     setIsLoading(true)
