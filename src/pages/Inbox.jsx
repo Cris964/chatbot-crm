@@ -6,7 +6,7 @@ import {
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
-  Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, CheckSquare, FileText
+  Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, DollarSign, CheckSquare, FileText
 , PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/apiFetch'
