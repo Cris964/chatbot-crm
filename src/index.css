@@ -3016,3 +3016,9 @@ body, .app-layout {
 .sidebar .nav-item {
   border-radius: 12px !important;
 }
+
+select.input option, select.form-control option {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
