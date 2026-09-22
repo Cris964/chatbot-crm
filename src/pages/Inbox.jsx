@@ -720,9 +720,12 @@ export default function Inbox() {
         client_id: tenant.clientId,
         user_phone: selectedConv.phone,
         user_name: newSale.user_name,
-        product: formattedProduct,
+        product: finalProduct, // Keep clean product name
+        quantity: newSale.quantity, // New column
+        unit_price: newSale.unit_price, // New column
         total: finalTotal,
-        sale_type: newSale.channel,
+        client_type: newSale.client_type, // New column
+        sale_channel: newSale.channel, // Fixed column name
         status: 'pagado',
         created_at: new Date().toISOString()
     });
