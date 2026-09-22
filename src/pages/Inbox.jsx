@@ -120,6 +120,18 @@ export default function Inbox() {
   
   // Plantillas state
   const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [showSaleModal, setShowSaleModal] = useState(false)
+  const [productsList, setProductsList] = useState([])
+  const [newSale, setNewSale] = useState({
+    user_name: '',
+    product_dropdown: '',
+    custom_product: '',
+    quantity: 1,
+    unit_price: 0,
+    client_type: 'Al detal',
+    channel: 'Digital'
+  })
+  const [isSavingSale, setIsSavingSale] = useState(false)
   const [showContactSettings, setShowContactSettings] = useState(false)
   const [editedClientType, setEditedClientType] = useState('detal')
   const [templateName, setTemplateName] = useState('')
@@ -1611,7 +1623,8 @@ const { error: uploadError } = await supabase.storage
                      </div>
                      <div className="flex gap-1">
                         <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
-                        <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm"><Phone size={14} /></a>
+                        <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm" title="Llamar"><Phone size={14} /></a>
+  <button className="btn btn-primary btn-sm mobile-hidden" style={{ background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }} onClick={() => setShowSaleModal(true)} title="Registrar Venta"><DollarSign size={14} /> Venta</button>
                           <button className="btn btn-secondary btn-sm" onClick={() => setShowContactSettings(true)} title="Configuración de Cliente"><Settings size={14} /></button>
                           
                         <button 
@@ -1988,6 +2001,81 @@ const { error: uploadError } = await supabase.storage
                  </div>
               </div>
            </div>
+        </div>
+      )}
+
+      
+      {/* Venta Modal */}
+      {showSaleModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 540, padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}><DollarSign size={20} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 8 }}/> Registrar Venta</h1>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowSaleModal(false)}><span style={{fontSize: '1.5rem', lineHeight: '1rem'}}>&times;</span></button>
+            </div>
+            <form onSubmit={handleRegisterSale} style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre del Cliente</label>
+                  <input type="text" required className="input" value={newSale.user_name} onChange={e => setNewSale({...newSale, user_name: e.target.value})} />
+                </div>
+                
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto del Inventario</label>
+                  <select className="input" value={newSale.product_dropdown} onChange={e => {
+                      const selected = productsList.find(p => p.name === e.target.value);
+                      setNewSale({...newSale, product_dropdown: e.target.value, custom_product: '', unit_price: selected ? selected.price : newSale.unit_price});
+                  }}>
+                    <option value="">-- Seleccionar o escribir otro --</option>
+                    {productsList.map((p, i) => <option key={i} value={p.name}>{p.name}</option>)}
+                  </select>
+                </div>
+
+                {(!newSale.product_dropdown) && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto Personalizado</label>
+                    <input type="text" required className="input" placeholder="Nombre del producto..." value={newSale.custom_product} onChange={e => setNewSale({...newSale, custom_product: e.target.value})} />
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cantidad</label>
+                  <input type="number" required min="1" className="input" value={newSale.quantity} onChange={e => setNewSale({...newSale, quantity: parseInt(e.target.value) || 1})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Unitario ($)</label>
+                  <input type="number" required min="0" className="input" value={newSale.unit_price} onChange={e => setNewSale({...newSale, unit_price: parseFloat(e.target.value) || 0})} />
+                </div>
+
+                <div style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Total Automático:</span>
+                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${(newSale.quantity * newSale.unit_price).toLocaleString('es-CO')}</span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Tipo de Cliente</label>
+                  <select className="input" value={newSale.client_type} onChange={e => setNewSale({...newSale, client_type: e.target.value})}>
+                    <option value="Al detal">Al detal</option>
+                    <option value="Mayorista">Mayorista</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Canal de Venta</label>
+                  <select className="input" value={newSale.channel} onChange={e => setNewSale({...newSale, channel: e.target.value})}>
+                    <option value="Digital">Digital (Redes Sociales)</option>
+                    <option value="Presencial">Presencial en Punto</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowSaleModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)', color: '#000' }} disabled={isSavingSale}>
+                  {isSavingSale ? 'Guardando...' : 'Confirmar Venta'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
