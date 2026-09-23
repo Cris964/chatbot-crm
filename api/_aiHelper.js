@@ -351,8 +351,11 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
        if (vends && vends.length > 0) assignedUserId = vends[0].user_id;
   }
 
-  // Round Robin / Load Balancing Assignment if human needed and no specific role matched
-  if (needsHuman && !assignedUserId) {
+  // Fetch current conversation state to avoid stealing chats from existing agents
+    const { data: currentConv } = await supabase.from('conversations').select('assigned_to').eq('id', conversationId).single();
+
+    // Round Robin / Load Balancing Assignment if human needed and no specific role matched
+    if (needsHuman && !assignedUserId && (!currentConv || !currentConv.assigned_to)) {
        const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('client_id', clientId);
        if (teamMembers && teamMembers.length > 0) {
            const memberIds = teamMembers.map(m => m.user_id);
