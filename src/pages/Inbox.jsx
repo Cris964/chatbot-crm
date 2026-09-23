@@ -316,7 +316,7 @@ export default function Inbox() {
                         phone: newConvRaw.user_phone,
                         avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random&color=fff&bold=true',
                         bg: 'var(--primary-600)',
-                        lastMsg: latest ? latest.content || (latest.type==='image'?'?? Imagen':(latest.type==='audio'?'?? Audio':'Adjunto')) : 'Inició conversación',
+                        lastMsg: latest ? latest.content || (latest.type==='image'?'?? Imagen':(latest.type==='audio'?'?? Audio':'Adjunto')) : 'Iniciï¿½ conversaciï¿½n',
                         time: latest ? new Date(latest.timestamp || latest.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '',
                         timestamp: latest ? new Date(latest.timestamp || latest.time).getTime() : new Date(newConvRaw.updated_at).getTime(),
                         unread: msgs.length > 0 && msgs[msgs.length - 1].role === 'user',
@@ -330,7 +330,7 @@ export default function Inbox() {
                     };
 
                     let convTags = [];
-                    if (convObj.needs_human) convTags.push({ label: 'Atención Req.', color: 'var(--accent-red, #ef4444)' });
+                    if (convObj.needs_human) convTags.push({ label: 'Atenciï¿½n Req.', color: 'var(--accent-red, #ef4444)' });
                     if (convObj.department) {
                         const dept = convObj.department.toUpperCase();
                         let color = '#6b7280';
@@ -2268,5 +2268,6 @@ const { error: uploadError } = await supabase.storage
     </div>
   )
 }
+
 
 
