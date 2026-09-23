@@ -664,8 +664,13 @@ export default function Inbox() {
     const messageObj = {
       role: messageRole,
       content: textMsg,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sender_name: getSenderName()
     }
+
+    // [AGY-FIX] Optimistic UI Update
+    setNewMessage('')
+    setSelectedConv(prev => { if (!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), messageObj] }; });
 
     const { error } = await supabase
       .from('conversations')
@@ -677,7 +682,6 @@ export default function Inbox() {
       .eq('id', selectedConv.id)
 
     if (!error) {
-       setNewMessage('')
        
        if (isSim) {
          try {
