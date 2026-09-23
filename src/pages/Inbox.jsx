@@ -300,13 +300,59 @@ export default function Inbox() {
                        try {
                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
                            audio.volume = 0.5;
-                           audio.play().catch(e => console.log('Autoplay bloqueado'));
-                       } catch(e){}
-                   }
-               }
+                           audio.play().catch(e => console.log('Autoplay bloqueado'));                        } catch(e){}
+                    }
+                }
+
+                // [AGY-FIX] In-place UI update
+                setConversationsList(prev => {
+                    const newConvRaw = payload.new;
+                    const displayName = newConvRaw.user_name || (newConvRaw.user_phone ? 'Cl: ' + newConvRaw.user_phone : 'Cliente Nuevo');
+                    const msgs = newConvRaw.messages || [];
+                    const latest = msgs[msgs.length - 1];
+                    const convObj = {
+                        id: newConvRaw.id,
+                        name: displayName,
+                        phone: newConvRaw.user_phone,
+                        avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random&color=fff&bold=true',
+                        bg: 'var(--primary-600)',
+                        lastMsg: latest ? latest.content || (latest.type==='image'?'?? Imagen':(latest.type==='audio'?'?? Audio':'Adjunto')) : 'Inició conversación',
+                        time: latest ? new Date(latest.timestamp || latest.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '',
+                        timestamp: latest ? new Date(latest.timestamp || latest.time).getTime() : new Date(newConvRaw.updated_at).getTime(),
+                        unread: msgs.length > 0 && msgs[msgs.length - 1].role === 'user',
+                        channel: newConvRaw.channel || newConvRaw.platform || newConvRaw.source || 'whatsapp',
+                        assigned_to: newConvRaw.assigned_to,
+                        rawMessages: msgs,
+                        archived: newConvRaw.archived || false,
+                        client_type: newConvRaw.client_type,
+                        needs_human: newConvRaw.needs_human,
+                        department: newConvRaw.department
+                    };
+
+                    let convTags = [];
+                    if (convObj.needs_human) convTags.push({ label: 'Atención Req.', color: 'var(--accent-red, #ef4444)' });
+                    if (convObj.department) {
+                        const dept = convObj.department.toUpperCase();
+                        let color = '#6b7280';
+                        if (dept === 'TRAZZOS') color = '#3b82f6';
+                        else if (dept === 'TREARQ') color = '#22c55e';
+                        else if (dept === 'ASESOR') color = '#f97316';
+                        convTags.push({ label: dept, color: color });
+                    }
+                    if (convObj.assigned_to) convTags.push({ label: 'Asignado', color: '#8b5cf6' });
+                    else if (convObj.needs_human) convTags.push({ label: 'Sin Asignar', color: '#6b7280' });
+                    convObj.tags = convTags;
+
+                    const exists = prev.find(c => c.id === convObj.id);
+                    if (exists) {
+                        return prev.map(c => c.id === convObj.id ? { ...c, ...convObj, name: c.name, bg: c.bg, avatar: c.avatar } : c).sort((a,b) => b.timestamp - a.timestamp);
+                    } else {
+                        return [convObj, ...prev].sort((a,b) => b.timestamp - a.timestamp);
+                    }
+                });
             }
         }
-        fetchConversations(true)
+        // fetchConversations(true) Replaced with AGY-FIX
       })
       .subscribe()
 
@@ -2222,3 +2268,5 @@ const { error: uploadError } = await supabase.storage
     </div>
   )
 }
+
+
