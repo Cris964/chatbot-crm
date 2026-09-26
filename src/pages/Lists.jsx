@@ -601,6 +601,45 @@ export default function Lists() {
         </div>
       )}
 
+      {/* ADD CONTACT MODAL */}
+      {showAddContactModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card glass-panel fade-in" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Agregar Contacto a la Lista</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="Ej: Bryan" 
+                  value={newContactName} 
+                  onChange={e => setNewContactName(e.target.value)} 
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Teléfono</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="Ej: +57 316 9336430" 
+                  value={newContactPhone} 
+                  onChange={e => setNewContactPhone(e.target.value)} 
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button className="btn btn-ghost" onClick={() => setShowAddContactModal(false)} disabled={isLoading}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={handleAddContact} disabled={!newContactPhone.trim() || isLoading}>
+                  {isLoading ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CAMPAIGN MODAL */}
       {showCampaignModal && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
