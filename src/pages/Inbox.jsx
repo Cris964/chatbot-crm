@@ -124,9 +124,12 @@ export default function Inbox() {
   const [productsList, setProductsList] = useState([])
   const [newSale, setNewSale] = useState({
     user_name: '',
+    product_dropdown: '',
+    custom_product: '',
+    quantity: 1,
+    unit_price: 0,
     client_type: 'Al detal',
-    channel: 'Digital',
-    items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }]
+    channel: 'Digital'
   })
   const [isSavingSale, setIsSavingSale] = useState(false)
   const [showContactSettings, setShowContactSettings] = useState(false)
@@ -759,38 +762,273 @@ export default function Inbox() {
   const handleRegisterSale = async (e) => {
     e.preventDefault();
     setIsSavingSale(true);
-    
-    const insertPromises = (newSale.items || []).map(item => {
-        const finalProduct = item.custom_product.trim() || item.product_dropdown;
-        const finalTotal = item.quantity * item.unit_price;
-        
-        return supabase.from('orders').insert({
-            client_id: tenant.clientId,
-            user_phone: selectedConv.phone,
-            user_name: newSale.user_name,
-            product: finalProduct,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total: finalTotal,
-            client_type: newSale.client_type,
-            sale_channel: newSale.channel,
-            status: 'pagado',
-            created_at: new Date().toISOString()
-        });
+    const finalProduct = newSale.custom_product.trim() || newSale.product_dropdown;
+    const formattedProduct = `${finalProduct} (x${newSale.quantity}) [${newSale.client_type}]`;
+    const finalTotal = newSale.quantity * newSale.unit_price;
+
+    const { error } = await supabase.from('orders').insert({
+        client_id: tenant.clientId,
+        user_phone: selectedConv.phone,
+        user_name: newSale.user_name,
+        product: finalProduct, // Keep clean product name
+        quantity: newSale.quantity, // New column
+        unit_price: newSale.unit_price, // New column
+        total: finalTotal,
+        client_type: newSale.client_type, // New column
+        sale_channel: newSale.channel, // Fixed column name
+        status: 'pagado',
+        created_at: new Date().toISOString()
     });
-    
-    const results = await Promise.all(insertPromises);
-    const hasError = results.some(r => r.error);
-    
     setIsSavingSale(false);
-    if (!hasError) {
+    if (!error) {
        setShowSaleModal(false);
        alert('Venta registrada con éxito.');
-       setNewSale({ user_name: '', client_type: 'Al detal', channel: 'Digital', items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }] });
     } else {
-       alert('Error registrando venta en uno o más productos.');
+       alert('Error registrando venta: ' + error.message);
     }
   };
+
+  const handleSendTemplate = async (e) => {
+    e.preventDefault()
+    if (!templateName.trim() || !selectedConv) return
+    setIsLoading(true)
+    
+    let mediaUrlToSend = templateMediaUrl.trim();
+      let finalAiContextUrls = [];
+    
+    try {
+      if (templateMediaFile) {
+        // Upload the file first
+        
+
+        const fileName = `template_${Date.now()}_${templateMediaFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('whatsapp_media')
+          .upload(fileName, templateMediaFile, {
+            contentType: templateMediaFile.type,
+            upsert: true
+          });
+          
+        if (uploadError) throw uploadError;
+        
+        const { data: publicUrlData } = supabase.storage
+          .from('whatsapp_media')
+          .getPublicUrl(fileName);
+          
+        mediaUrlToSend = publicUrlData.publicUrl;
+      }
+      
+      const textMsg = `[Plantilla Enviada: ${templateName}]`
+      const messageObj = {
+        role: 'agent', sender_name: getSenderName(),
+        content: textMsg,
+        timestamp: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('conversations')
+        .update({ 
+          messages: [...selectedConv.rawMessages, messageObj],
+          updated_at: new Date().toISOString(),
+          needs_human: false
+        })
+        .eq('id', selectedConv.id)
+
+      if (!error) {
+         setShowTemplateModal(false)
+         const res = await apiFetch('/api/send', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             client_id: tenant.clientId,
+             phone: selectedConv.phone,
+             message: templateName.trim(),
+             type: 'template',
+             channel: selectedConv.channel,
+             variable: templateVariable.trim(),
+             mediaUrl: mediaUrlToSend,
+             languageCode: templateLanguage,
+               aiContextUrls: finalAiContextUrls
+             })
+         });
+         const apiData = await res.json();
+         if (apiData.meta_message_id) {
+             const updatedMsgs = [...selectedConv.rawMessages, messageObj];
+             updatedMsgs[updatedMsgs.length - 1].sent_meta = [{ id: apiData.meta_message_id, type: 'template', content: templateName }];
+             await supabase.from('conversations').update({ messages: updatedMsgs }).eq('id', selectedConv.id);
+             alert(`Plantilla "${templateName}" enviada con éxito. La ventana de 24 horas se reabrirá cuando el cliente responda.`);
+         } else {
+             const errorDetail = apiData.details?.error?.message || apiData.error || 'Desconocido';
+             alert(`Error al enviar plantilla: ${errorDetail}`);
+         }
+      }
+    } catch (apiErr) {
+      console.error('Error sending template:', apiErr);
+      alert('Hubo un error de conexión al enviar la plantilla.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContext();
+      const sourceNode = audioCtx.createMediaStreamSource(stream);
+      
+      const recorder = new Recorder({
+          encoderPath: '/opus-recorder/encoderWorker.min.js',
+          numberOfChannels: 1,
+          encoderSampleRate: 48000,
+          sourceNode: sourceNode
+      })
+
+      recorder.ondataavailable = async (arrayBuffer) => {
+        const audioBlob = new Blob([arrayBuffer], { type: 'audio/ogg' })
+        stream.getTracks().forEach(track => track.stop())
+        if (audioCtx.state !== 'closed') {
+          audioCtx.close();
+        }
+        await uploadAudio(audioBlob)
+      }
+
+      mediaRecorderRef.current = recorder
+      mediaRecorderRef.current.stream = stream
+      mediaRecorderRef.current.audioCtx = audioCtx
+
+      await recorder.start()
+      
+      setIsRecording(true)
+      setRecordingTime(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+    } catch (err) {
+      console.error("Microphone access denied or recorder error:", err)
+      alert("Error al grabar: " + (err.message || err.toString() || JSON.stringify(err)))
+    }
+  }
+
+  const stopRecording = (cancel = false) => {
+    if (mediaRecorderRef.current && isRecording) {
+      if (cancel) {
+        mediaRecorderRef.current.ondataavailable = () => {
+          mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop())
+        }
+      }
+      mediaRecorderRef.current.stop()
+      clearInterval(recordingTimerRef.current)
+      setIsRecording(false)
+      setRecordingTime(0)
+    }
+  }
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+    const s = (seconds % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  const uploadAudio = async (audioBlob) => {
+    if (!selectedConv) return
+    setIsLoading(true)
+    try {
+      const fileName = `voice_${Date.now()}.ogg`
+      const { data, error } = await supabase.storage
+        .from('whatsapp_media')
+        .upload(fileName, audioBlob, { contentType: 'audio/ogg' })
+        
+      if (error) throw error
+
+      const { data: publicUrlData } = supabase.storage
+        .from('whatsapp_media')
+        .getPublicUrl(fileName)
+
+      const audioUrl = publicUrlData.publicUrl
+      
+      const messageObj = {
+        role: 'agent', sender_name: getSenderName(),
+        content: audioUrl,
+        type: 'audio',
+        timestamp: new Date().toISOString()
+      }
+
+      const { error: dbError } = await supabase
+        .from('conversations')
+        .update({ 
+          messages: [...selectedConv.rawMessages, messageObj],
+          updated_at: new Date().toISOString(),
+          needs_human: true
+        })
+        .eq('id', selectedConv.id)
+
+      if (!dbError) {
+        // Enviar a la API de WhatsApp
+        try {
+          const apiRes = await apiFetch('/api/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              client_id: tenant.clientId,
+              phone: selectedConv.phone,
+              message: audioUrl,
+              type: 'audio',
+              channel: selectedConv.channel
+            })
+          });
+          const apiData = await apiRes.json();
+          if (apiData.meta_message_id) {
+              const { data: latest } = await supabase.from('conversations').select('messages').eq('id', selectedConv.id).single();
+                 if (latest && latest.messages) {
+                     const msgs = latest.messages;
+                     const idx = msgs.findLastIndex(m => m.timestamp === messageObj.timestamp);
+                     if (idx !== -1) {
+                         msgs[idx].sent_meta = [{ id: apiData.meta_message_id, type: 'audio', content: audioUrl }];
+                         await supabase.from('conversations').update({ messages: msgs }).eq('id', selectedConv.id);
+                     }
+                 }
+          }
+        } catch (apiErr) {
+          console.error('Error sending audio via API:', apiErr);
+        }
+        
+        fetchConversations(true)
+      } else {
+        throw dbError
+      }
+    } catch (err) {
+      console.error("Upload error:", err)
+      alert("Error al subir el audio: " + err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  const handleFileUpload = async (eOrFile) => {
+    let file;
+    if (eOrFile?.target?.files) file = eOrFile.target.files[0];
+    else if (eOrFile instanceof File) file = eOrFile;
+    
+    if (!file || !selectedConv) return
+    setIsLoading(true)
+    try {
+      // Read file as base64
+      
+
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+      
+      
+        const getMedia = (mt, fn) => {
+          if(!mt) mt=''; const m=mt.toLowerCase();
+          if(m.startsWith('image/')) return 'image';
+          if(m.startsWith('video/')) return 'video';
+          if(m.startsWith('audio/')) return 'audio';
+          const ext = fn ? fn.split('.').pop().toLowerCase() : '';
+          if(['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
+          if(['mp4','webm','mov'].includes(ext)) return 'video';
+          return 'document';
+        };
         const mType = getMedia(file.type, file.name);
         if (mType === 'video' && file.size > 16 * 1024 * 1024) {
             alert('❌ WhatsApp no permite videos mayores a 16 MB.\n\nEste video pesa ' + (file.size / (1024*1024)).toFixed(1) + ' MB.');
@@ -1870,77 +2108,39 @@ const { error: uploadError } = await supabase.storage
                   <input type="text" required className="input" value={newSale.user_name} onChange={e => setNewSale({...newSale, user_name: e.target.value})} />
                 </div>
                 
-                {(newSale.items || []).map((item, index) => (
-  <div key={index} style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>Producto {index + 1}</h4>
-        {(newSale.items || []).length > 1 && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
-             const newItems = [...newSale.items];
-             newItems.splice(index, 1);
-             setNewSale({...newSale, items: newItems});
-          }} style={{ color: 'var(--accent-rose)', padding: '4px 8px' }}>Eliminar</button>
-        )}
-     </div>
-     
-     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={{ gridColumn: 'span 2' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Referencia</label>
-          <select className="input" value={item.product_dropdown || ''} onChange={e => {
-              const selected = (productsList || []).find(p => p && p.name === e.target.value);
-              const newItems = [...newSale.items];
-              newItems[index] = { ...item, product_dropdown: e.target.value, custom_product: '', unit_price: selected ? selected.price : item.unit_price };
-              setNewSale({...newSale, items: newItems});
-          }}>
-            <option value="">-- Seleccionar o escribir otro --</option>
-            {(productsList || []).map((p, i) => <option key={i} value={p?.name || ''}>{p?.name || 'Producto sin nombre'}</option>)}
-          </select>
-        </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto del Inventario</label>
+                  <select className="input" value={newSale.product_dropdown || ''} onChange={e => {
+                      const selected = (productsList || []).find(p => p && p.name === e.target.value);
+                      setNewSale({...newSale, product_dropdown: e.target.value, custom_product: '', unit_price: selected ? selected.price : newSale.unit_price});
+                  }}>
+                    <option value="">-- Seleccionar o escribir otro --</option>
+                    {(productsList || []).map((p, i) => <option key={i} value={p?.name || ''}>{p?.name || 'Producto sin nombre'}</option>)}
+                  </select>
+                </div>
 
-        {(!item.product_dropdown) && (
-          <div style={{ gridColumn: 'span 2' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto Personalizado</label>
-            <input type="text" required className="input" placeholder="Nombre del producto..." value={item.custom_product || ''} onChange={e => {
-              const newItems = [...newSale.items];
-              newItems[index] = { ...item, custom_product: e.target.value };
-              setNewSale({...newSale, items: newItems});
-            }} />
-          </div>
-        )}
+                {(!newSale.product_dropdown) && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto Personalizado</label>
+                    <input type="text" required className="input" placeholder="Nombre del producto..." value={newSale.custom_product || ''} onChange={e => setNewSale({...newSale, custom_product: e.target.value})} />
+                  </div>
+                )}
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cantidad</label>
-          <input type="number" required min="1" className="input" value={item.quantity || 1} onChange={e => {
-              const newItems = [...newSale.items];
-              newItems[index] = { ...item, quantity: parseInt(e.target.value) || 1 };
-              setNewSale({...newSale, items: newItems});
-          }} />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Unitario ($)</label>
-          <input type="number" required min="0" className="input" value={item.unit_price || 0} onChange={e => {
-              const newItems = [...newSale.items];
-              newItems[index] = { ...item, unit_price: parseFloat(e.target.value) || 0 };
-              setNewSale({...newSale, items: newItems});
-          }} />
-        </div>
-     </div>
-  </div>
-))}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cantidad</label>
+                  <input type="number" required min="1" className="input" value={newSale.quantity || 1} onChange={e => setNewSale({...newSale, quantity: parseInt(e.target.value) || 1})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Unitario ($)</label>
+                  <input type="number" required min="0" className="input" value={newSale.unit_price || 0} onChange={e => setNewSale({...newSale, unit_price: parseFloat(e.target.value) || 0})} />
+                </div>
 
-<div style={{ gridColumn: 'span 2' }}>
-   <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
-      setNewSale({...newSale, items: [...(newSale.items || []), { product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }]});
-   }} style={{ width: '100%' }}>
-      + Agregar otro producto a esta venta
-   </button>
-</div>
+                <div style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Total Automático:</span>
+                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${((newSale.quantity * newSale.unit_price) || 0).toLocaleString('es-CO')}</span>
+                </div>
 
-<div style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-   <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Total General:</span>
-   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${((newSale.items || []).reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)).toLocaleString('es-CO')}</span>
-</div>
-<div>
+                <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Tipo de Cliente</label>
                   <select className="input" value={newSale.client_type} onChange={e => setNewSale({...newSale, client_type: e.target.value})}>
                     <option value="Al detal">Al detal</option>
