@@ -98,6 +98,7 @@ export default function Inbox() {
   const location = useLocation()
   const tenant = useTenant()
   const [conversationsList, setConversationsList] = useState([])
+    const [fetchLimit, setFetchLimit] = useState(300)
   const [activeTab, setActiveTab] = useState('all');
     const [agentFilter, setAgentFilter] = useState('all');
   const [activeFolder, setActiveFolder] = useState('inbox');
@@ -124,12 +125,9 @@ export default function Inbox() {
   const [productsList, setProductsList] = useState([])
   const [newSale, setNewSale] = useState({
     user_name: '',
-    product_dropdown: '',
-    custom_product: '',
-    quantity: 1,
-    unit_price: 0,
     client_type: 'Al detal',
-    channel: 'Digital'
+    channel: 'Digital',
+    items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }]
   })
   const [isSavingSale, setIsSavingSale] = useState(false)
   const [showContactSettings, setShowContactSettings] = useState(false)
@@ -485,7 +483,7 @@ export default function Inbox() {
          query = query.eq('assigned_to', tenant.session.user.id)
       }
       
-      const { data, error } = await query.order('updated_at', { ascending: false }).limit(1500)
+      const { data, error } = await query.order('updated_at', { ascending: false }).limit(fetchLimit)
       
       if (error) { setDebugError(error.message); return; }
       if (!error && data) {
@@ -635,6 +633,10 @@ export default function Inbox() {
         const me = teamMembers.find(m => m.user_id === session.user.id);
         return me ? me.full_name : 'Admin';
     };
+
+    useEffect(() => {
+      fetchConversations(true);
+    }, [fetchLimit]);
     const handleSendMessage = async (e) => {
     e.preventDefault()
     if (!newMessage.trim() && !pendingFile) return
@@ -2108,39 +2110,77 @@ const { error: uploadError } = await supabase.storage
                   <input type="text" required className="input" value={newSale.user_name} onChange={e => setNewSale({...newSale, user_name: e.target.value})} />
                 </div>
                 
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto del Inventario</label>
-                  <select className="input" value={newSale.product_dropdown || ''} onChange={e => {
-                      const selected = (productsList || []).find(p => p && p.name === e.target.value);
-                      setNewSale({...newSale, product_dropdown: e.target.value, custom_product: '', unit_price: selected ? selected.price : newSale.unit_price});
-                  }}>
-                    <option value="">-- Seleccionar o escribir otro --</option>
-                    {(productsList || []).map((p, i) => <option key={i} value={p?.name || ''}>{p?.name || 'Producto sin nombre'}</option>)}
-                  </select>
-                </div>
+                {(newSale.items || []).map((item, index) => (
+  <div key={index} style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>Producto {index + 1}</h4>
+        {(newSale.items || []).length > 1 && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+             const newItems = [...newSale.items];
+             newItems.splice(index, 1);
+             setNewSale({...newSale, items: newItems});
+          }} style={{ color: 'var(--accent-rose)', padding: '4px 8px' }}>Eliminar</button>
+        )}
+     </div>
+     
+     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ gridColumn: 'span 2' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Referencia</label>
+          <select className="input" value={item.product_dropdown || ''} onChange={e => {
+              const selected = (productsList || []).find(p => p && p.name === e.target.value);
+              const newItems = [...newSale.items];
+              newItems[index] = { ...item, product_dropdown: e.target.value, custom_product: '', unit_price: selected ? selected.price : item.unit_price };
+              setNewSale({...newSale, items: newItems});
+          }}>
+            <option value="">-- Seleccionar o escribir otro --</option>
+            {(productsList || []).map((p, i) => <option key={i} value={p?.name || ''}>{p?.name || 'Producto sin nombre'}</option>)}
+          </select>
+        </div>
 
-                {(!newSale.product_dropdown) && (
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto Personalizado</label>
-                    <input type="text" required className="input" placeholder="Nombre del producto..." value={newSale.custom_product || ''} onChange={e => setNewSale({...newSale, custom_product: e.target.value})} />
-                  </div>
-                )}
+        {(!item.product_dropdown) && (
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Producto Personalizado</label>
+            <input type="text" required className="input" placeholder="Nombre del producto..." value={item.custom_product || ''} onChange={e => {
+              const newItems = [...newSale.items];
+              newItems[index] = { ...item, custom_product: e.target.value };
+              setNewSale({...newSale, items: newItems});
+            }} />
+          </div>
+        )}
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cantidad</label>
-                  <input type="number" required min="1" className="input" value={newSale.quantity || 1} onChange={e => setNewSale({...newSale, quantity: parseInt(e.target.value) || 1})} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Unitario ($)</label>
-                  <input type="number" required min="0" className="input" value={newSale.unit_price || 0} onChange={e => setNewSale({...newSale, unit_price: parseFloat(e.target.value) || 0})} />
-                </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Cantidad</label>
+          <input type="number" required min="1" className="input" value={item.quantity || 1} onChange={e => {
+              const newItems = [...newSale.items];
+              newItems[index] = { ...item, quantity: parseInt(e.target.value) || 1 };
+              setNewSale({...newSale, items: newItems});
+          }} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Unitario ($)</label>
+          <input type="number" required min="0" className="input" value={item.unit_price || 0} onChange={e => {
+              const newItems = [...newSale.items];
+              newItems[index] = { ...item, unit_price: parseFloat(e.target.value) || 0 };
+              setNewSale({...newSale, items: newItems});
+          }} />
+        </div>
+     </div>
+  </div>
+))}
 
-                <div style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Total Automático:</span>
-                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${((newSale.quantity * newSale.unit_price) || 0).toLocaleString('es-CO')}</span>
-                </div>
+<div style={{ gridColumn: 'span 2' }}>
+   <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
+      setNewSale({...newSale, items: [...(newSale.items || []), { product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }]});
+   }} style={{ width: '100%' }}>
+      + Agregar otro producto a esta venta
+   </button>
+</div>
 
-                <div>
+<div style={{ gridColumn: 'span 2', background: 'var(--glass-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+   <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Total General:</span>
+   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>${((newSale.items || []).reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)).toLocaleString('es-CO')}</span>
+</div>
+<div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Tipo de Cliente</label>
                   <select className="input" value={newSale.client_type} onChange={e => setNewSale({...newSale, client_type: e.target.value})}>
                     <option value="Al detal">Al detal</option>
