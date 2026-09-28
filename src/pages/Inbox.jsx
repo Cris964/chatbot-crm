@@ -762,35 +762,42 @@ export default function Inbox() {
   }, [showSaleModal, selectedConv, tenant]);
 
   const handleRegisterSale = async (e) => {
-    e.preventDefault();
-    setIsSavingSale(true);
-    const finalProduct = newSale.custom_product.trim() || newSale.product_dropdown;
-    const formattedProduct = `${finalProduct} (x${newSale.quantity}) [${newSale.client_type}]`;
-    const finalTotal = newSale.quantity * newSale.unit_price;
+      e.preventDefault();
+      setIsSavingSale(true);
+      
+      const insertPromises = (newSale.items || []).map(item => {
+          const finalProduct = (item.custom_product || '').trim() || item.product_dropdown;
+          const finalTotal = item.quantity * item.unit_price;
+          
+          return supabase.from('orders').insert({
+              client_id: tenant.clientId,
+              user_phone: selectedConv.phone,
+              user_name: newSale.user_name,
+              product: finalProduct,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total: finalTotal,
+              client_type: newSale.client_type,
+              sale_channel: newSale.channel,
+              status: 'pagado',
+              created_at: new Date().toISOString()
+          });
+      });
+      
+      const results = await Promise.all(insertPromises);
+      const hasError = results.some(r => r.error);
+      
+      setIsSavingSale(false);
+      if (!hasError) {
+         setShowSaleModal(false);
+         alert('Venta registrada con éxito.');
+         setNewSale({ user_name: '', client_type: 'Al detal', channel: 'Digital', items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }] });
+      } else {
+         alert('Error registrando venta en uno o más productos.');
+      }
+    };
 
-    const { error } = await supabase.from('orders').insert({
-        client_id: tenant.clientId,
-        user_phone: selectedConv.phone,
-        user_name: newSale.user_name,
-        product: finalProduct, // Keep clean product name
-        quantity: newSale.quantity, // New column
-        unit_price: newSale.unit_price, // New column
-        total: finalTotal,
-        client_type: newSale.client_type, // New column
-        sale_channel: newSale.channel, // Fixed column name
-        status: 'pagado',
-        created_at: new Date().toISOString()
-    });
-    setIsSavingSale(false);
-    if (!error) {
-       setShowSaleModal(false);
-       alert('Venta registrada con éxito.');
-    } else {
-       alert('Error registrando venta: ' + error.message);
-    }
-  };
-
-  const handleSendTemplate = async (e) => {
+    const handleSendTemplate = async (e) => {
     e.preventDefault()
     if (!templateName.trim() || !selectedConv) return
     setIsLoading(true)
