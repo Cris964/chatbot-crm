@@ -677,7 +677,7 @@ export default function Inbox() {
     const { error } = await supabase
       .from('conversations')
       .update({ 
-        messages: [...selectedConv.rawMessages, messageObj],
+        messages: [...(selectedConv.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))), messageObj],
         updated_at: new Date().toISOString(),
         needs_human: true // Al responder el asesor, mantener la IA apagada
       })
@@ -838,7 +838,7 @@ export default function Inbox() {
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          messages: [...selectedConv.rawMessages, messageObj],
+          messages: [...(selectedConv.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))), messageObj],
           updated_at: new Date().toISOString(),
           needs_human: false
         })
@@ -967,7 +967,7 @@ export default function Inbox() {
       const { error: dbError } = await supabase
         .from('conversations')
         .update({ 
-          messages: [...selectedConv.rawMessages, messageObj],
+          messages: [...(selectedConv.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))), messageObj],
           updated_at: new Date().toISOString(),
           needs_human: true
         })
@@ -1102,7 +1102,7 @@ const { error: uploadError } = await supabase.storage
       const { error: dbError } = await supabase
         .from('conversations')
         .update({ 
-          messages: [...selectedConv.rawMessages, messageObj],
+          messages: [...(selectedConv.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))), messageObj],
           updated_at: new Date().toISOString(),
           needs_human: true
         })
@@ -1143,7 +1143,11 @@ const { error: uploadError } = await supabase.storage
         throw dbError
       }
     } catch (err) {
-      console.error("Upload error:", err)
+      console.error("Upload error:", err);
+      setSelectedConv(prev => {
+         if (!prev) return prev;
+         return { ...prev, rawMessages: (prev.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))) };
+      });
       alert("Error al subir el archivo: " + err.message)
     } finally {
       setIsLoading(false)
