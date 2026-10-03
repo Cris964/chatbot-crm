@@ -282,7 +282,8 @@ export default async function handler(req, res) {
         finalMessages = [...(chat.messages || []), newMsgNode];
         const updateData = {
              messages: finalMessages,
-             updated_at: new Date().toISOString()
+             updated_at: new Date().toISOString(),
+             channel: channel
         };
         if (senderName && senderName !== 'Cliente') {
             updateData.user_name = senderName;

@@ -160,6 +160,12 @@ export default async function handler(req, res) {
       // Limpiar teléfono (solo números)
       let cleanPhone = lead.phone.replace(/\D/g, '');
       
+      // Skip Instagram/Messenger IDs
+      if (cleanPhone.length > 13) {
+          console.log(`Skipping IGSID ${cleanPhone}`);
+          continue;
+      }
+      
       // Asegurar código de país (asumiendo Colombia +57 si tiene 10 dígitos)
       if (cleanPhone.length === 10) {
         cleanPhone = '57' + cleanPhone;
