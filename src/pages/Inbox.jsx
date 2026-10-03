@@ -1020,7 +1020,15 @@ export default function Inbox() {
     else if (eOrFile instanceof File) file = eOrFile;
     
     if (!file || !selectedConv) return
-    setIsLoading(true)
+      
+      const fileNameStr = file.name ? file.name.toLowerCase() : '';
+      if (fileNameStr.endsWith('.mov') || fileNameStr.endsWith('.avi') || fileNameStr.endsWith('.wmv')) {
+          alert('⚠️ Formato de video no soportado.\n\nPor favor convierte el video a formato .mp4 antes de enviarlo. (Los videos .mov de iPhone no son compatibles con la API de WhatsApp).');
+          if (eOrFile?.target) eOrFile.target.value = ''; // reset input
+          return;
+      }
+      
+      setIsLoading(true)
     try {
       // Read file as base64
       
