@@ -53,27 +53,50 @@ export default function AttendanceButton({ session }) {
     let biometricVerified = false;
     try {
         if (window.PublicKeyCredential) {
-            // We generate a dummy challenge just to prompt the local device authenticator (FaceID/TouchID/Windows Hello)
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
             
-            const credential = await navigator.credentials.create({
-                publicKey: {
-                    challenge: challenge,
-                    rp: { name: "Nexus CRM", id: window.location.hostname },
-                    user: {
-                        id: new Uint8Array(16),
-                        name: session.user.email,
-                        displayName: session.user.email
-                    },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                    authenticatorSelection: {
-                        authenticatorAttachment: "platform", // Force local device (FaceID/TouchID)
-                        userVerification: "required"
-                    },
-                    timeout: 60000
+            const storedCredId = localStorage.getItem('nexus_biometric_id_' + session.user.id);
+            
+            let credential;
+            if (storedCredId) {
+                // Ya tiene llave registrada, solo verificamos
+                const credIdBuffer = Uint8Array.from(atob(storedCredId), c => c.charCodeAt(0));
+                credential = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: challenge,
+                        allowCredentials: [{
+                            id: credIdBuffer,
+                            type: 'public-key'
+                        }],
+                        userVerification: "required",
+                        timeout: 60000
+                    }
+                });
+            } else {
+                // Crear llave nueva por primera vez
+                credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: challenge,
+                        rp: { name: "Nexus CRM", id: window.location.hostname },
+                        user: {
+                            id: new Uint8Array(16).map(() => Math.floor(Math.random() * 256)),
+                            name: session.user.email,
+                            displayName: session.user.email
+                        },
+                        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                        authenticatorSelection: {
+                            authenticatorAttachment: "platform",
+                            userVerification: "required"
+                        },
+                        timeout: 60000
+                    }
+                });
+                if (credential && credential.rawId) {
+                    const base64Id = btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId)));
+                    localStorage.setItem('nexus_biometric_id_' + session.user.id, base64Id);
                 }
-            });
+            }
             if (credential) biometricVerified = true;
         } else {
             console.warn("Biometría no soportada en este navegador");
