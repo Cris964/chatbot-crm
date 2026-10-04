@@ -9,6 +9,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 import NexusLogo from './NexusLogo'
+import AttendanceButton from './AttendanceButton'
 
 const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com']
 
@@ -222,6 +223,7 @@ export default function Layout({ session }) {
           </div>
 
           <div className="header-actions">
+            <AttendanceButton session={session} />
             <div style={{ position: 'relative' }}>
               <button className="header-action-btn" onClick={() => setShowNotifications(!showNotifications)}>
                 <Bell size={20} />
