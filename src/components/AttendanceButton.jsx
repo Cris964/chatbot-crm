@@ -101,6 +101,12 @@ export default function AttendanceButton({ session }) {
         } else {
             console.warn("Biometría no soportada en este navegador");
         }
+
+        if (!biometricVerified) {
+            alert("⚠️ Autenticación Biométrica Requerida.\n\nTu navegador no soporta FaceID/Huella o lo bloqueó. Por favor, abre el CRM en el navegador oficial (Safari o Chrome) y NO desde links dentro de WhatsApp/Instagram.");
+            setIsLoading(false);
+            return;
+        }
     } catch (e) {
         console.error("Biometric error or cancelled:", e);
         alert("Autenticación biométrica fallida o cancelada. Requerido para registrar asistencia.");
@@ -148,12 +154,12 @@ export default function AttendanceButton({ session }) {
         alert(`Turno ${actionType === 'check_in' ? 'Iniciado' : 'Finalizado'} exitosamente. \\nUbicación guardada.`);
 
     }, (geoErr) => {
-        alert("No se pudo obtener la ubicación. Permite el acceso al GPS para registrar asistencia.");
+        alert("Error GPS (" + geoErr.code + "): " + geoErr.message + "\n\nVe a Configuración de tu celular -> Privacidad -> Localización -> Safari, y asegúrate de que esté permitido.");
         setIsLoading(false);
     }, {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        timeout: 30000,
+        maximumAge: 60000
     });
   }
 
