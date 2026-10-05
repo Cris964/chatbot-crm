@@ -340,7 +340,7 @@ export default function AttendanceButton({ session }) {
 
       {showCameraModal && (
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 24, textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 20, textAlign: 'center', maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ marginBottom: 8 }}>
                 {isEnrollmentMode ? 'Registro Facial Inicial' : 'Verificación Facial'}
             </h3>
@@ -352,7 +352,7 @@ export default function AttendanceButton({ session }) {
               </div>
             )}
 
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ position: 'relative', width: '100%', height: '300px', background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
               {!capturedPhoto ? (
                 <video 
                   ref={videoRef} 
