@@ -168,14 +168,14 @@ export default function AttendanceButton({ session }) {
             alert("¡Rostro registrado exitosamente! Ahora tu cara es tu llave de acceso.")
             
             // Auto-proceed to check-in/out
-            await confirmAttendance(photoDataUrl)
+            await confirmAttendance(photoWithBoxAndTextUrl)
         } else {
             // VERIFICATION
             const distance = faceapi.euclideanDistance(descriptor, enrolledDescriptor)
             // Distance < 0.6 is generally considered a match for ssdMobilenetv1
             if (distance < 0.6) {
                 setMatchStatus('success')
-                await confirmAttendance(photoDataUrl)
+                await confirmAttendance(photoWithBoxUrl)
             } else {
                 setMatchStatus('failed')
                 setCameraError("Rostro no reconocido. La persona en la cámara no coincide con el perfil registrado.")
