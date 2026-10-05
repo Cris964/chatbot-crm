@@ -137,7 +137,7 @@ export default function AttendanceButton({ session }) {
 
       setTimeout(async () => {
       try {
-        const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+        const detection = await faceapi.detectSingleFace(canvas, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1 })).withFaceLandmarks().withFaceDescriptor();
         
         if (!detection) {
             setMatchStatus('failed');
@@ -339,18 +339,14 @@ export default function AttendanceButton({ session }) {
       </div>
 
       {showCameraModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 20, textAlign: 'center', maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999 }}>
+          <div className="card" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', maxWidth: 400, padding: 16, textAlign: 'center', maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ marginBottom: 8 }}>
                 {isEnrollmentMode ? 'Registro Facial Inicial' : 'Verificación Facial'}
             </h3>
             {isEnrollmentMode && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>Es tu primera vez. Mira a la cámara para guardar tu perfil biométrico.</p>}
             
-            {cameraError && (
-              <div style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-rose)', borderRadius: 8, marginBottom: 16, fontSize: '0.85rem' }}>
-                {cameraError}
-              </div>
-            )}
+            
 
             <div style={{ position: 'relative', width: '100%', height: '300px', background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
               {!capturedPhoto ? (
@@ -376,6 +372,11 @@ export default function AttendanceButton({ session }) {
               )}
             </div>
 
+            {cameraError && (
+              <div style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-rose)', borderRadius: 8, marginBottom: 16, fontSize: '0.85rem' }}>
+                {cameraError}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
               <button className="btn btn-ghost" onClick={stopCamera} disabled={isLoading && capturedPhoto}>Cancelar</button>
               
