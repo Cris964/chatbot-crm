@@ -120,21 +120,26 @@ export default function AttendanceButton({ session }) {
 
   const takeAndAnalyzePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
-      setIsLoading(true)
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      if (videoRef.current.videoWidth === 0) {
+          setCameraError("La cámara aún se está inicializando. Intenta de nuevo.");
+          return;
+      }
+      setIsLoading(true);
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8)
-      setCapturedPhoto(photoDataUrl)
+      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      setCapturedPhoto(photoDataUrl);
 
-      // AI Analysis
+      // AI Analysis - Yield thread to allow UI to render the photo and loading state
+      setTimeout(async () => {
       try {
         // Detect face from the canvas
-        const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor()
+        const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
         
         if (!detection) {
             setMatchStatus('failed')
@@ -178,10 +183,11 @@ export default function AttendanceButton({ session }) {
             }
         }
       } catch (aiErr) {
-          console.error(aiErr)
-          setCameraError("Error al procesar el reconocimiento facial.")
-          setIsLoading(false)
+          console.error(aiErr);
+          setCameraError("Error al procesar el reconocimiento facial.");
+          setIsLoading(false);
       }
+      }, 100);
     }
   }
 
@@ -307,8 +313,8 @@ export default function AttendanceButton({ session }) {
       </div>
 
       {showCameraModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 24, textAlign: 'center' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 24, textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginBottom: 8 }}>
                 {isEnrollmentMode ? 'Registro Facial Inicial' : 'Verificación Facial'}
             </h3>
