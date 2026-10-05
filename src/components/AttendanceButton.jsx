@@ -135,51 +135,77 @@ export default function AttendanceButton({ session }) {
       const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedPhoto(photoDataUrl);
 
-      // AI Analysis - Yield thread to allow UI to render the photo and loading state
       setTimeout(async () => {
       try {
-        // Detect face from the canvas
         const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
         
         if (!detection) {
-            setMatchStatus('failed')
-            setCameraError("No se detectó ningún rostro. Asegúrate de estar bien iluminado y mirar a la cámara.")
-            setIsLoading(false)
-            return
+            setMatchStatus('failed');
+            setCameraError("No se detectó ningún rostro. Asegúrate de estar bien iluminado y mirar a la cámara.");
+            setIsLoading(false);
+            return;
         }
 
-        const descriptor = detection.descriptor
+        const descriptor = detection.descriptor;
+        const dims = faceapi.matchDimensions(canvas, video, true);
+        const resizedDetection = faceapi.resizeResults(detection, dims);
+        const box = resizedDetection.detection.box;
 
         if (isEnrollmentMode) {
-            // ENROLLMENT
-            const descriptorArray = Array.from(descriptor)
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#6366f1';
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
+            
+            ctx.fillStyle = '#6366f1';
+            ctx.fillRect(box.x, box.y - 30, box.width, 30);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Arial';
+            ctx.fillText(`${session.user.email.split('@')[0]} (Registrando)`, box.x + 5, box.y - 10);
+            
+            const finalPhotoUrl = canvas.toDataURL('image/jpeg', 0.8);
+            setCapturedPhoto(finalPhotoUrl);
+
+            const descriptorArray = Array.from(descriptor);
             const { error: enrollError } = await supabase.from('attendance_logs').insert([{
                 client_id: tenant.clientId,
                 user_id: session.user.id,
                 user_email: session.user.email,
                 type: 'enrollment',
                 biometric_verified: true,
-                device_info: JSON.stringify(descriptorArray) // save vector
-            }])
-            if (enrollError) throw enrollError
+                device_info: JSON.stringify(descriptorArray)
+            }]);
+            if (enrollError) throw enrollError;
             
-            setEnrolledDescriptor(new Float32Array(descriptorArray))
-            setIsEnrollmentMode(false)
-            alert("¡Rostro registrado exitosamente! Ahora tu cara es tu llave de acceso.")
+            setEnrolledDescriptor(new Float32Array(descriptorArray));
+            setIsEnrollmentMode(false);
+            alert("¡Rostro registrado exitosamente! Ahora tu cara es tu llave de acceso.");
             
-            // Auto-proceed to check-in/out
-            await confirmAttendance(photoWithBoxAndTextUrl)
+            await confirmAttendance(finalPhotoUrl);
         } else {
-            // VERIFICATION
-            const distance = faceapi.euclideanDistance(descriptor, enrolledDescriptor)
-            // Distance < 0.6 is generally considered a match for ssdMobilenetv1
-            if (distance < 0.6) {
-                setMatchStatus('success')
-                await confirmAttendance(photoWithBoxUrl)
+            const distance = faceapi.euclideanDistance(descriptor, enrolledDescriptor);
+            const percentage = Math.max(0, Math.round((1 - distance) * 100));
+            const isMatch = distance < 0.6;
+            
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = isMatch ? '#10b981' : '#ef4444';
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
+            
+            ctx.fillStyle = isMatch ? '#10b981' : '#ef4444';
+            ctx.fillRect(box.x, box.y - 30, box.width, 30);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Arial';
+            ctx.fillText(isMatch ? `${session.user.email.split('@')[0]} ${percentage}%` : `Desconocido ${percentage}%`, box.x + 5, box.y - 10);
+            
+            const finalPhotoUrl = canvas.toDataURL('image/jpeg', 0.8);
+            setCapturedPhoto(finalPhotoUrl);
+
+            if (isMatch) {
+                setMatchStatus('success');
+                await confirmAttendance(finalPhotoUrl);
             } else {
-                setMatchStatus('failed')
-                setCameraError("Rostro no reconocido. La persona en la cámara no coincide con el perfil registrado.")
-                setIsLoading(false)
+                setMatchStatus('failed');
+                setCameraError("Rostro no reconocido. La persona en la cámara no coincide con el perfil registrado.");
+                setIsLoading(false);
             }
         }
       } catch (aiErr) {
