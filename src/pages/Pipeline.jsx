@@ -233,7 +233,89 @@ export default function Pipeline() {
                             >
                               <div className="pipeline-card-title">{deal.title}</div>
                               <div className="pipeline-card-company">{deal.company}</div>
-                              <div className="pipeline-card-value" style={{ fontWeight: 600, color: 'var(--accent-emerald)', marginTop: 4 }}>{deal.value}</div>
+                              <div className="pipeline-card-value" style={{ fontWeight: 600, color: 'var(--accent-emerald)', marginTop: 4 }}>
+    {typeof deal.value === 'string' && deal.value.includes('
+                                <div style={{ marginTop: 8 }}>
+                                  <button 
+                                    className="btn btn-sm btn-ghost" 
+                                    style={{ width: '100%', padding: '4px 0', fontSize: '12px', border: '1px solid var(--border-color)' }}
+                                    onClick={(e) => { e.stopPropagation(); navigate('/inbox', { state: { phone: deal.phone } }); }}
+                                  >
+                                    Ver Chat
+                                  </button>
+                                </div>
+                              <div className="pipeline-card-footer">
+                                <div className="avatar pipeline-card-avatar" style={{ background: deal.assigned.bg }}>
+                                  {deal.assigned.avatar}
+                                </div>
+                                <span className={`pipeline-card-probability badge ${getProbabilityColor(deal.probability)}`}>
+                                  {deal.probability}%
+                                </span>
+                                <span className="pipeline-card-days">{deal.days}d</span>
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      <button 
+                        className="btn btn-ghost btn-sm w-full" 
+                        onClick={() => { setNewDeal({ ...newDeal, stage: stage.id }); setShowModal(true); }}
+                        style={{ justifyContent: 'center', marginTop: 8, borderStyle: 'dashed', border: '1px dashed var(--border-default)' }}
+                      >
+                        <Plus size={14} /> Agregar
+                      </button>
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            )
+          })}
+        </div>
+      </DragDropContext>
+
+      {/* New Deal Modal */}
+      {showModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(10px)' }}>
+          <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 480, padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Nuevo Deal</h1>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateDeal} style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre del Deal / Contacto</label>
+                  <input type="text" required className="input" placeholder="ej: Juan Pérez" value={newDeal.name} onChange={e => setNewDeal({...newDeal, name: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Empresa</label>
+                  <input type="text" className="input" placeholder="ej: Naturel Corp" value={newDeal.company} onChange={e => setNewDeal({...newDeal, company: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor Estimado</label>
+                  <input type="text" className="input" placeholder="ej: $1,500" value={newDeal.value} onChange={e => setNewDeal({...newDeal, value: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Etapa Inicial</label>
+                  <select className="input" value={newDeal.stage} onChange={e => setNewDeal({...newDeal, stage: e.target.value})}>
+                    {stages.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Crear Deal'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+) ? deal.value : `${parseInt(deal.value || 0).toLocaleString()}`}
+  </div>
                                 <div style={{ marginTop: 8 }}>
                                   <button 
                                     className="btn btn-sm btn-ghost" 
