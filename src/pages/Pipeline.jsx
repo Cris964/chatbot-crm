@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useNavigate } from 'react-router-dom'
 import { useTenant } from '../lib/useTenant'
 import {
   Plus, MoreHorizontal, DollarSign, Filter, Settings, Search, X
@@ -25,6 +25,7 @@ function getProbabilityColor(p) {
 
 export default function Pipeline() {
   const { session } = useOutletContext()
+  const navigate = useNavigate()
   const tenant = useTenant()
   const [stages, setStages] = useState(initialStages)
   const [isLoading, setIsLoading] = useState(true)
@@ -77,6 +78,7 @@ export default function Pipeline() {
             company: l.company || 'Sin Empresa',
             value: l.value || '$0',
             probability: l.score || 50,
+            phone: l.phone,
             days: Math.floor((new Date() - new Date(l.created_at)) / (1000 * 60 * 60 * 24)),
             assigned: { avatar: l.name.substring(0,2).toUpperCase(), bg: '#6366f1' }
           }))
@@ -231,7 +233,16 @@ export default function Pipeline() {
                             >
                               <div className="pipeline-card-title">{deal.title}</div>
                               <div className="pipeline-card-company">{deal.company}</div>
-                              <div className="pipeline-card-value">{deal.value}</div>
+                              <div className="pipeline-card-value" style={{ fontWeight: 600, color: 'var(--accent-emerald)', marginTop: 4 }}>{deal.value}</div>
+                                <div style={{ marginTop: 8 }}>
+                                  <button 
+                                    className="btn btn-sm btn-ghost" 
+                                    style={{ width: '100%', padding: '4px 0', fontSize: '12px', border: '1px solid var(--border-color)' }}
+                                    onClick={(e) => { e.stopPropagation(); navigate('/inbox', { state: { phone: deal.phone } }); }}
+                                  >
+                                    Ver Chat
+                                  </button>
+                                </div>
                               <div className="pipeline-card-footer">
                                 <div className="avatar pipeline-card-avatar" style={{ background: deal.assigned.bg }}>
                                   {deal.assigned.avatar}

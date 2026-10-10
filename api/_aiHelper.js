@@ -215,7 +215,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   const needsHuman = needsHumanMatch && humanDept !== 'TREARQ';
 
   const leadStateMatch = botReplyText.match(/\[\s*LEAD_STATE\s*:\s*([^|\]]+?)\s*(?:\||,|-)\s*(\d+)\s*\]/i);
-  const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(.*?)\]/i);
+  const saleMatch = botReplyText.match(/\[SALE_CONFIRMED:\s*(\d+(?:\.\d+)?)\]/i);
   const citaMatch = botReplyText.match(/\[CITA_AGENDADA(?::\s*(.+?))?\]/i);
   const nameMatch = botReplyText.match(/\[CLIENT_NAME:\s*(.+?)\]/i);
   let clientNameExtracted = nameMatch ? nameMatch[1].trim() : null;
@@ -305,10 +305,12 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
        
        score = parseInt(leadStateMatch[2], 10);
   }
-  if (saleMatch) {
-       stage = 'Venta Cerrada';
-       score = 100;
-  }
+  let saleValue = null;
+    if (saleMatch) {
+         stage = 'Venta Cerrada';
+         score = 100;
+         saleValue = saleMatch[1];
+    }
 
   let finalSenderName = senderName;
   if (clientNameExtracted && clientNameExtracted.toLowerCase() !== 'cliente' && clientNameExtracted.toLowerCase() !== 'usuario') {
@@ -321,7 +323,8 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
        if (existingLead) {
             const updatePayload = { name: finalSenderName };
             if (stage) updatePayload.stage = stage;
-            if (score) updatePayload.score = score;
+              if (score) updatePayload.score = score;
+              if (saleValue) updatePayload.value = `${saleValue}`;
             await supabase.from('leads').update(updatePayload).eq('id', existingLead.id);
        } else {
             await supabase.from('leads').insert([{
@@ -393,12 +396,15 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   await supabase.from('conversations').update(updatePayload).eq('id', conversationId);
 
   if (leadStateMatch) {
-    const newStage = leadStateMatch[1].trim();
-    const newScore = parseInt(leadStateMatch[2], 10);
+    const newStage = saleMatch ? 'Venta Cerrada' : leadStateMatch[1].trim();
+    const newScore = saleMatch ? 100 : parseInt(leadStateMatch[2], 10);
+    const newValue = saleMatch ? `${saleMatch[1]}` : undefined;
     try {
       const { data: existingLead } = await supabase.from('leads').select('id').eq('client_id', clientId).eq('phone', senderPhone).limit(1).single();
       if (existingLead) {
-        await supabase.from('leads').update({ stage: newStage, score: newScore }).eq('id', existingLead.id);
+        const updateObj = { stage: newStage, score: newScore };
+          if (newValue) updateObj.value = newValue;
+          await supabase.from('leads').update(updateObj).eq('id', existingLead.id);
       }
     } catch(err) { console.error('Error updating lead pipeline', err) }
   }
