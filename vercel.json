@@ -5,6 +5,10 @@
       "destination": "/api/$1"
     },
     {
+      "source": "/tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt.txt",
+      "destination": "/tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt.txt"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
