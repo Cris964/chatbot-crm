@@ -6,7 +6,7 @@
     },
     {
       "source": "/tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt.txt",
-      "destination": "/tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt.txt"
+      "destination": "/api/tiktok-verify"
     },
     {
       "source": "/(.*)",
