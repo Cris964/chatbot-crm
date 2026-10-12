@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   // TIKTOK SITE VERIFICATION FILE
-  if (req.query?.tiktok_verify || (req.url && req.url.includes('tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt'))) {
+  if (req.query?.tiktok_verify || (req.url && (req.url.includes('tiktok') || req.url.includes('07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt') || req.url.includes('.txt')))) {
     res.setHeader('Content-Type', 'text/plain');
     return res.status(200).send('tiktok-developers-site-verification=07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt');
   }
