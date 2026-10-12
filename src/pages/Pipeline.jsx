@@ -62,12 +62,26 @@ export default function Pipeline() {
   const fetchLeads = async () => {
     setIsLoading(true)
 
-    const { data: leads, error } = await supabase
+    // 1. Fetch all deals with active stages (so no sales/deals are ever truncated by the 1000-row limit)
+    const { data: pipelineLeads } = await supabase
       .from('leads')
       .select('*')
       .eq('client_id', tenant.clientId)
-    
-    if (!error && leads) {
+      .neq('stage', 'Nuevo')
+      .order('created_at', { ascending: false })
+
+    // 2. Fetch the most recent 'Nuevo' leads (top 100 newest)
+    const { data: newLeads } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('client_id', tenant.clientId)
+      .or('stage.eq.Nuevo,stage.is.null')
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    const leads = [...(pipelineLeads || []), ...(newLeads || [])]
+
+    if (leads.length > 0) {
       const newStages = initialStages.map(stage => ({
         ...stage,
         deals: leads
@@ -77,10 +91,10 @@ export default function Pipeline() {
             title: l.name,
             company: l.company || 'Sin Empresa',
             value: l.value || '$0',
-            probability: l.score || 50,
+            probability: l.score || (stage.id === 'Venta Cerrada' ? 100 : 50),
             phone: l.phone,
-            days: Math.floor((new Date() - new Date(l.created_at)) / (1000 * 60 * 60 * 24)),
-            assigned: { avatar: l.name.substring(0,2).toUpperCase(), bg: '#6366f1' }
+            days: Math.max(0, Math.floor((new Date() - new Date(l.created_at)) / (1000 * 60 * 60 * 24))),
+            assigned: { avatar: (l.name || 'C').substring(0,2).toUpperCase(), bg: stage.color || '#6366f1' }
           }))
       }))
       setStages(newStages)
@@ -89,7 +103,7 @@ export default function Pipeline() {
   }
 
   const totalValue = stages.reduce((acc, stage) =>
-    acc + stage.deals.reduce((s, d) => s + parseInt(d.value.replace(/[$,]/g, '')), 0), 0
+    acc + stage.deals.reduce((s, d) => s + (parseInt(String(d.value).replace(/[^0-9]/g, '')) || 0), 0), 0
   )
 
   const onDragEnd = (result) => {
@@ -189,7 +203,7 @@ export default function Pipeline() {
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="pipeline-container animate-slideUp stagger-1" style={{ flex: 1, overflowX: 'auto', display: 'flex', gap: 16, padding: '0 24px 24px' }}>
           {stages.map(stage => {
-            const stageTotal = stage.deals.reduce((s, d) => s + parseInt(d.value.replace(/[$,]/g, '')), 0)
+            const stageTotal = stage.deals.reduce((s, d) => s + (parseInt(String(d.value).replace(/[^0-9]/g, '')) || 0), 0)
             return (
               <div key={stage.id} className="pipeline-column" style={{ minWidth: 320, maxWidth: 320, display: 'flex', flexDirection: 'column' }}>
                 <div className="pipeline-column-header">
