@@ -12,8 +12,12 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // META WEBHOOK VERIFICATION
+  // WEBHOOK VERIFICATION (META & TIKTOK)
   if (req.method === 'GET') {
+    if (req.query?.challenge) {
+      console.log('[TIKTOK GET VERIFIED]', req.query.challenge);
+      return res.status(200).send(req.query.challenge);
+    }
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -31,7 +35,15 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const body = req.body;
-      if (!['whatsapp_business_account', 'page', 'instagram'].includes(body.object)) {
+
+      // Handle TikTok Verification Event
+      if (body?.event === 'endpoint.verify' || body?.challenge || body?.content?.challenge) {
+        const challenge = body.challenge || body.content?.challenge || req.query?.challenge;
+        console.log('[TIKTOK POST VERIFIED]', challenge);
+        return res.status(200).json({ challenge: challenge });
+      }
+
+      if (!['whatsapp_business_account', 'page', 'instagram', 'tiktok'].includes(body?.object) && !body?.event) {
         return res.status(404).send('Event not supported');
       }
 
