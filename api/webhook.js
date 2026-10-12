@@ -12,6 +12,12 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // TIKTOK SITE VERIFICATION FILE
+  if (req.query?.tiktok_verify || (req.url && req.url.includes('tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt'))) {
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send('tiktok-developers-site-verification=07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt');
+  }
+
   // WEBHOOK VERIFICATION (META & TIKTOK)
   if (req.method === 'GET') {
     if (req.query?.challenge || req.query?.['hub.challenge']) {
