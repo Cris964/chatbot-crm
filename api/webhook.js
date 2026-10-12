@@ -14,9 +14,9 @@ export default async function handler(req, res) {
 
   // WEBHOOK VERIFICATION (META & TIKTOK)
   if (req.method === 'GET') {
-    if (req.query?.challenge) {
-      console.log('[TIKTOK GET VERIFIED]', req.query.challenge);
-      return res.status(200).send(req.query.challenge);
+    if (req.query?.challenge || req.query?.['hub.challenge']) {
+      console.log('[TIKTOK / META GET VERIFIED]', req.query);
+      return res.status(200).send(req.query.challenge || req.query['hub.challenge']);
     }
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
@@ -27,24 +27,37 @@ export default async function handler(req, res) {
       console.log('WEBHOOK_VERIFIED');
       return res.status(200).send(challenge);
     } else {
-      return res.status(403).json({ error: 'Verification failed' });
+      return res.status(200).send('OK');
     }
   }
 
   // INCOMING MESSAGES
   if (req.method === 'POST') {
     try {
-      const body = req.body;
+      const body = req.body || {};
 
-      // Handle TikTok Verification Event
-      if (body?.event === 'endpoint.verify' || body?.challenge || body?.content?.challenge) {
+      // Handle TikTok Verification & Test Events immediately
+      if (
+        body.event === 'endpoint.verify' ||
+        body.challenge ||
+        body.content?.challenge ||
+        body.event === 'test' ||
+        body.type === 'test' ||
+        body.client_key ||
+        body.event_type === 'test' ||
+        (body.event && !body.entry && !body.object)
+      ) {
         const challenge = body.challenge || body.content?.challenge || req.query?.challenge;
-        console.log('[TIKTOK POST VERIFIED]', challenge);
-        return res.status(200).json({ challenge: challenge });
+        console.log('[TIKTOK TEST / VERIFY SUCCESS]', body);
+        return res.status(200).json({
+          status: 'success',
+          challenge: challenge,
+          message: 'TikTok webhook endpoint verified'
+        });
       }
 
-      if (!['whatsapp_business_account', 'page', 'instagram', 'tiktok'].includes(body?.object) && !body?.event) {
-        return res.status(404).send('Event not supported');
+      if (!['whatsapp_business_account', 'page', 'instagram', 'tiktok'].includes(body?.object) && !body?.entry) {
+        return res.status(200).send('OK');
       }
 
       let messageObj, senderPhone, senderName, recipientId, channel;
