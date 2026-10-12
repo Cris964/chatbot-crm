@@ -121,6 +121,39 @@ export default function Sales() {
     })
 
     if (!error) {
+       // Auto-sync sale to Pipeline (leads table)
+       try {
+         const saleAmount = parseInt(newSale.total) || 0;
+         const { data: existingLeads } = await supabase.from('leads')
+           .select('id, value')
+           .eq('client_id', targetClientId)
+           .eq('name', newSale.user_name);
+         
+         if (existingLeads && existingLeads.length > 0) {
+           const lead = existingLeads[0];
+           const currentVal = parseInt(String(lead.value).replace(/[^0-9]/g, '')) || 0;
+           await supabase.from('leads').update({
+             stage: 'Venta Cerrada',
+             score: 100,
+             value: String(currentVal + saleAmount),
+             company: newSale.product
+           }).eq('id', lead.id);
+         } else {
+           await supabase.from('leads').insert({
+             client_id: targetClientId,
+             name: newSale.user_name,
+             stage: 'Venta Cerrada',
+             score: 100,
+             value: String(saleAmount),
+             company: newSale.product,
+             source: 'Ventas',
+             status: 'active'
+           });
+         }
+       } catch (syncErr) {
+         console.error('Error syncing sale to leads:', syncErr);
+       }
+
        setShowModal(false)
        setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp', sale_type: 'Digital' })
        setInvoiceFile(null)
