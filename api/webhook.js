@@ -13,9 +13,19 @@ export default async function handler(req, res) {
   }
 
   // TIKTOK SITE VERIFICATION FILE
-  if (req.query?.tiktok_verify || (req.url && (req.url.includes('tiktok') || req.url.includes('07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt') || req.url.includes('.txt')))) {
+  if (
+    req.query?.tiktok_verify ||
+    req.query?.challenge === '07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt' ||
+    (req.url && (req.url.includes('tiktok07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt') || req.url.includes('07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt')))
+  ) {
     res.setHeader('Content-Type', 'text/plain');
     return res.status(200).send('tiktok-developers-site-verification=07mg5DGK2MK2mHUxMTjzRnMdWZJcTwgt');
+  }
+
+  // TIKTOK OAUTH CALLBACK
+  if (req.query?.code || (req.url && req.url.includes('callback'))) {
+    console.log('[TIKTOK OAUTH CALLBACK RECEIVED]', req.query);
+    return res.redirect(302, '/settings?tiktok_auth=success');
   }
 
   // WEBHOOK VERIFICATION (META & TIKTOK)
