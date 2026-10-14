@@ -7,7 +7,7 @@ import {
   Mail, MapPin, Calendar, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
   Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, DollarSign, CheckSquare, FileText
-, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings } from 'lucide-react'
+, PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings, Reply } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/apiFetch'
 import { useTenant } from '../lib/useTenant'
@@ -149,6 +149,9 @@ export default function Inbox() {
   const [selectedChats, setSelectedChats] = useState([])
   const [isSelectMode, setIsSelectMode] = useState(false)
   const fileInputRef = useRef(null)
+  const textInputRef = useRef(null)
+  const [replyingTo, setReplyingTo] = useState(null)
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false)
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -400,15 +403,24 @@ export default function Inbox() {
 
         return {
           id: i,
-          sender: m.role === 'user' ? 'client' : (m.role === 'assistant' ? 'bot' : 'agent'),
+          sender: m.role === 'user' ? 'client' : (m.role === 'system' ? 'system' : (m.role === 'assistant' ? 'bot' : 'agent')),
           text: finalContent,
           type: m.media_type || finalType,
           media_url: mediaUrl,
-          time: `${dateStr} ${timeStr}`
+          time: `${dateStr} ${timeStr}`,
+          raw: m,
+          reply_to: m.reply_to || null,
+          meta_id: m.meta_id || m.sent_meta?.[0]?.id || null,
+          sender_name: m.sender_name || null,
+          isUploading: !!m.isUploading
         };
       }))
     }
   }, [selectedConv])
+
+  useEffect(() => {
+    setReplyingTo(null);
+  }, [selectedConv?.id])
 
   useEffect(() => {
     if (!selectedConv?.id) return;
@@ -670,8 +682,19 @@ export default function Inbox() {
       sender_name: getSenderName()
     }
 
+    const currentReply = replyingTo;
+    if (currentReply) {
+      messageObj.reply_to = {
+        text: currentReply.type === 'image' ? '📷 Foto' : (currentReply.text || currentReply.content || ''),
+        type: currentReply.type || 'text',
+        sender_name: currentReply.sender === 'client' ? (selectedConv.name || 'Cliente') : (currentReply.sender_name || 'Asesor'),
+        media_url: currentReply.media_url || (currentReply.type === 'image' ? (currentReply.media_url || currentReply.text) : null)
+      };
+    }
+
     // [AGY-FIX] Optimistic UI Update
     setNewMessage('')
+    setReplyingTo(null)
     setSelectedConv(prev => { if (!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), messageObj] }; });
 
     const { error } = await supabase
@@ -715,7 +738,8 @@ export default function Inbox() {
                phone: selectedConv.phone,
                message: textMsg,
                type: 'text',
-               channel: selectedConv.channel
+               channel: selectedConv.channel,
+               ...(currentReply?.meta_id || currentReply?.raw?.meta_id || currentReply?.raw?.sent_meta?.[0]?.id ? { context_message_id: currentReply.meta_id || currentReply.raw?.meta_id || currentReply.raw?.sent_meta?.[0]?.id } : {})
              })
            });
            const apiData = await res.json();
@@ -986,7 +1010,7 @@ export default function Inbox() {
 
   const uploadAudio = async (audioBlob) => {
     if (!selectedConv) return
-    setIsLoading(true)
+    setIsUploadingMedia(true)
     try {
       const fileName = `voice_${Date.now()}.ogg`
       const { data, error } = await supabase.storage
@@ -1055,156 +1079,259 @@ export default function Inbox() {
       console.error("Upload error:", err)
       alert("Error al subir el audio: " + err.message)
     } finally {
-      setIsLoading(false)
+      setIsUploadingMedia(false)
     }
   }
   const handleFileUpload = async (eOrFile) => {
-    let file;
-    if (eOrFile?.target?.files) file = eOrFile.target.files[0];
-    else if (eOrFile instanceof File) file = eOrFile;
+    let files = [];
+    if (eOrFile?.target?.files) {
+      files = Array.from(eOrFile.target.files);
+    } else if (Array.isArray(eOrFile)) {
+      files = eOrFile;
+    } else if (eOrFile instanceof File) {
+      files = [eOrFile];
+    }
     
-    if (!file || !selectedConv) return
-      
+    if (!files || files.length === 0 || !selectedConv) return;
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    const validFiles = [];
+    for (const file of files) {
       const fileNameStr = file.name ? file.name.toLowerCase() : '';
       if (fileNameStr.endsWith('.mov') || fileNameStr.endsWith('.avi') || fileNameStr.endsWith('.wmv')) {
-          alert('⚠️ Formato de video no soportado.\n\nPor favor convierte el video a formato .mp4 antes de enviarlo. (Los videos .mov de iPhone no son compatibles con la API de WhatsApp).');
-          if (eOrFile?.target) eOrFile.target.value = ''; // reset input
-          return;
+        alert(`⚠️ Formato de video no soportado en "${file.name}".\n\nPor favor conviértelo a .mp4.`);
+        continue;
       }
       
-      setIsLoading(true)
-    try {
-      // Read file as base64
-      
-
-      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-      
-      
-        const getMedia = (mt, fn) => {
-          if(!mt) mt=''; const m=mt.toLowerCase();
-          if(m.startsWith('image/')) return 'image';
-          if(m.startsWith('video/')) return 'video';
-          if(m.startsWith('audio/')) return 'audio';
-          const ext = fn ? fn.split('.').pop().toLowerCase() : '';
-          if(['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
-          if(['mp4','webm','mov'].includes(ext)) return 'video';
-          return 'document';
-        };
-        const mType = getMedia(file.type, file.name);
-        if (mType === 'video' && file.size > 16 * 1024 * 1024) {
-            alert('❌ WhatsApp no permite videos mayores a 16 MB.\n\nEste video pesa ' + (file.size / (1024*1024)).toFixed(1) + ' MB.');
-            setIsLoading(false);
-            return;
-        }
-        if (mType === 'image' && file.size > 5 * 1024 * 1024) {
-            alert('❌ WhatsApp no permite imágenes mayores a 5 MB.\n\nEsta imagen pesa ' + (file.size / (1024*1024)).toFixed(1) + ' MB.');
-            setIsLoading(false);
-            return;
-        }
-        if (mType === 'document' && file.size > 100 * 1024 * 1024) {
-            alert('❌ WhatsApp no permite documentos mayores a 100 MB.');
-            setIsLoading(false);
-            return;
-        }
-        let tempMsg = null;
-        if (mType === 'image' || mType === 'video') {
-            tempMsg = { role: 'agent', sender_name: getSenderName(), content: URL.createObjectURL(file), type: mType, timestamp: new Date().toISOString(), isUploading: true };
-            setSelectedConv(prev => { if(!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), tempMsg] } });
-        }
-        
-const { error: uploadError } = await supabase.storage
-          .from('whatsapp_media')
-          .upload(fileName, file, {
-          contentType: file.type,
-          upsert: true
-        });
-        
-      if (uploadError) throw uploadError;
-      
-      const { data: publicUrlData } = supabase.storage
-          .from('whatsapp_media')
-          .getPublicUrl(fileName);
-        
-      const fileUrl = publicUrlData.publicUrl;
-      
-      const getMediaType = (mimeType, fName) => {
-        if (!mimeType) mimeType = '';
-        const m = mimeType.toLowerCase();
+      const getMedia = (mt, fn) => {
+        if (!mt) mt = ''; const m = mt.toLowerCase();
         if (m.startsWith('image/')) return 'image';
         if (m.startsWith('video/')) return 'video';
         if (m.startsWith('audio/')) return 'audio';
-        
-        if (fName) {
-          const ext = fName.split('.').pop().toLowerCase();
-          if (['jpeg','jpg','gif','png','webp'].includes(ext)) return 'image';
-          if (['mp4','webm','ogg','avi','mov'].includes(ext)) return 'video';
-          if (['mp3','wav','oga','aac','m4a','amr'].includes(ext)) return 'audio';
-        }
+        const ext = fn ? fn.split('.').pop().toLowerCase() : '';
+        if (['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
+        if (['mp4','webm','mov'].includes(ext)) return 'video';
         return 'document';
       };
-      const mediaType = getMediaType(file.type, file.name);
-
-      const messageObj = {
-        role: 'agent', sender_name: getSenderName(),
-        content: fileUrl,
-        type: mediaType,
-        timestamp: new Date().toISOString()
+      const mType = getMedia(file.type, file.name);
+      if (mType === 'video' && file.size > 16 * 1024 * 1024) {
+        alert(`❌ WhatsApp no permite videos mayores a 16 MB (${file.name}).`);
+        continue;
       }
-
-      const { error: dbError } = await supabase
-        .from('conversations')
-        .update({ 
-          messages: [...(selectedConv.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))), messageObj],
-          updated_at: new Date().toISOString(),
-          needs_human: true
-        })
-        .eq('id', selectedConv.id)
-
-      if (!dbError) {
-        // Enviar a la API de WhatsApp
-        try {
-          const apiRes = await apiFetch('/api/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+      if (mType === 'image' && file.size > 5 * 1024 * 1024) {
+        alert(`❌ WhatsApp no permite imágenes mayores a 5 MB (${file.name}).`);
+        continue;
+      }
+      if (mType === 'document' && file.size > 100 * 1024 * 1024) {
+        alert(`❌ WhatsApp no permite documentos mayores a 100 MB (${file.name}).`);
+        continue;
+      }
+      validFiles.push({ file, mType });
+    }
+    
+    if (validFiles.length === 0) return;
+    
+    setIsUploadingMedia(true);
+    
+    try {
+      const currentReply = replyingTo;
+      setReplyingTo(null);
+      
+      for (let i = 0; i < validFiles.length; i++) {
+        const { file, mType } = validFiles[i];
+        const tempId = `temp_up_${Date.now()}_${i}`;
+        const blobUrl = URL.createObjectURL(file);
+        
+        // Optimistic preview bubble in chat
+        const tempMsg = {
+          id: tempId,
+          role: 'agent',
+          sender_name: getSenderName(),
+          content: blobUrl,
+          type: mType,
+          timestamp: new Date().toISOString(),
+          isUploading: true
+        };
+        
+        setSelectedConv(prev => {
+          if (!prev) return prev;
+          return { ...prev, rawMessages: [...(prev.rawMessages || []), tempMsg] };
+        });
+        
+        const fileName = `${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('whatsapp_media')
+          .upload(fileName, file, {
+            contentType: file.type,
+            upsert: true
+          });
+          
+        if (uploadError) {
+          console.error("Storage upload error:", uploadError);
+          setSelectedConv(prev => {
+            if (!prev) return prev;
+            return { ...prev, rawMessages: (prev.rawMessages || []).filter(m => m.id !== tempId && m.content !== blobUrl) };
+          });
+          alert(`Error al subir ${file.name}: ` + uploadError.message);
+          continue;
+        }
+        
+        const { data: publicUrlData } = supabase.storage
+          .from('whatsapp_media')
+          .getPublicUrl(fileName);
+          
+        const fileUrl = publicUrlData.publicUrl;
+        
+        const messageObj = {
+          role: 'agent',
+          sender_name: getSenderName(),
+          content: fileUrl,
+          type: mType,
+          timestamp: new Date().toISOString()
+        };
+        
+        if (currentReply && i === 0) {
+          messageObj.reply_to = {
+            text: currentReply.type === 'image' ? '📷 Foto' : (currentReply.text || currentReply.content || ''),
+            type: currentReply.type || 'text',
+            sender_name: currentReply.sender === 'client' ? (selectedConv.name || 'Cliente') : (currentReply.sender_name || 'Asesor'),
+            media_url: currentReply.media_url || (currentReply.type === 'image' ? (currentReply.media_url || currentReply.text) : null)
+          };
+        }
+        
+        // Fetch current messages from state to replace tempMsg
+        setSelectedConv(prev => {
+          if (!prev) return prev;
+          const cleaned = (prev.rawMessages || []).filter(m => m.id !== tempId && m.content !== blobUrl);
+          return { ...prev, rawMessages: [...cleaned, messageObj] };
+        });
+        
+        // Update database with latest messages
+        const { data: currentConvData } = await supabase
+          .from('conversations')
+          .select('messages')
+          .eq('id', selectedConv.id)
+          .single();
+          
+        const baseMsgs = (currentConvData?.messages || selectedConv.rawMessages || [])
+          .filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:')));
+          
+        const updatedMsgs = [...baseMsgs, messageObj];
+        
+        const { error: dbError } = await supabase
+          .from('conversations')
+          .update({
+            messages: updatedMsgs,
+            updated_at: new Date().toISOString(),
+            needs_human: true
+          })
+          .eq('id', selectedConv.id);
+          
+        if (!dbError) {
+          try {
+            const sendBody = {
               client_id: tenant.clientId,
               phone: selectedConv.phone,
               message: fileUrl,
-              type: mediaType,
+              type: mType,
               channel: selectedConv.channel
-            })
-          });
-          const apiData = await apiRes.json();
-          if (apiData.meta_message_id) {
+            };
+            if (currentReply && i === 0) {
+              const ctxId = currentReply?.meta_id || currentReply?.raw?.meta_id || currentReply?.raw?.sent_meta?.[0]?.id || null;
+              if (ctxId) sendBody.context_message_id = ctxId;
+            }
+            const apiRes = await apiFetch('/api/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(sendBody)
+            });
+            const apiData = await apiRes.json();
+            if (apiData.meta_message_id) {
               const { data: latest } = await supabase.from('conversations').select('messages').eq('id', selectedConv.id).single();
-                 if (latest && latest.messages) {
-                     const msgs = latest.messages;
-                     const idx = msgs.findLastIndex(m => m.timestamp === messageObj.timestamp);
-                     if (idx !== -1) {
-                         msgs[idx].sent_meta = [{ id: apiData.meta_message_id, type: mediaType, content: fileUrl }];
-                         await supabase.from('conversations').update({ messages: msgs }).eq('id', selectedConv.id);
-                     }
-                 }
+              if (latest && latest.messages) {
+                const msgs = latest.messages;
+                const idx = msgs.findLastIndex(m => m.timestamp === messageObj.timestamp);
+                if (idx !== -1) {
+                  msgs[idx].sent_meta = [{ id: apiData.meta_message_id, type: mType, content: fileUrl }];
+                  await supabase.from('conversations').update({ messages: msgs }).eq('id', selectedConv.id);
+                }
+              }
+            }
+          } catch (apiErr) {
+            console.error('Error sending file via API:', apiErr);
           }
-        } catch (apiErr) {
-          console.error('Error sending file via API:', apiErr);
         }
         
-        fetchConversations(true)
-      } else {
-        throw dbError
+        if (i < validFiles.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+        }
       }
+      
+      fetchConversations(true);
     } catch (err) {
       console.error("Upload error:", err);
-      setSelectedConv(prev => {
-         if (!prev) return prev;
-         return { ...prev, rawMessages: (prev.rawMessages || []).filter(m => !m.isUploading && !(typeof m.content === 'string' && m.content.startsWith('blob:'))) };
-      });
-      alert("Error al subir el archivo: " + err.message)
+      alert("Error al subir los archivos: " + err.message);
     } finally {
-      setIsLoading(false)
+      setIsUploadingMedia(false);
     }
-  }
+  };
+
+  const handleStartReply = (msg) => {
+    setReplyingTo(msg);
+    setTimeout(() => {
+      if (textInputRef.current) {
+        textInputRef.current.focus();
+      }
+    }, 60);
+  };
+
+  const handleTogglePending = async () => {
+    if (!selectedConv) return;
+    const isCurrentlyPending = !!selectedConv.unread;
+    const newUnreadState = !isCurrentlyPending;
+    const sender = getSenderName();
+    
+    const statusMsg = isCurrentlyPending
+      ? { role: 'system', content: `✓ Atendido por ${sender}`, timestamp: new Date().toISOString() }
+      : { role: 'user', content: `[Marcado como pendiente por ${sender}]`, timestamp: new Date().toISOString() };
+      
+    const updatedMessages = [...(selectedConv.rawMessages || []), statusMsg];
+    
+    setSelectedConv(prev => prev ? {
+      ...prev,
+      unread: newUnreadState,
+      rawMessages: updatedMessages
+    } : prev);
+    
+    setConversationsList(prev => prev.map(c => {
+      if (c.id === selectedConv.id) {
+        return {
+          ...c,
+          unread: newUnreadState,
+          rawMessages: updatedMessages
+        };
+      }
+      return c;
+    }));
+    
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({
+          messages: updatedMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedConv.id);
+        
+      if (error) console.error("Error updating pending status in DB:", error);
+    } catch (err) {
+      console.error("Exception in handleTogglePending:", err);
+    }
+  };
 
   const handleDeleteMessage = async (msgIndex) => {
     if (!selectedConv || !window.confirm("¿Seguro que deseas eliminar este mensaje del CRM? (No se borrará del WhatsApp del cliente)")) return;
@@ -1777,7 +1904,39 @@ const { error: uploadError } = await supabase.storage
                      <div className="flex gap-1">
                         <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
                         <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm" title="Llamar"><Phone size={14} /></a>
-  <button className="btn btn-primary btn-sm mobile-hidden" style={{ background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }} onClick={() => setShowSaleModal(true)} title="Registrar Venta"><DollarSign size={14} /> Venta</button>
+  {selectedConv?.unread ? (
+                            <button 
+                              className="btn btn-sm"
+                              style={{ 
+                                background: 'rgba(16, 185, 129, 0.18)', 
+                                color: 'var(--accent-emerald)', 
+                                border: '1px solid rgba(16, 185, 129, 0.35)',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5
+                              }}
+                              onClick={handleTogglePending}
+                              title="Sacar este chat de Pendientes (Marcar como Atendido)"
+                            >
+                              <CheckCheck size={14} /> <span className="mobile-hidden">Sacar de Pendientes</span>
+                            </button>
+                          ) : (
+                            <button 
+                              className="btn btn-secondary btn-sm"
+                              style={{ 
+                                opacity: 0.85,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5
+                              }}
+                              onClick={handleTogglePending}
+                              title="Hacer clic para marcar como Pendiente nuevamente"
+                            >
+                              <Clock size={14} /> <span className="mobile-hidden">Atendido</span>
+                            </button>
+                          )}
+                          <button className="btn btn-primary btn-sm mobile-hidden" style={{ background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }} onClick={() => setShowSaleModal(true)} title="Registrar Venta"><DollarSign size={14} /> Venta</button>
                           <button className="btn btn-secondary btn-sm" onClick={() => setShowContactSettings(true)} title="Configuración de Cliente"><Settings size={14} /></button>
                           
                         <button 
@@ -1812,14 +1971,91 @@ const { error: uploadError } = await supabase.storage
               </div>
 
               <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {messages.map(m => (
+                  {messages.map(m => {
+                    if (m.sender === 'system' || (m.text && (m.text.startsWith('✓ Atendido por') || m.text.startsWith('[Marcado como pendiente')))) {
+                      return (
+                        <div key={m.id} style={{ display: 'flex', justifyContent: 'center', margin: '12px 0' }}>
+                          <span style={{ 
+                            background: 'rgba(255,255,255,0.06)', 
+                            color: 'var(--text-secondary)', 
+                            border: '1px solid var(--glass-border)',
+                            padding: '4px 14px', 
+                            borderRadius: '20px', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6
+                          }}>
+                            {m.text?.includes('Atendido') ? (
+                              <CheckCheck size={13} style={{ color: 'var(--accent-emerald)' }} />
+                            ) : (
+                              <Clock size={13} style={{ color: 'var(--accent-amber)' }} />
+                            )}
+                            {m.text}
+                            <span style={{ opacity: 0.5, fontSize: '0.65rem', marginLeft: 4 }}>{m.time}</span>
+                          </span>
+                        </div>
+                      );
+                    }
+                    return (
                     <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`} style={{ opacity: m.isUploading ? 0.6 : 1 }}>
+                        {m.reply_to && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: 'rgba(0,0,0,0.28)',
+                            borderLeft: '3px solid var(--accent-emerald)',
+                            borderRadius: 4,
+                            padding: '4px 8px',
+                            marginBottom: 6,
+                            fontSize: '0.75rem'
+                          }}>
+                            {m.reply_to.media_url && (
+                              <img src={m.reply_to.media_url} alt="Quoted" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+                            )}
+                            <div style={{ overflow: 'hidden' }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.7rem', color: 'var(--accent-emerald)' }}>
+                                {m.reply_to.sender_name || 'Mensaje citado'}
+                              </div>
+                              <div style={{ opacity: 0.85, fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 240 }}>
+                                {m.reply_to.text || (m.reply_to.media_url ? '📷 Foto' : '')}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         {m.type === 'image' || (m.text && m.text.startsWith('http') && !m.text.includes(' ') && m.text.match(/\.(jpeg|jpg|gif|png|webp)/i)) ? (
                           <div>
                             <img src={m.media_url || m.text} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />
                             {m.media_url && m.text && m.text !== m.media_url && m.text !== '📷 Imagen recibida' && (
                               <p style={{ margin: '4px 0 0 0', fontStyle: 'italic', fontSize: '0.8rem' }}>{m.text}</p>
                             )}
+                            <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-start' }}>
+                              <button 
+                                type="button" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartReply(m);
+                                }} 
+                                style={{
+                                  background: 'rgba(255,255,255,0.12)',
+                                  border: '1px solid rgba(255,255,255,0.18)',
+                                  borderRadius: 6,
+                                  padding: '2px 8px',
+                                  color: '#fff',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}
+                                title="Responder sobre esta imagen"
+                              >
+                                <Reply size={12} /> Responder
+                              </button>
+                            </div>
                           </div>
                         ) : m.type === 'audio' || m.type === 'voice' ? (
                           <div>
@@ -1889,14 +2125,73 @@ const { error: uploadError } = await supabase.storage
                               )}
                             </>
                           )}
+                          <span title="Responder a este mensaje" style={{ cursor: 'pointer', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: 2 }} onClick={() => handleStartReply(m)}>
+                            <Reply size={11} />
+                          </span>
                           {m.time}
                         </div>
                     </div>
-                  ))}
+                  );
+                })}
                  <div ref={messagesEndRef} />
               </div>
 
               <div className="chat-input-area" style={{ padding: '12px 0', background: 'rgba(0,0,0,0.2)', width: '100%' }}>
+                  {isUploadingMedia && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 16px',
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      borderTop: '1px solid rgba(59, 130, 246, 0.25)',
+                      fontSize: '0.8rem',
+                      color: '#60a5fa'
+                    }}>
+                      <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                      <span>Subiendo archivo(s) multimedia...</span>
+                    </div>
+                  )}
+                  {replyingTo && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(var(--overlay-rgb), 0.08)',
+                      borderLeft: '4px solid var(--accent-emerald)',
+                      padding: '6px 16px',
+                      borderTop: '1px solid var(--glass-border)',
+                      borderBottom: '1px solid var(--glass-border)',
+                      fontSize: '0.8rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+                        {(replyingTo.media_url || (replyingTo.type === 'image' && replyingTo.text)) && (
+                          <img 
+                            src={replyingTo.media_url || replyingTo.text} 
+                            alt="Preview" 
+                            style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} 
+                          />
+                        )}
+                        <div style={{ overflow: 'hidden' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--accent-emerald)', display: 'block', fontSize: '0.75rem' }}>
+                            Respondiendo a {replyingTo.sender === 'client' ? (selectedConv.name || 'Cliente') : (replyingTo.sender_name || 'Asesor')}:
+                          </span>
+                          <span style={{ opacity: 0.85, fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 350 }}>
+                            {replyingTo.type === 'image' ? '📷 Foto' : (replyingTo.text || replyingTo.content || '')}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setReplyingTo(null)} 
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '2px 6px', color: 'var(--text-secondary)' }}
+                        title="Cancelar respuesta"
+                      >
+                        <Close size={16} />
+                      </button>
+                    </div>
+                  )}
                   <form onSubmit={handleSendMessage} style={{ background: 'rgba(var(--overlay-rgb), 0.03)', border: '1px solid var(--glass-border)', borderRadius: '0', padding: '4px 16px', display: 'flex', alignItems: 'center', width: '100%' }}>
                      {isRecording ? (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
@@ -1905,6 +2200,7 @@ const { error: uploadError } = await supabase.storage
                         </div>
                      ) : (
                           <textarea 
+                            ref={textInputRef}
                             placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem', resize: 'none', minHeight: '36px', maxHeight: '120px', overflowY: 'auto', lineHeight: '20px', alignSelf: 'center', fontFamily: 'inherit' }} 
                             rows={1}
                             value={newMessage} 
@@ -1925,13 +2221,16 @@ const { error: uploadError } = await supabase.storage
                             onPaste={(e) => {
                             const items = e.clipboardData?.items;
                             if (items) {
+                              const files = [];
                               for (let i = 0; i < items.length; i++) {
                                 if (items[i].type.indexOf('image') !== -1) {
-                                  e.preventDefault();
                                   const file = items[i].getAsFile();
-                                  if (file) handleFileUpload(file);
-                                  break;
+                                  if (file) files.push(file);
                                 }
+                              }
+                              if (files.length > 0) {
+                                e.preventDefault();
+                                handleFileUpload(files);
                               }
                             }
                           }}
@@ -1944,7 +2243,7 @@ const { error: uploadError } = await supabase.storage
                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(true)} title="Enviar Plantilla (Template)"><FileText size={18} /></button>
                             )}
                             <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
-                            <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" />
+                            <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" multiple />
                             <button type="submit" className="btn btn-primary btn-sm" disabled={!newMessage.trim()}><Send size={16} /></button>
                             <button type="button" className="btn btn-ghost btn-sm" onClick={startRecording}><Mic size={18} /></button>
                           </>

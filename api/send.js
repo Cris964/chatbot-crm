@@ -254,6 +254,10 @@ export default async function handler(req, res) {
           metaPayload.text = { preview_url: false, body: message };
         }
 
+        if (record.context_message_id) {
+          metaPayload.context = { message_id: record.context_message_id };
+        }
+
         headers = {
           'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
           'Content-Type': 'application/json'
@@ -282,6 +286,10 @@ export default async function handler(req, res) {
             };
         }
 
+        if (record.context_message_id) {
+            metaPayload.message.reply_to = { mid: record.context_message_id };
+        }
+
         headers = {
           'Content-Type': 'application/json'
         };
@@ -291,13 +299,25 @@ export default async function handler(req, res) {
 
     console.log(`Sending message to ${phone} via ${channel} for client ${clientId}...`);
 
-    const metaResponse = await fetch(metaUrl, {
+    let metaResponse = await fetch(metaUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(metaPayload)
     });
 
-    const metaResult = await metaResponse.json();
+    let metaResult = await metaResponse.json();
+
+    if (!metaResponse.ok && (metaPayload.context || metaPayload.message?.reply_to)) {
+      console.warn('Meta send with context failed, retrying without context:', metaResult);
+      if (metaPayload.context) delete metaPayload.context;
+      if (metaPayload.message?.reply_to) delete metaPayload.message.reply_to;
+      metaResponse = await fetch(metaUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(metaPayload)
+      });
+      metaResult = await metaResponse.json();
+    }
 
     if (!metaResponse.ok) {
       console.error('Meta API Error:', metaResult);
