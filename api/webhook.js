@@ -392,6 +392,27 @@ export default async function handler(req, res) {
         }
       }
 
+      // 3.1 AUTO-DETECT SALES & PAYMENT RECEIPTS (AI Vision & NLP)
+      if (clientId && conversationId) {
+        try {
+          const { detectAndProcessSale } = await import('./_saleDetector.js');
+          await detectAndProcessSale({
+            supabase,
+            clientId,
+            conversationId,
+            senderPhone,
+            senderName,
+            messageObj,
+            textResponse,
+            channel,
+            openRouterKey: process.env.OPENROUTER_API_KEY,
+            openAiKey: process.env.OPENAI_API_KEY
+          });
+        } catch(saleErr) {
+          console.error('[SALE AUTO-DETECT ERROR]', saleErr);
+        }
+      }
+
       // 4. AI Dispatch — Shared AI Helper
       const isNeedsHuman = existingChats?.[0]?.needs_human === true;
       let messageQueue = [];

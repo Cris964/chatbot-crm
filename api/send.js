@@ -356,6 +356,26 @@ export default async function handler(req, res) {
         }
     }
 
+    // Auto-detect sale confirmation from advisor message in background
+    try {
+      const { data: convRecord } = await supabase.from('conversations').select('id, user_name').eq('client_id', clientId).eq('user_phone', phone).maybeSingle();
+      if (convRecord) {
+        const { detectAndProcessSale } = await import('./_saleDetector.js');
+        detectAndProcessSale({
+          supabase,
+          clientId,
+          conversationId: convRecord.id,
+          senderPhone: phone,
+          senderName: convRecord.user_name || 'Cliente',
+          messageObj: { type: 'text', text: { body: message } },
+          textResponse: message,
+          channel: channel || 'whatsapp',
+          openRouterKey: process.env.OPENROUTER_API_KEY,
+          openAiKey: process.env.OPENAI_API_KEY
+        }).catch(e => console.error('[SEND SALE DETECT ERR]', e));
+      }
+    } catch(e) {}
+
     return res.status(200).json({
       success: true,
       meta_message_id: sentWamid,
