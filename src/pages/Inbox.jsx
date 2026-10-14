@@ -787,12 +787,56 @@ export default function Inbox() {
       const results = await Promise.all(insertPromises);
       const hasError = results.some(r => r.error);
       
-      setIsSavingSale(false);
       if (!hasError) {
+         try {
+           const totalSaleAmount = (newSale.items || []).reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
+           const mainProduct = (newSale.items?.[0]?.custom_product || newSale.items?.[0]?.product_dropdown || 'Producto');
+           const targetPhone = selectedConv?.phone;
+           const targetName = newSale.user_name || selectedConv?.name;
+
+           let leadQuery = supabase.from('leads').select('id, value').eq('client_id', tenant.clientId);
+           if (targetPhone && targetName) {
+             leadQuery = leadQuery.or(`phone.eq.${targetPhone},name.eq.${targetName}`);
+           } else if (targetPhone) {
+             leadQuery = leadQuery.eq('phone', targetPhone);
+           } else if (targetName) {
+             leadQuery = leadQuery.eq('name', targetName);
+           }
+
+           const { data: existingLeads } = await leadQuery;
+
+           if (existingLeads && existingLeads.length > 0) {
+             const lead = existingLeads[0];
+             const currentVal = parseInt(String(lead.value).replace(/[^0-9]/g, '')) || 0;
+             await supabase.from('leads').update({
+               stage: 'Venta Cerrada',
+               score: 100,
+               value: String(currentVal + totalSaleAmount),
+               company: mainProduct
+             }).eq('id', lead.id);
+           } else {
+             await supabase.from('leads').insert({
+               client_id: tenant.clientId,
+               phone: targetPhone,
+               name: targetName,
+               stage: 'Venta Cerrada',
+               score: 100,
+               value: String(totalSaleAmount),
+               company: mainProduct,
+               source: newSale.channel || 'WhatsApp',
+               status: 'active'
+             });
+           }
+         } catch (syncErr) {
+           console.error('Error syncing sale to leads from Inbox:', syncErr);
+         }
+
+         setIsSavingSale(false);
          setShowSaleModal(false);
          alert('Venta registrada con éxito.');
          setNewSale({ user_name: '', client_type: 'Al detal', channel: 'Digital', items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }] });
       } else {
+         setIsSavingSale(false);
          alert('Error registrando venta en uno o más productos.');
       }
     };
