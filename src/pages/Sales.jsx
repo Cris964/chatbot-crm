@@ -14,6 +14,23 @@ function getPaymentBadge(status) {
 }
 
 export default function Sales() {
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getSaleTimestamp = (dateStr) => {
+    if (!dateStr) return new Date().toISOString();
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const d = new Date(`${dateStr}T${hours}:${minutes}:${seconds}`);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  };
   const { session } = useOutletContext()
   const tenant = useTenant()
   const [searchQuery, setSearchQuery] = useState('')
@@ -31,7 +48,8 @@ export default function Sales() {
     city: '',
     address: '',
     payment_method: 'WhatsApp',
-    sale_type: 'Digital'
+    sale_type: 'Digital',
+    date: getTodayString()
   })
 
   useEffect(() => {
@@ -60,7 +78,7 @@ export default function Sales() {
         client: d.user_name || 'Cliente',
         product: d.product || 'Producto',
         amount: d.total || 25000, 
-        date: new Date(d.created_at).toLocaleDateString(),
+        date: new Date(d.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         raw_date: d.created_at,
         payment: d.status === 'pagado' ? 'Pagado' : 'Pendiente',
         method: d.payment_method || 'WhatsApp',
@@ -106,6 +124,8 @@ export default function Sales() {
        uploadedUrl = publicUrl;
     }
 
+    const saleTimestamp = getSaleTimestamp(newSale.date);
+
     const { error } = await supabase.from('orders').insert({
       client_id: targetClientId,
       product: newSale.product,
@@ -117,7 +137,7 @@ export default function Sales() {
       payment_method: newSale.payment_method,
       sale_type: newSale.sale_type,
       invoice_url: uploadedUrl,
-      created_at: new Date().toISOString()
+      created_at: saleTimestamp
     })
 
     if (!error) {
@@ -155,7 +175,7 @@ export default function Sales() {
        }
 
        setShowModal(false)
-       setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp', sale_type: 'Digital' })
+       setNewSale({ user_name: '', product: '', total: '', city: '', address: '', payment_method: 'WhatsApp', sale_type: 'Digital', date: getTodayString() })
        setInvoiceFile(null)
        fetchSales(tenant.clientId)
     } else {
@@ -356,11 +376,21 @@ export default function Sales() {
             </div>
             <form onSubmit={handleCreateSale} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre del Cliente</label>
                   <input 
                     type="text" required className="input" placeholder="Nombre completo" 
                     value={newSale.user_name} onChange={e => setNewSale({...newSale, user_name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>
+                    📅 Fecha de la Venta
+                  </label>
+                  <input 
+                    type="date" required className="input" 
+                    value={newSale.date || getTodayString()} onChange={e => setNewSale({...newSale, date: e.target.value})}
+                    style={{ colorScheme: 'dark' }}
                   />
                 </div>
                 <div>

@@ -94,6 +94,23 @@ const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
 }
 
 export default function Inbox() {
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getSaleTimestamp = (dateStr) => {
+    if (!dateStr) return new Date().toISOString();
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const d = new Date(`${dateStr}T${hours}:${minutes}:${seconds}`);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  };
   const { session } = useOutletContext()
   const location = useLocation()
   const tenant = useTenant()
@@ -127,6 +144,7 @@ export default function Inbox() {
     user_name: '',
     client_type: 'Al detal',
     channel: 'Digital',
+    date: getTodayString(),
     items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }]
   })
   const [isSavingSale, setIsSavingSale] = useState(false)
@@ -781,7 +799,7 @@ export default function Inbox() {
        supabase.from('products').select('name, price').eq('client_id', tenant?.clientId).then(({data}) => {
           if (data) setProductsList(data);
        });
-       setNewSale(prev => ({ ...prev, user_name: selectedConv?.name || '' }));
+       setNewSale(prev => ({ ...prev, user_name: selectedConv?.name || '', date: prev.date || getTodayString() }));
     }
   }, [showSaleModal, selectedConv, tenant]);
 
@@ -789,6 +807,8 @@ export default function Inbox() {
       e.preventDefault();
       setIsSavingSale(true);
       
+      const saleTimestamp = getSaleTimestamp(newSale.date);
+
       const insertPromises = (newSale.items || []).map(item => {
           const finalProduct = (item.custom_product || '').trim() || item.product_dropdown;
           const finalTotal = item.quantity * item.unit_price;
@@ -804,7 +824,7 @@ export default function Inbox() {
               client_type: newSale.client_type,
               sale_channel: newSale.channel,
               status: 'pagado',
-              created_at: new Date().toISOString()
+              created_at: saleTimestamp
           });
       });
       
@@ -858,7 +878,7 @@ export default function Inbox() {
          setIsSavingSale(false);
          setShowSaleModal(false);
          alert('Venta registrada con éxito.');
-         setNewSale({ user_name: '', client_type: 'Al detal', channel: 'Digital', items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }] });
+         setNewSale({ user_name: '', client_type: 'Al detal', channel: 'Digital', date: getTodayString(), items: [{ product_dropdown: '', custom_product: '', quantity: 1, unit_price: 0 }] });
       } else {
          setIsSavingSale(false);
          alert('Error registrando venta en uno o más productos.');
@@ -2467,9 +2487,22 @@ export default function Inbox() {
             </div>
             <form onSubmit={handleRegisterSale} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre del Cliente</label>
                   <input type="text" required className="input" value={newSale.user_name} onChange={e => setNewSale({...newSale, user_name: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>
+                    📅 Fecha de la Venta
+                  </label>
+                  <input 
+                    type="date" 
+                    required 
+                    className="input" 
+                    value={newSale.date || getTodayString()} 
+                    onChange={e => setNewSale({...newSale, date: e.target.value})} 
+                    style={{ colorScheme: 'dark' }}
+                  />
                 </div>
                 
                 {(newSale.items || []).map((item, index) => (
