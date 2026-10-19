@@ -376,6 +376,17 @@ export default async function handler(req, res) {
         }
     }
 
+    // Auto-advance lead to Contactado when agent sends message
+    if (phone && clientId) {
+      try {
+        const { data: curLead } = await supabase.from('leads').select('id, stage').eq('client_id', clientId).eq('phone', phone).maybeSingle();
+        if (curLead && (curLead.stage === 'Nuevo' || !curLead.stage)) {
+          await supabase.from('leads').update({ stage: 'Contactado', score: 25, updated_at: new Date().toISOString() }).eq('id', curLead.id);
+          console.log(`[LEAD PIPELINE] ${phone} → Contactado por respuesta de asesor`);
+        }
+      } catch(e) {}
+    }
+
     // Auto-detect sale confirmation from advisor message in background
     try {
       const { data: convRecord } = await supabase.from('conversations').select('id, user_name').eq('client_id', clientId).eq('user_phone', phone).maybeSingle();

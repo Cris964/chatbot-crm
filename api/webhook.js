@@ -154,11 +154,13 @@ export default async function handler(req, res) {
       const supabase = createClient(supabaseUrl, supabaseKey);
 
       let textResponse = messageObj.text?.body;
+      let adHeadline = messageObj.referral?.headline || messageObj.referral?.body || null;
+      let adId = messageObj.referral?.source_id || null;
       if (messageObj.referral) {
-          const headline = messageObj.referral.headline ? ` "${messageObj.referral.headline}"` : '';
+          const headline = adHeadline ? ` "${adHeadline}"` : '';
           textResponse = (textResponse || '') + `
 
-[SISTEMA: El cliente viene de un Anuncio${headline}]`;
+[SISTEMA: El cliente viene de un Anuncio de Meta${headline}]`;
           if (messageObj.referral.image_url) {
               messageObj._mediaUrl = messageObj.referral.image_url;
               messageObj._mediaType = 'image';
@@ -365,30 +367,61 @@ export default async function handler(req, res) {
         try {
           const { data: existingLead } = await supabase
             .from('leads')
-            .select('id')
+            .select('id, stage, score, value, source')
             .eq('client_id', clientId)
             .eq('phone', senderPhone)
             .maybeSingle();
           
+          const leadSource = adHeadline ? `Meta Ad: ${adHeadline}` : (channel === 'whatsapp' ? 'WhatsApp' : channel === 'messenger' ? 'Messenger' : 'Instagram');
+
           if (existingLead) {
-            // Actualizar nombre si cambió
-            await supabase.from('leads').update({ name: senderName }).eq('id', existingLead.id);
+            const textLower = (textResponse || '').toLowerCase();
+            let nextStage = existingLead.stage || 'Nuevo';
+            let nextScore = existingLead.score || 10;
+
+            const isPriceOrProductInquiry = ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'tienes', 'disponible', 'catalogo', 'catálogo', 'morral', 'colores', 'fotos', 'foto', 'referencia'].some(k => textLower.includes(k));
+            const isNegotiationOrShipping = ['envio', 'envío', 'domicilio', 'medios de pago', 'cuenta', 'nequi', 'bancolombia', 'pago contraentrega', 'como pago', 'cómo pago', 'donde transfiero', 'donde consigno', 'separar', 'comprar'].some(k => textLower.includes(k));
+
+            if (nextStage === 'Nuevo' || nextStage === 'Contactado') {
+              if (isNegotiationOrShipping) {
+                nextStage = 'Negociación';
+                nextScore = 75;
+              } else if (isPriceOrProductInquiry) {
+                nextStage = 'Interesado';
+                nextScore = 50;
+              }
+            } else if (nextStage === 'Interesado' && isNegotiationOrShipping) {
+              nextStage = 'Negociación';
+              nextScore = 75;
+            }
+
+            const updateData = {
+              name: senderName,
+              stage: nextStage,
+              score: nextScore,
+              updated_at: new Date().toISOString()
+            };
+            if (adHeadline && (!existingLead.source || !existingLead.source.startsWith('Meta Ad'))) {
+              updateData.source = leadSource;
+            }
+            await supabase.from('leads').update(updateData).eq('id', existingLead.id);
+            console.log(`[LEAD PIPELINE AUTO] ${senderName} (${senderPhone}) → ${nextStage} (${nextScore}%)`);
           } else {
-            // Crear nuevo lead automáticamente
             await supabase.from('leads').insert([{
               client_id: clientId,
               phone: senderPhone,
               name: senderName,
               stage: 'Nuevo',
-              score: 5,
-              source: channel === 'whatsapp' ? 'WhatsApp' : channel === 'messenger' ? 'Messenger' : 'Instagram',
+              score: 10,
+              source: leadSource,
               value: '$0',
-              status: 'active'
+              status: 'active',
+              created_at: new Date().toISOString()
             }]);
-            console.log(`[LEAD CREADO] ${senderName} (${senderPhone}) → Nuevo`);
+            console.log(`[LEAD CREADO] ${senderName} (${senderPhone}) → Nuevo | ${leadSource}`);
           }
         } catch(leadErr) {
-          console.error('[LEAD AUTO-CREATE ERROR]', leadErr);
+          console.error('[LEAD AUTO-PROGRESSION ERROR]', leadErr);
         }
       }
 
@@ -418,6 +451,13 @@ export default async function handler(req, res) {
       let messageQueue = [];
 
       if (clients?.[0]?.active !== false && conversationId && !isNeedsHuman) {
+          try {
+            const { data: curLead } = await supabase.from('leads').select('id, stage').eq('client_id', clientId).eq('phone', senderPhone).maybeSingle();
+            if (curLead && (curLead.stage === 'Nuevo' || !curLead.stage)) {
+              await supabase.from('leads').update({ stage: 'Contactado', score: 25, updated_at: new Date().toISOString() }).eq('id', curLead.id);
+              console.log(`[LEAD AUTO-CONTACTADO POR IA] ${senderPhone} → Contactado`);
+            }
+          } catch(e) {}
           const { dispatchToAI } = await import('./_aiHelper.js');
           try {
               messageQueue = await dispatchToAI({

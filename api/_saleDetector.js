@@ -16,7 +16,12 @@ export function mightBeSaleOrReceipt(text, hasImage) {
     'ya transferí', 'ya transferi', 'ya pagué', 'ya pague', 'adjunto el pago',
     'datos de envio', 'datos de envío', 'datos para el envio', 'datos para el despacho',
     'para el envio', 'para el envío', 'direccion de envio', 'dirección de envío',
-    'guia de envio', 'guía de envío', 'orden de compra', 'venta cerrada', 'confirmar pedido'
+    'guia de envio', 'guía de envío', 'orden de compra', 'venta cerrada', 'confirmar pedido',
+    'ya quedo', 'ya quedó', 'listo el pago', 'listo el envio', 'listo el envío',
+    'ya consigne', 'ya consigné', 'ya envie el dinero', 'envié el dinero',
+    'soporte de pago', 'soporte', 'recibo', 'recibo de pago', 'captura',
+    'pantallazo', 'adjunto captura', 'adjunto soporte', 'ya lo pague', 'ya lo pagué',
+    'pago confirmado', 'pago recibido', 'recibido el pago', 'transferencia exitosa'
   ];
 
   return paymentKeywords.some(kw => lower.includes(kw));

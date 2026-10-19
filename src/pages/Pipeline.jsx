@@ -85,7 +85,7 @@ export default function Pipeline() {
       const newStages = initialStages.map(stage => ({
         ...stage,
         deals: leads
-          .filter(l => l.stage === stage.id || (stage.id === 'Nuevo' && !l.stage))
+          .filter(l => l.stage === stage.id || (stage.id === 'Nuevo' && !l.stage) || (stage.id === 'Venta Cerrada' && (l.stage === 'Ganado' || l.stage === 'Venta Cerrada')))
           .map(l => ({
             id: l.id,
             title: l.name,
@@ -93,6 +93,7 @@ export default function Pipeline() {
             value: l.value || '$0',
             probability: l.score || (stage.id === 'Venta Cerrada' ? 100 : 50),
             phone: l.phone,
+            source: l.source || 'Directo',
             days: Math.max(0, Math.floor((new Date() - new Date(l.created_at)) / (1000 * 60 * 60 * 24))),
             assigned: { avatar: (l.name || 'C').substring(0,2).toUpperCase(), bg: stage.color || '#6366f1' }
           }))
@@ -247,6 +248,24 @@ export default function Pipeline() {
                             >
                               <div className="pipeline-card-title">{deal.title}</div>
                               <div className="pipeline-card-company">{deal.company}</div>
+                              {deal.source && deal.source.startsWith('Meta Ad') && (
+                                <div style={{ marginTop: 4 }}>
+                                  <span style={{ 
+                                    background: 'rgba(236, 72, 153, 0.15)', 
+                                    color: '#ec4899', 
+                                    border: '1px solid rgba(236, 72, 153, 0.3)',
+                                    borderRadius: 12,
+                                    padding: '2px 8px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 700,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3
+                                  }}>
+                                    📢 {deal.source.replace('Meta Ad: ', '')}
+                                  </span>
+                                </div>
+                              )}
                               <div className="pipeline-card-value" style={{ fontWeight: 600, color: 'var(--accent-emerald)', marginTop: 4 }}>
                                 {typeof deal.value === 'string' && deal.value.includes('$') 
                                   ? deal.value 
