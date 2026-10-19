@@ -376,15 +376,33 @@ export default async function handler(req, res) {
         }
     }
 
-    // Auto-advance lead to Contactado when agent sends message
+    // Auto-advance lead when agent sends message
     if (phone && clientId) {
       try {
-        const { data: curLead } = await supabase.from('leads').select('id, stage').eq('client_id', clientId).eq('phone', phone).maybeSingle();
-        if (curLead && (curLead.stage === 'Nuevo' || !curLead.stage)) {
-          await supabase.from('leads').update({ stage: 'Contactado', score: 25, updated_at: new Date().toISOString() }).eq('id', curLead.id);
-          console.log(`[LEAD PIPELINE] ${phone} → Contactado por respuesta de asesor`);
+        const { data: curLead } = await supabase.from('leads').select('id, stage, score').eq('client_id', clientId).eq('phone', phone).maybeSingle();
+        if (curLead) {
+          const msgLower = (message || '').toLowerCase();
+          const isAskingPayment = ['comprobante', 'pago', 'cuenta', 'nequi', 'bancolombia', 'transfiera', 'transferir', 'consignar', 'total', 'cada uno'].some(k => msgLower.includes(k));
+          
+          let targetStage = curLead.stage || 'Nuevo';
+          let targetScore = curLead.score || 10;
+
+          if (targetStage === 'Nuevo' || !targetStage) {
+            targetStage = isAskingPayment ? 'Negociación' : 'Contactado';
+            targetScore = isAskingPayment ? 75 : 25;
+          } else if ((targetStage === 'Contactado' || targetStage === 'Interesado') && isAskingPayment) {
+            targetStage = 'Negociación';
+            targetScore = 75;
+          }
+
+          if (targetStage !== curLead.stage) {
+            await supabase.from('leads').update({ stage: targetStage, score: targetScore }).eq('id', curLead.id);
+            console.log(`[LEAD PIPELINE] ${phone} → ${targetStage} por respuesta de asesor`);
+          }
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error('[LEAD ADVANCE ON SEND ERROR]', e);
+      }
     }
 
     // Auto-detect sale confirmation from advisor message in background

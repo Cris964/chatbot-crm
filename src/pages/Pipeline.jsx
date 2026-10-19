@@ -85,7 +85,14 @@ export default function Pipeline() {
       const newStages = initialStages.map(stage => ({
         ...stage,
         deals: leads
-          .filter(l => l.stage === stage.id || (stage.id === 'Nuevo' && !l.stage) || (stage.id === 'Venta Cerrada' && (l.stage === 'Ganado' || l.stage === 'Venta Cerrada')))
+          .filter(l => {
+            if (l.stage === stage.id) return true;
+            if (stage.id === 'Nuevo' && (!l.stage || l.stage === '')) return true;
+            if (stage.id === 'Negociación' && (l.stage === 'Negociacion' || l.stage === 'Propuesta')) return true;
+            if (stage.id === 'Venta Cerrada' && (l.stage === 'Ganado' || l.stage === 'Gano' || l.stage === 'Venta Cerrada')) return true;
+            if (stage.id === 'Venta Perdida' && (l.stage === 'Perdido' || l.stage === 'Perdio')) return true;
+            return false;
+          })
           .map(l => ({
             id: l.id,
             title: l.name,

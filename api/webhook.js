@@ -379,8 +379,8 @@ export default async function handler(req, res) {
             let nextStage = existingLead.stage || 'Nuevo';
             let nextScore = existingLead.score || 10;
 
-            const isPriceOrProductInquiry = ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'tienes', 'disponible', 'catalogo', 'catálogo', 'morral', 'colores', 'fotos', 'foto', 'referencia'].some(k => textLower.includes(k));
-            const isNegotiationOrShipping = ['envio', 'envío', 'domicilio', 'medios de pago', 'cuenta', 'nequi', 'bancolombia', 'pago contraentrega', 'como pago', 'cómo pago', 'donde transfiero', 'donde consigno', 'separar', 'comprar'].some(k => textLower.includes(k));
+            const isPriceOrProductInquiry = ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'tienes', 'disponible', 'catalogo', 'catálogo', 'morral', 'colores', 'fotos', 'foto', 'referencia', 'me interesa', 'me interesan', 'me gustaría', 'me gustaria', 'quiero', 'quisiera', 'necesito', 'busco', 'tienen', 'de estos', 'de estes', 'estos', 'estan', 'están', 'cuantos'].some(k => textLower.includes(k));
+            const isNegotiationOrShipping = ['envio', 'envío', 'domicilio', 'medios de pago', 'cuenta', 'nequi', 'bancolombia', 'daviplata', 'pago contraentrega', 'como pago', 'cómo pago', 'donde transfiero', 'donde consigno', 'separar', 'comprar', 'super', 'me gustaría esos', 'me gustaria esos', 'los llevo', 'hacer el pedido', 'hacer la compra', 'total', 'consignar', 'transferir', 'comprobante', 'pagar', 'cuanto seria', 'cuánto sería', 'me mandas'].some(k => textLower.includes(k));
 
             if (nextStage === 'Nuevo' || nextStage === 'Contactado') {
               if (isNegotiationOrShipping) {
@@ -398,8 +398,7 @@ export default async function handler(req, res) {
             const updateData = {
               name: senderName,
               stage: nextStage,
-              score: nextScore,
-              updated_at: new Date().toISOString()
+              score: nextScore
             };
             if (adHeadline && (!existingLead.source || !existingLead.source.startsWith('Meta Ad'))) {
               updateData.source = leadSource;
@@ -454,7 +453,7 @@ export default async function handler(req, res) {
           try {
             const { data: curLead } = await supabase.from('leads').select('id, stage').eq('client_id', clientId).eq('phone', senderPhone).maybeSingle();
             if (curLead && (curLead.stage === 'Nuevo' || !curLead.stage)) {
-              await supabase.from('leads').update({ stage: 'Contactado', score: 25, updated_at: new Date().toISOString() }).eq('id', curLead.id);
+              await supabase.from('leads').update({ stage: 'Contactado', score: 25 }).eq('id', curLead.id);
               console.log(`[LEAD AUTO-CONTACTADO POR IA] ${senderPhone} → Contactado`);
             }
           } catch(e) {}
