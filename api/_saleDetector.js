@@ -74,36 +74,36 @@ export async function detectAndProcessSale({
 
   // 3. Build prompt for AI Vision / Analysis
   const systemPrompt = `Eres un auditor inteligente de pagos y ventas para un CRM comercial (Activo Morrales / ecommerce).
-Tu objetivo es analizar la conversación y/o la imagen adjunta para determinar si el cliente acaba de realizar un PAGO REAL o si se confirmó una VENTA / COMPRA válida.
+Tu objetivo es analizar la conversación y la imagen adjunta para determinar si se realizó un pago real o transferencia.
 
-Catálogo de productos de referencia:
+Catálogo de referencia:
 ${productListStr}
 
-Reglas estrictas:
-1. Si la imagen es un COMPROBANTE DE PAGO BANCARIO (Nequi, Bancolombia, Daviplata, Transfiya, Dale, etc.):
-   - Extrae el valor pagado exacto en pesos colombianos (ej: 89000). Si la imagen muestra el valor, úsalo como prioritario.
-   - Extrae el método de pago (Nequi, Bancolombia, Daviplata, etc.).
-   - Identifica el producto o morral mencionado en el chat o en la nota.
-   - Extrae ciudad y dirección de envío si el cliente las dio en el chat.
+Reglas estrictas e infalibles:
+1. SI LA IMAGEN ES UN COMPROBANTE DE PAGO BANCARIO O TRANSFERENCIA (Bancolombia, Nequi, Daviplata, Transfiya, Dale, etc.):
+   - OBLIGATORIO: MARCA "is_sale": true SIEMPRE. Incluso si es un monto pequeño o de prueba como $1.000, $5.000, o cualquier valor.
+   - Extrae el valor numérico exacto de la transferencia en el campo "total" (por ejemplo: si la imagen dice $ 1.000, pon total: 1000; si dice $ 89.000, pon total: 89000).
+   - Extrae el banco o entidad en "payment_method" (ej: "Bancolombia", "Nequi", "Daviplata").
+   - Identifica el producto acordado en el chat (ej: "Maletín", "Morral", o el producto mencionado).
    - is_sale: true.
 
-2. Si en el chat el cliente confirmó el pago explícitamente ("ya transferí los 89.000", "listo el pago de la maleta negra", etc.) o el asesor confirmó la venta ("pago confirmado", "recibido el comprobante"):
+2. Si en el chat el cliente confirmó el pago explícitamente ("ya transferí", "listo el pago", "adjunto soporte") O si el asesor confirmó la recepción del pago ("ya ingreso el pago", "gracias recibido", "pago confirmado"):
    - is_sale: true.
-   - Extrae el monto numérico (total).
+   - Extrae el monto total.
 
-3. Si es solo una consulta (preguntando precio, enviando foto de un morral para consultar disponibilidad, pidiendo catálogo, etc.):
+3. Si la imagen es únicamente una foto de un producto sin ningún texto bancario ni transferencia:
    - is_sale: false.
 
 Responde ÚNICAMENTE un objeto JSON válido con este formato:
 {
   "is_sale": true,
-  "total": 89000,
-  "product": "Nombre del morral o producto",
-  "payment_method": "Nequi",
-  "city": "Cali",
-  "address": "Calle 10 # 5-20",
+  "total": 1000,
+  "product": "Maletín",
+  "payment_method": "Bancolombia",
+  "city": "N/A",
+  "address": "N/A",
   "customer_name": "Nombre del cliente si está disponible",
-  "notes": "Detalles breves"
+  "notes": "Transferencia exitosa"
 }`;
 
   let userContent = [];
@@ -178,6 +178,7 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
       const errText = await aiRes.text();
       console.error('[SALE DETECTOR AI API ERROR]', aiRes.status, errText);
     }
+    console.log('[DEBUG resultJson]:', resultJson);
   } catch (err) {
     console.error('[SALE DETECTOR CALL ERROR]', err);
   }
@@ -209,38 +210,38 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
     .gte('created_at', twelveHoursAgo)
     .limit(5);
 
+  let orderId = existingOrders?.[0]?.id || null;
   const isDuplicate = (existingOrders || []).some(o => Math.abs((o.total || 0) - saleAmount) < 100);
   if (isDuplicate) {
-    console.log(`[SALE DETECTOR IDEMPOTENT] Ya existe orden reciente de $${saleAmount} para ${senderPhone}. Omitiendo duplicado.`);
-    return null;
+    console.log(`[SALE DETECTOR IDEMPOTENT] Ya existe orden reciente de $${saleAmount} para ${senderPhone}. Omitiendo inserción duplicada en orders y sincronizando lead.`);
+  } else {
+    // 6. Insert into `orders`
+    const { data: insertedOrder, error: orderErr } = await supabase
+      .from('orders')
+      .insert({
+        client_id: clientId,
+        user_phone: senderPhone,
+        user_name: finalName,
+        product: finalProduct,
+        status: 'pagado',
+        total: saleAmount,
+        payment_method: paymentMethod,
+        sale_type: 'Digital',
+        city: city,
+        address: address,
+        invoice_url: imageUrl || null,
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    if (orderErr) {
+      console.error('[SALE DETECTOR ORDER INSERT ERROR]', orderErr);
+    } else {
+      orderId = insertedOrder?.id;
+      console.log(`[SALE DETECTOR ÉXITO] ¡Orden #${insertedOrder.id} creada por $${saleAmount} para ${finalName}!`);
+    }
   }
-
-  // 6. Insert into `orders`
-  const { data: insertedOrder, error: orderErr } = await supabase
-    .from('orders')
-    .insert({
-      client_id: clientId,
-      user_phone: senderPhone,
-      user_name: finalName,
-      product: finalProduct,
-      status: 'pagado',
-      total: saleAmount,
-      payment_method: paymentMethod,
-      sale_type: 'Digital',
-      city: city,
-      address: address,
-      invoice_url: imageUrl || null,
-      created_at: new Date().toISOString()
-    })
-    .select('id')
-    .single();
-
-  if (orderErr) {
-    console.error('[SALE DETECTOR ORDER INSERT ERROR]', orderErr);
-    return null;
-  }
-
-  console.log(`[SALE DETECTOR ÉXITO] ¡Orden #${insertedOrder.id} creada por $${saleAmount} para ${finalName}!`);
 
   // 7. Update `leads` (Pipeline) to 'Venta Cerrada' (Ganado)
   try {
@@ -257,11 +258,10 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
 
     if (existingLeads && existingLeads.length > 0) {
       const lead = existingLeads[0];
-      const currentVal = parseInt(String(lead.value).replace(/[^0-9]/g, '')) || 0;
       await supabase.from('leads').update({
         stage: 'Venta Cerrada',
         score: 100,
-        value: String(currentVal + saleAmount),
+        value: `$${saleAmount.toLocaleString('es-CO')}`,
         company: finalProduct
       }).eq('id', lead.id);
     } else {
@@ -271,7 +271,7 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
         name: finalName,
         stage: 'Venta Cerrada',
         score: 100,
-        value: String(saleAmount),
+        value: `$${saleAmount.toLocaleString('es-CO')}`,
         company: finalProduct,
         source: channel === 'whatsapp' ? 'WhatsApp' : channel === 'messenger' ? 'Messenger' : channel === 'instagram' ? 'Instagram' : 'Digital',
         status: 'active'
@@ -312,7 +312,7 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
   }
 
   return {
-    orderId: insertedOrder.id,
+    orderId: orderId,
     total: saleAmount,
     product: finalProduct
   };
