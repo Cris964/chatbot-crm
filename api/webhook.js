@@ -160,7 +160,7 @@ export default async function handler(req, res) {
           const headline = adHeadline ? ` "${adHeadline}"` : '';
           textResponse = (textResponse || '') + `
 
-[SISTEMA: El cliente viene de un Anuncio de Meta${headline}]`;
+[SISTEMA: El cliente viene de un Anuncio de Meta${headline}. REGLA DE PRIORIDAD: El producto real de interés es el del título de este anuncio publicitario${headline ? ' (' + adHeadline + ')' : ''}. Dale PRIORIDAD ABSOLUTA al título del anuncio sobre cualquier texto predeterminado del cliente si difieren.]`;
           if (messageObj.referral.image_url) {
               messageObj._mediaUrl = messageObj.referral.image_url;
               messageObj._mediaType = 'image';
