@@ -123,6 +123,7 @@ export default function Inbox() {
   const [isListsExpanded, setIsListsExpanded] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchingServer, setIsSearchingServer] = useState(false)
   const [selectedConv, setSelectedConv] = useState(null)
   const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
   const [messages, setMessages] = useState([])
@@ -498,11 +499,79 @@ export default function Inbox() {
       return 'inbox';
   };
 
-  const fetchConversations = async (isBackground = false) => {
+  const mapRawConversation = (conv, members = teamMembers) => {
+    const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo');
+
+    let convTags = [];
+    if (conv.needs_human) convTags.push({ label: 'Atención Req.', color: 'var(--accent-red, #ef4444)' });
+    
+    if (conv.department) {
+        const dept = conv.department.toUpperCase();
+        let color = '#6b7280'; // gray
+        if (dept === 'TRAZZOS') color = '#3b82f6'; // blue
+        else if (dept === 'TREARQ') color = '#22c55e'; // green
+        else if (dept === 'ASESOR') color = '#f97316'; // orange
+        convTags.push({ label: dept, color: color });
+    }
+
+    if (conv.assigned_to) {
+       convTags.push({ label: 'Asignado', color: '#8b5cf6' }); // purple
+    } else if (conv.needs_human) {
+       convTags.push({ label: 'Sin Asignar', color: '#6b7280' });
+    }
+
+    const msgs = conv.messages || [];
+    const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+
+    return {
+      id: conv.id,
+      name: displayName,
+      preview: (() => {
+        if (!lastMsg) return 'Inició conversación...';
+        let lastMsgText = lastMsg.content || lastMsg.text || 'Inició conversación...';
+        if (lastMsgText.includes('[IMAGEN_BASE64_URL]:') || lastMsgText.includes('[SEND_IMAGE:')) {
+          return '📷 Foto';
+        } else if (lastMsgText.includes('[SEND_VIDEO:')) {
+          return '🎥 Video';
+        } else if (lastMsgText.includes('[Multimedia:')) {
+          return '🖼️ Multimedia';
+        } else if (lastMsg.type === 'audio' || lastMsg.type === 'voice') {
+          return '🎙️ Audio';
+        }
+        return lastMsgText;
+      })(),
+      time: (() => {
+         if (!conv.updated_at) return '';
+         const safeDateStr = (typeof conv.updated_at === 'string' && conv.updated_at.includes('T') && !conv.updated_at.endsWith('Z')) 
+            ? conv.updated_at + 'Z' 
+            : conv.updated_at;
+         return new Date(safeDateStr).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+      })(),
+      channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
+      unread: msgs.length > 0 && msgs[msgs.length - 1].role === 'user',
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
+      bg: '#6366f1',
+      tags: convTags,
+      intent: 'consulta',
+      botHandled: !conv.needs_human,
+      phone: conv.user_phone,
+      client: conv.clients,
+      rawMessages: msgs,
+      needs_human: conv.needs_human,
+      assigned_to: conv.assigned_to,
+      department: conv.department,
+      archived: conv.archived,
+      client_type: conv.client_type || 'detal',
+      updated_at: conv.updated_at
+    };
+  };
+
+  const fetchConversations = async (isBackground = false, limitOverride = null) => {
     if (!tenant.clientId) return
     if (!isBackground) setIsLoading(true)
     
     try {
+      const currentLimit = limitOverride || fetchLimit;
       let query = supabase
         .from('conversations')
         .select('*, clients(*)')
@@ -513,74 +582,12 @@ export default function Inbox() {
          query = query.eq('assigned_to', tenant.session.user.id)
       }
       
-      const { data, error } = await query.order('updated_at', { ascending: false }).limit(fetchLimit)
+      const { data, error } = await query.order('updated_at', { ascending: false }).limit(currentLimit)
       
       if (error) { setDebugError(error.message); return; }
       if (!error && data) {
-        const mapped = data.map((conv) => {
-          const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo')
-
-            let convTags = []
-            if (conv.needs_human) convTags.push({ label: 'Atención Req.', color: 'var(--accent-red, #ef4444)' })
-            
-            if (conv.department) {
-                const dept = conv.department.toUpperCase();
-                let color = '#6b7280'; // gray
-                if (dept === 'TRAZZOS') color = '#3b82f6'; // blue
-                else if (dept === 'TREARQ') color = '#22c55e'; // green
-                else if (dept === 'ASESOR') color = '#f97316'; // orange
-                convTags.push({ label: dept, color: color });
-            }
-
-            if (conv.assigned_to) {
-               convTags.push({ label: 'Asignado', color: '#8b5cf6' }) // purple
-            } else if (conv.needs_human) {
-               convTags.push({ label: 'Sin Asignar', color: '#6b7280' })
-            }
-
-            return {
-              id: conv.id,
-              name: displayName,
-              preview: (() => {
-                if (!conv.messages || conv.messages.length === 0) return 'Inició conversación...';
-                const lastMsg = conv.messages[conv.messages.length - 1];
-                let lastMsgText = lastMsg.content || lastMsg.text || 'Inició conversación...';
-                if (lastMsgText.includes('[IMAGEN_BASE64_URL]:') || lastMsgText.includes('[SEND_IMAGE:')) {
-                  return '📷 Foto';
-                } else if (lastMsgText.includes('[SEND_VIDEO:')) {
-                  return '🎥 Video';
-                } else if (lastMsgText.includes('[Multimedia:')) {
-                  return '🖼️ Multimedia';
-                } else if (lastMsg.type === 'audio' || lastMsg.type === 'voice') {
-                  return '🎙️ Audio';
-                }
-                return lastMsgText;
-              })(),
-              time: (() => {
-                 if (!conv.updated_at) return '';
-                 const safeDateStr = (typeof conv.updated_at === 'string' && conv.updated_at.includes('T') && !conv.updated_at.endsWith('Z')) 
-                    ? conv.updated_at + 'Z' 
-                    : conv.updated_at;
-                 return new Date(safeDateStr).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
-              })(),
-              channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
-              unread: conv.messages && conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role === 'user',
-              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&bold=true`,
-              bg: '#6366f1',
-              tags: convTags,
-              intent: 'consulta',
-              botHandled: !conv.needs_human,
-              phone: conv.user_phone,
-              client: conv.clients,
-              rawMessages: conv.messages || [],
-              needs_human: conv.needs_human,
-              assigned_to: conv.assigned_to,
-              department: conv.department,
-              archived: conv.archived,
-              client_type: conv.client_type || 'detal'
-            }
-          })
-          setConversationsList(mapped)
+        const mapped = data.map((conv) => mapRawConversation(conv, teamMembers));
+        setConversationsList(mapped)
         if (mapped.length > 0) {
           setSelectedConv(prev => {
              if (!prev) return mapped[0];
@@ -595,7 +602,45 @@ export default function Inbox() {
     } finally {
       setIsLoading(false)
     }
-  }
+  };
+
+  // Server search effect: query Supabase directly on user_name and user_phone so old contacts are always found
+  useEffect(() => {
+    const q = searchQuery?.trim();
+    if (!q || q.length < 2 || !tenant.clientId) return;
+
+    const timer = setTimeout(async () => {
+      setIsSearchingServer(true);
+      try {
+        let query = supabase
+          .from('conversations')
+          .select('*, clients(*)')
+          .eq('client_id', tenant.clientId);
+
+        if (!tenant.isAdmin && tenant.session?.user?.id) {
+          query = query.eq('assigned_to', tenant.session.user.id);
+        }
+
+        query = query.or(`user_name.ilike.%${q}%,user_phone.ilike.%${q}%`);
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+
+        if (!error && data && data.length > 0) {
+          const mappedResults = data.map(c => mapRawConversation(c, teamMembers));
+          setConversationsList(prev => {
+            const map = new Map(prev.map(c => [c.id, c]));
+            mappedResults.forEach(c => map.set(c.id, c));
+            return Array.from(map.values());
+          });
+        }
+      } catch (err) {
+        console.error('Error in server search:', err);
+      } finally {
+        setIsSearchingServer(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, tenant.clientId, teamMembers]);
 
   const fetchTeamMembers = async () => {
     const { data } = await supabase
@@ -1453,6 +1498,96 @@ export default function Inbox() {
   };
 
 
+  const getSearchScore = (c, rawQ) => {
+    const q = (rawQ || '').toLowerCase().trim();
+    if (!q) return 0;
+    const name = (c.name || '').toLowerCase();
+    const phone = (c.phone || '').toLowerCase();
+    const preview = (c.preview || '').toLowerCase();
+
+    // 1. Exact match on name
+    if (name === q) return 1000;
+    // Name starts with query
+    if (name.startsWith(q)) return 900;
+    // Word in name starts with query
+    if (name.split(/\s+/).some(w => w.startsWith(q))) return 850;
+    // Substring in name
+    if (name.includes(q)) return 800;
+
+    // 2. Phone match
+    if (phone === q) return 750;
+    if (phone.includes(q)) return 700;
+
+    // 3. Message preview match (if not a broadcast notification)
+    if (preview.includes(q) && !preview.includes('[difusión]')) return 400;
+
+    // 4. Past conversation messages (ignoring broadcast templates)
+    if (c.rawMessages && c.rawMessages.length > 0) {
+      const hasMsgMatch = c.rawMessages.some(m => {
+        const text = (m.content || m.text || '').toLowerCase();
+        if (text.startsWith('[difusión]') || text.startsWith('[multimedia:')) return false;
+        return text.includes(q);
+      });
+      if (hasMsgMatch) return 200;
+    }
+
+    // 5. Broadcast list name
+    const fId = getConversationFolder(c);
+    if (fId.startsWith('broadcast_')) {
+      const lId = fId.replace('broadcast_', '');
+      const bl = broadcastLists.find(b => b.id === lId);
+      if (bl && bl.name && bl.name.toLowerCase().includes(q)) return 100;
+    }
+
+    return 0;
+  };
+
+  const displayedConversations = useMemo(() => {
+    let list = conversationsList;
+
+    // Filter by tab
+    list = list.filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)));
+
+    // Filter by agent
+    list = list.filter(c => {
+      if (agentFilter === 'all') return true;
+      if (agentFilter === 'unassigned') return !c.assigned_to;
+      return c.assigned_to === agentFilter;
+    });
+
+    // Filter by folder (bypassed if searching)
+    if (!searchQuery) {
+      list = list.filter(c => {
+        const fId = getConversationFolder(c);
+        if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
+        if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
+        if (activeFolder === 'pending') return c.unread && !c.archived;
+        if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
+        if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
+        if (activeFolder === 'difusiones') return fId.startsWith('broadcast_');
+        if (activeFolder === 'resolved') return c.archived;
+        if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
+        return fId === 'inbox' && !c.archived;
+      });
+    }
+
+    // Filter and score by search query
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const scored = [];
+      for (const c of list) {
+        const score = getSearchScore(c, q);
+        if (score > 0) {
+          scored.push({ conv: c, score });
+        }
+      }
+      scored.sort((a, b) => b.score - a.score);
+      return scored.map(s => s.conv);
+    }
+
+    return list;
+  }, [conversationsList, activeTab, agentFilter, activeFolder, searchQuery, tenant.session?.user?.id, broadcastLists]);
+
   return (
     <div className="inbox-container">
       <style>{`
@@ -1644,15 +1779,28 @@ export default function Inbox() {
                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
                </div>
              </div>
-             <div className="search-bar" style={{ padding: '8px 12px' }}>
-               <Search size={16} />
+             <div className="search-bar" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+               {isSearchingServer ? (
+                 <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2, flexShrink: 0 }} />
+               ) : (
+                 <Search size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+               )}
                <input 
                   type="text" 
-                  placeholder="Buscar..." 
-                  style={{ fontSize: '0.85rem' }} 
+                  placeholder="Buscar cliente, teléfono o mensaje..." 
+                  style={{ fontSize: '0.85rem', flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }} 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                />
+               {searchQuery && (
+                 <button 
+                   onClick={() => setSearchQuery('')} 
+                   style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
+                   title="Limpiar búsqueda"
+                 >
+                   <Close size={14} />
+                 </button>
+               )}
              </div>
              <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
                 {['all', 'whatsapp', 'instagram', 'messenger', 'archived'].map(tab => (
@@ -1741,45 +1889,15 @@ export default function Inbox() {
                  <div className="spinner" style={{ margin: '0 auto 12px' }} />
                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando...</p>
               </div>
-            ) : conversationsList
-                .filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)))
-                  .filter(c => {
-                     if (agentFilter === 'all') return true;
-                     if (agentFilter === 'unassigned') return !c.assigned_to;
-                     return c.assigned_to === agentFilter;
-                  })
-                .filter(c => {
-                     if (searchQuery) return true; // BYPASS folder filter if searching globally
-                     const fId = getConversationFolder(c);
-                     if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
-                   if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
-                   if (activeFolder === 'pending') return c.unread && !c.archived;
-                   
-                   if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
-                   if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
-                   if (activeFolder === 'difusiones') return fId.startsWith('broadcast_');
-                   if (activeFolder === 'resolved') return c.archived;
-                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
-
-                   if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
-                   return fId === 'inbox' && !c.archived;
-                })
-                .filter(c => {
-                   if (!searchQuery) return true;
-                   const q = searchQuery.toLowerCase();
-                   if (c.name && c.name.toLowerCase().includes(q)) return true;
-                   if (c.phone && c.phone.includes(q)) return true;
-                   if (c.preview && c.preview.toLowerCase().includes(q)) return true;
-                   if (c.rawMessages && c.rawMessages.some(m => (m.content || m.text || '').toLowerCase().includes(q))) return true;
-                     const fId = getConversationFolder(c);
-                     if (fId.startsWith('broadcast_')) {
-                        const lId = fId.replace('broadcast_', '');
-                        const bl = broadcastLists.find(b => b.id === lId);
-                        if (bl && bl.name && bl.name.toLowerCase().includes(q)) return true;
-                     }
-                     return false;
-                })
-                .map(c => (
+            ) : displayedConversations.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                 <Search size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                 <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>No se encontraron conversaciones</p>
+                 {searchQuery && <p style={{ fontSize: '0.75rem', marginTop: 4 }}>Buscando "${searchQuery}"</p>}
+              </div>
+            ) : (
+              <>
+                {displayedConversations.map(c => (
               <div 
                 key={c.id} 
                 className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
@@ -1853,6 +1971,23 @@ export default function Inbox() {
                   </div>
                </div>
             ))}
+                {!searchQuery && conversationsList.length >= fetchLimit && (
+                  <div style={{ padding: '16px 8px', textAlign: 'center' }}>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: '100%', fontSize: '0.8rem', padding: '8px', borderRadius: 10, cursor: 'pointer' }}
+                      onClick={() => {
+                        const nextLimit = fetchLimit + 200;
+                        setFetchLimit(nextLimit);
+                        fetchConversations(false, nextLimit);
+                      }}
+                    >
+                      Cargar más conversaciones (+200)
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
