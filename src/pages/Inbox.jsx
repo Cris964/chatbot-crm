@@ -125,6 +125,8 @@ export default function Inbox() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchingServer, setIsSearchingServer] = useState(false)
   const [selectedConv, setSelectedConv] = useState(null)
+  const [showChatMenu, setShowChatMenu] = useState(false)
+  const chatMenuRef = useRef(null)
   const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
@@ -274,10 +276,25 @@ export default function Inbox() {
   }
 
   useEffect(() => {
+    setShowChatMenu(false);
     if (selectedConv) {
       setEditedClientType(selectedConv.client_type || 'detal');
     }
   }, [selectedConv]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) {
+        setShowChatMenu(false);
+      }
+    };
+    if (showChatMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showChatMenu]);
 
   useEffect(() => {
     scrollToBottom()
@@ -1996,133 +2013,399 @@ export default function Inbox() {
           {selectedConv ? (
             <>
               
-              <div className="chat-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center' }}>
-                 <button 
-                   className="mr-3 p-2 rounded-full mobile-only"
-                   onClick={() => { setSelectedConv(null); setMobileView('list'); }}
-                   style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                 >
-                   <ChevronRight size={24} style={{ transform: 'rotate(180deg)' }} />
-                 </button>
-                 <div className="avatar md" style={{ background: selectedConv.bg, width: 36, height: 36, flexShrink: 0, overflow: 'hidden' }}>
-                    {selectedConv.avatar?.startsWith('http') ? <img src={selectedConv.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : selectedConv.avatar}
-                 </div>
-                 <div style={{ marginLeft: 12, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConv.name}</span>
-                      <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
+              <div className="chat-header" style={{ 
+                padding: '12px 20px', 
+                borderBottom: '1px solid var(--glass-border)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: 12,
+                background: 'rgba(var(--overlay-rgb), 0.02)',
+                backdropFilter: 'blur(12px)',
+                minHeight: 64,
+                position: 'relative'
+              }}>
+                {/* Left Block: Client Identity */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto' }}>
+                  <button 
+                    className="mobile-only"
+                    onClick={() => { setSelectedConv(null); setMobileView('list'); }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 8 }}
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ 
+                      width: 40, 
+                      height: 40, 
+                      borderRadius: '50%', 
+                      background: selectedConv.bg || '#6366f1', 
+                      overflow: 'hidden', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      border: '2px solid rgba(255,255,255,0.1)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    }}>
+                      {selectedConv.avatar?.startsWith('http') ? (
+                        <img src={selectedConv.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="avatar" />
+                      ) : (
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff' }}>
+                          {selectedConv.avatar || (selectedConv.name?.substring(0, 2).toUpperCase() || 'CL')}
+                        </span>
+                      )}
                     </div>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4, textTransform: 'capitalize' }}>
-                      {selectedConv.channel === 'instagram' ? <Instagram size={10} /> : selectedConv.channel === 'facebook' ? <Facebook size={10} /> : <MessageCircle size={10} />}
-                      {selectedConv.channel} | Cliente
-                    </p>
-                 </div>
-                  <div className="ml-auto flex items-center gap-3">
-                     <div className="hidden sm:flex" style={{ alignItems: 'center' }}>
-                         <select 
-                             className="badge-select"
-                             value={selectedConv.assigned_to || ''} 
-                             onChange={async (e) => {
-                                 const val = e.target.value || null;
-                                 assignAdvisor(selectedConv.id, val);
-                             }}
-                             style={{ 
-                                 background: 'rgba(var(--overlay-rgb), 0.05)', 
-                                 border: '1px solid var(--glass-border)',
-                                 color: "var(--text-secondary)",
-                                 borderRadius: 8,
-                                 fontSize: '0.75rem',
-                                 padding: '4px 8px',
-                                 fontWeight: 600,
-                                 marginRight: '8px'
-                             }}
-                         >
-                             <option value="" style={{ background: '#111' }}>Asignar Asesor...</option>
-                             {teamMembers.map(m => (
-                                 <option key={m.user_id} value={m.user_id} style={{ background: '#111' }}>{m.full_name}</option>
-                             ))}
-                         </select>
-                     </div>
-                     <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(var(--overlay-rgb), 0.03)', borderRadius: 100, border: '1px solid var(--glass-border)' }}>
-                        <Bot size={14} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>AI</span>
-                        <div className={`toggle-switch small ${botActive ? 'active' : ''}`} onClick={async () => {
-                          const newState = !botActive;
-                          setBotActive(newState);
-                          if (selectedConv) {
-                            selectedConv.needs_human = !newState;
-                            const { error } = await supabase.from('conversations').update({ needs_human: !newState }).eq('id', selectedConv.id);
-                            if (error) console.error("Error updating AI status", error);
-                          }
-                        }} />
-                     </div>
-                     <div className="flex gap-1">
-                        <button className="btn btn-secondary btn-sm mobile-only" onClick={() => setMobileView('info')}><User size={14} /></button>
-                        <a href={`tel:${selectedConv?.phone}`} className="btn btn-secondary btn-sm" title="Llamar"><Phone size={14} /></a>
-  {selectedConv?.unread ? (
-                            <button 
-                              className="btn btn-sm"
-                              style={{ 
-                                background: 'rgba(16, 185, 129, 0.18)', 
-                                color: 'var(--accent-emerald)', 
-                                border: '1px solid rgba(16, 185, 129, 0.35)',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 5
-                              }}
-                              onClick={handleTogglePending}
-                              title="Sacar este chat de Pendientes (Marcar como Atendido)"
-                            >
-                              <CheckCheck size={14} /> <span className="mobile-hidden">Sacar de Pendientes</span>
-                            </button>
-                          ) : (
-                            <button 
-                              className="btn btn-secondary btn-sm"
-                              style={{ 
-                                opacity: 0.85,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 5
-                              }}
-                              onClick={handleTogglePending}
-                              title="Hacer clic para marcar como Pendiente nuevamente"
-                            >
-                              <Clock size={14} /> <span className="mobile-hidden">Atendido</span>
-                            </button>
-                          )}
-                          <button className="btn btn-primary btn-sm mobile-hidden" style={{ background: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }} onClick={() => setShowSaleModal(true)} title="Registrar Venta"><DollarSign size={14} /> Venta</button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => setShowContactSettings(true)} title="Configuración de Cliente"><Settings size={14} /></button>
-                          
+                    {/* Live Channel Indicator */}
+                    <div style={{ 
+                      position: 'absolute', 
+                      bottom: -2, 
+                      right: -2, 
+                      width: 16, 
+                      height: 16, 
+                      borderRadius: '50%', 
+                      background: selectedConv.channel === 'instagram' ? '#e1306c' : (selectedConv.channel === 'facebook' ? '#1877f2' : '#22c55e'), 
+                      border: '2px solid var(--bg-primary, #0f172a)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                    }}>
+                      {selectedConv.channel === 'instagram' ? <Instagram size={9} /> : (selectedConv.channel === 'facebook' ? <Facebook size={9} /> : <MessageCircle size={9} />)}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {selectedConv.name}
+                      </span>
+                      <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
+                      {selectedConv.client_type === 'mayorista' && (
+                        <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 6, background: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-400)', fontWeight: 700, border: '1px solid rgba(99, 102, 241, 0.3)', flexShrink: 0 }}>
+                          Mayorista
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                      <span style={{ fontFamily: 'monospace', letterSpacing: 0.2 }}>{selectedConv.phone || 'Sin número'}</span>
+                      <span>•</span>
+                      <span style={{ textTransform: 'capitalize' }}>{selectedConv.channel || 'Chat'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Block: Controls & Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
+                  
+                  {/* Asesor Pill */}
+                  <div className="hidden sm:flex" style={{ 
+                    alignItems: 'center', 
+                    gap: 5, 
+                    background: 'rgba(var(--overlay-rgb), 0.04)', 
+                    border: '1px solid var(--glass-border)', 
+                    borderRadius: 20, 
+                    padding: '4px 10px',
+                    height: 32
+                  }}>
+                    <User size={12} style={{ color: selectedConv.assigned_to ? 'var(--primary-400)' : 'var(--text-tertiary)', flexShrink: 0 }} />
+                    <select 
+                      value={selectedConv.assigned_to || ''} 
+                      onChange={async (e) => {
+                        const val = e.target.value || null;
+                        assignAdvisor(selectedConv.id, val);
+                      }}
+                      style={{ 
+                        background: 'transparent', 
+                        border: 'none', 
+                        color: selectedConv.assigned_to ? 'var(--text-primary)' : 'var(--text-secondary)', 
+                        fontSize: '0.75rem', 
+                        fontWeight: 600, 
+                        outline: 'none', 
+                        cursor: 'pointer',
+                        paddingRight: 4,
+                        maxWidth: 110
+                      }}
+                    >
+                      <option value="" style={{ background: '#181824', color: '#999' }}>Sin asignar</option>
+                      {teamMembers.map(m => (
+                        <option key={m.user_id} value={m.user_id} style={{ background: '#181824', color: '#fff' }}>
+                          {m.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* AI Copilot Toggle Pill */}
+                  <div 
+                    className="hidden sm:flex"
+                    onClick={async () => {
+                      const newState = !botActive;
+                      setBotActive(newState);
+                      if (selectedConv) {
+                        selectedConv.needs_human = !newState;
+                        const { error } = await supabase.from('conversations').update({ needs_human: !newState }).eq('id', selectedConv.id);
+                        if (error) console.error("Error updating AI status", error);
+                      }
+                    }}
+                    style={{ 
+                      alignItems: 'center', 
+                      gap: 7, 
+                      padding: '4px 12px', 
+                      borderRadius: 20, 
+                      background: botActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(var(--overlay-rgb), 0.04)', 
+                      border: `1px solid ${botActive ? 'rgba(16, 185, 129, 0.4)' : 'var(--glass-border)'}`, 
+                      cursor: 'pointer',
+                      height: 32,
+                      transition: 'all 0.2s ease',
+                      userSelect: 'none'
+                    }}
+                    title={botActive ? "IA respondiendo automáticamente (Clic para pausar)" : "IA pausada, en modo asesor humano (Clic para activar)"}
+                  >
+                    <div style={{ 
+                      width: 7, 
+                      height: 7, 
+                      borderRadius: '50%', 
+                      background: botActive ? 'var(--accent-emerald, #10b981)' : '#6b7280', 
+                      boxShadow: botActive ? '0 0 8px rgba(16, 185, 129, 0.8)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }} />
+                    <Bot size={13} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: botActive ? 'var(--accent-emerald)' : 'var(--text-secondary)' }}>
+                      {botActive ? 'IA Activa' : 'IA Pausa'}
+                    </span>
+                  </div>
+
+                  {/* Status Button: Atendido / Pendiente */}
+                  <button 
+                    className="btn btn-sm"
+                    onClick={handleTogglePending}
+                    style={{ 
+                      background: selectedConv?.unread ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.1)', 
+                      color: selectedConv?.unread ? '#ef4444' : 'var(--accent-emerald)', 
+                      border: `1px solid ${selectedConv?.unread ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.25)'}`, 
+                      borderRadius: 20, 
+                      padding: '5px 12px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700, 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: 5,
+                      height: 32,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title={selectedConv?.unread ? "Clic para marcar como Atendido" : "Clic para marcar como Pendiente"}
+                  >
+                    {selectedConv?.unread ? (
+                      <>
+                        <Clock size={13} />
+                        <span className="mobile-hidden">Pendiente</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCheck size={13} />
+                        <span className="mobile-hidden">Atendido</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Primary CTA: $ Venta */}
+                  <button 
+                    className="btn btn-sm"
+                    onClick={() => setShowSaleModal(true)}
+                    style={{ 
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', 
+                      color: '#ffffff', 
+                      border: 'none', 
+                      borderRadius: 20, 
+                      padding: '6px 14px', 
+                      fontSize: '0.78rem', 
+                      fontWeight: 800, 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: 5,
+                      height: 32,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Registrar Venta para este cliente"
+                  >
+                    <DollarSign size={13} strokeWidth={3} />
+                    <span>Venta</span>
+                  </button>
+
+                  {/* Quick Call Icon (if phone exists) */}
+                  {selectedConv?.phone && (
+                    <a 
+                      href={`tel:${selectedConv.phone}`}
+                      style={{ 
+                        width: 32, 
+                        height: 32, 
+                        borderRadius: 10, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        background: 'rgba(var(--overlay-rgb), 0.04)', 
+                        border: '1px solid var(--glass-border)', 
+                        color: 'var(--text-secondary)', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease',
+                        textDecoration: 'none'
+                      }}
+                      title={`Llamar a ${selectedConv.name} (${selectedConv.phone})`}
+                    >
+                      <Phone size={14} />
+                    </a>
+                  )}
+
+                  {/* Contact Settings Button */}
+                  <button 
+                    onClick={() => setShowContactSettings(true)}
+                    style={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: 10, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      background: 'rgba(var(--overlay-rgb), 0.04)', 
+                      border: '1px solid var(--glass-border)', 
+                      color: 'var(--text-secondary)', 
+                      cursor: 'pointer', 
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Configuración y datos del cliente"
+                  >
+                    <Settings size={14} />
+                  </button>
+
+                  {/* More Options Dropdown (...) */}
+                  <div style={{ position: 'relative' }} ref={chatMenuRef}>
+                    <button 
+                      onClick={() => setShowChatMenu(prev => !prev)}
+                      style={{ 
+                        width: 32, 
+                        height: 32, 
+                        borderRadius: 10, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        background: showChatMenu ? 'rgba(var(--overlay-rgb), 0.1)' : 'rgba(var(--overlay-rgb), 0.04)', 
+                        border: '1px solid var(--glass-border)', 
+                        color: 'var(--text-secondary)', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="Más opciones"
+                    >
+                      <MoreVertical size={15} />
+                    </button>
+
+                    {showChatMenu && (
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: 38, 
+                        right: 0, 
+                        minWidth: 190, 
+                        background: 'var(--bg-secondary, #181824)', 
+                        border: '1px solid var(--glass-border)', 
+                        borderRadius: 12, 
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4)', 
+                        padding: '6px', 
+                        zIndex: 60,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2
+                      }}>
                         <button 
-                           className="btn btn-secondary btn-sm"
-                           title={selectedConv?.archived ? "Desarchivar" : "Archivar"}
-                           onClick={async () => {
-                              const newArchivedState = !selectedConv.archived;
-                              const { error } = await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', selectedConv.id);
-                              if (!error) {
-                                  setSelectedConv({...selectedConv, archived: newArchivedState});
-                                  fetchConversations(true);
-                              }
-                           }}
+                          className="mobile-only"
+                          onClick={() => { setShowChatMenu(false); setMobileView('info'); }}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 10, 
+                            padding: '8px 10px', 
+                            borderRadius: 8, 
+                            border: 'none', 
+                            background: 'transparent', 
+                            color: 'var(--text-primary)', 
+                            fontSize: '0.8rem', 
+                            fontWeight: 500, 
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%'
+                          }}
                         >
-                           <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-amber)' : 'inherit' }} />
+                          <User size={14} /> Ver Perfil del Cliente
                         </button>
+
+                        <button 
+                          onClick={async () => {
+                            setShowChatMenu(false);
+                            const newArchivedState = !selectedConv.archived;
+                            const { error } = await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', selectedConv.id);
+                            if (!error) {
+                              setSelectedConv({...selectedConv, archived: newArchivedState});
+                              fetchConversations(true);
+                            }
+                          }}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 10, 
+                            padding: '8px 10px', 
+                            borderRadius: 8, 
+                            border: 'none', 
+                            background: 'transparent', 
+                            color: 'var(--text-primary)', 
+                            fontSize: '0.8rem', 
+                            fontWeight: 500, 
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%'
+                          }}
+                        >
+                          <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-amber)' : 'inherit' }} />
+                          <span>{selectedConv?.archived ? 'Desarchivar conversación' : 'Archivar conversación'}</span>
+                        </button>
+
                         {tenant.isAdmin && (
-                          <button 
-                             className="btn btn-secondary btn-sm"
-                             title="Eliminar Chat Completo"
-                             style={{ color: '#ef4444', borderColor: '#ef444420', background: '#ef444410' }}
-                             onClick={() => {
+                          <>
+                            <div style={{ height: 1, background: 'var(--glass-border)', margin: '4px 0' }} />
+                            <button 
+                              onClick={() => {
+                                setShowChatMenu(false);
                                 setChatToDelete(selectedConv);
                                 setShowDeleteModal(true);
-                             }}
-                          >
-                             <Trash2 size={14} />
-                          </button>
+                              }}
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 10, 
+                                padding: '8px 10px', 
+                                borderRadius: 8, 
+                                border: 'none', 
+                                background: 'rgba(239, 68, 68, 0.08)', 
+                                color: '#ef4444', 
+                                fontSize: '0.8rem', 
+                                fontWeight: 600, 
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                width: '100%'
+                              }}
+                            >
+                              <Trash2 size={14} />
+                              <span>Eliminar conversación</span>
+                            </button>
+                          </>
                         )}
-                     </div>
+                      </div>
+                    )}
                   </div>
+                </div>
               </div>
 
               <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
