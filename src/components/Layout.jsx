@@ -4,14 +4,14 @@ import {
   LayoutDashboard, MessageSquare, Users, UserCircle, Kanban,
   DollarSign, Truck, Zap, Settings, Search,
   Bell, Menu, Sparkles, LogOut, Calendar,
-  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard, Sun, Moon, ListTodo
+  Package, ShieldCheck, Megaphone, AlertCircle, CreditCard, Sun, Moon, ListTodo, Lock
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 import NexusLogo from './NexusLogo'
 import AttendanceButton from './AttendanceButton'
 
-const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com']
+const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com', 'admin@nexusia.com']
 
 export default function Layout({ session }) {
   const tenant = useTenant()
@@ -133,6 +133,242 @@ export default function Layout({ session }) {
   }
 
   const displayRole = roleLabels[tenant.role] || tenant.role || 'Usuario'
+
+  // 1. Loading State
+  if (tenant.isLoading) {
+    return (
+      <div style={{
+        height: '100vh',
+        width: '100vw',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#090d16',
+        color: '#94a3b8',
+        gap: '16px',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}>
+        <div style={{
+          width: '38px',
+          height: '38px',
+          border: '3px solid rgba(255,255,255,0.1)',
+          borderTopColor: '#6366f1',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Cargando espacio de trabajo...</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  // 2. Suspended / Inactive Tenant State (Option 1)
+  if (tenant.isSuspended || tenant.error === 'ACCOUNT_SUSPENDED') {
+    const isMemberOnly = tenant.suspensionReason === 'MEMBER_INACTIVE'
+    const companyTitle = tenant.clientName || 'Tu Cuenta'
+
+    return (
+      <div style={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(ellipse at top, #1e1b4b 0%, #090d16 60%, #030712 100%)',
+        padding: '24px',
+        color: '#f8fafc',
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{
+          maxWidth: '520px',
+          width: '100%',
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(244, 63, 94, 0.3)',
+          borderRadius: '24px',
+          padding: '40px 32px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(244, 63, 94, 0.12)',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Subtle top glow accent */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '20%',
+            right: '20%',
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent, #f43f5e, #fb7185, transparent)',
+            borderRadius: '2px'
+          }} />
+
+          {/* Nexus Logo */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '22px' }}>
+            <NexusLogo size={44} />
+          </div>
+
+          {/* Lock Icon Badge */}
+          <div style={{
+            width: '74px',
+            height: '74px',
+            margin: '0 auto 18px',
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.2), rgba(225, 29, 72, 0.05))',
+            border: '1px solid rgba(244, 63, 94, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(244, 63, 94, 0.2)'
+          }}>
+            <Lock size={36} color="#f43f5e" strokeWidth={2.2} />
+          </div>
+
+          {/* Status Badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 14px',
+            borderRadius: '9999px',
+            background: 'rgba(244, 63, 94, 0.15)',
+            border: '1px solid rgba(244, 63, 94, 0.3)',
+            color: '#fb7185',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginBottom: '16px'
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e' }} />
+            Servicio Pausado
+          </div>
+
+          {/* Heading */}
+          <h2 style={{
+            fontSize: '1.6rem',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            color: '#ffffff',
+            margin: '0 0 6px 0'
+          }}>
+            Cuenta Inactiva
+          </h2>
+
+          <p style={{
+            fontSize: '1.05rem',
+            color: '#e2e8f0',
+            fontWeight: 600,
+            margin: '0 0 16px 0'
+          }}>
+            {companyTitle}
+          </p>
+
+          {/* Description */}
+          <p style={{
+            fontSize: '0.92rem',
+            lineHeight: 1.6,
+            color: '#94a3b8',
+            margin: '0 0 24px 0',
+            padding: '0 8px'
+          }}>
+            {isMemberOnly
+              ? 'Tu usuario se encuentra actualmente desactivado dentro del equipo de trabajo. Por favor contacta al administrador de tu empresa.'
+              : 'El servicio para esta cuenta se encuentra temporalmente pausado. Durante este periodo, el acceso a la plataforma del CRM y la atención automática de WhatsApp han sido deshabilitadas.'}
+          </p>
+
+          {/* Notice Card */}
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '14px',
+            padding: '14px 16px',
+            marginBottom: '26px',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px'
+          }}>
+            <AlertCircle size={20} color="#38bdf8" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+              Para reactivar tu cuenta, solicitar información sobre tu suscripción o gestionar tus datos, comunícate con nuestro equipo de soporte.
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <a
+              href={`mailto:soporte@nexusia.com?subject=Consulta%20sobre%20cuenta%20pausada%20-%20${encodeURIComponent(companyTitle)}&body=Hola%20equipo%20NexusCRM,%20deseo%20consultar%20sobre%20el%20estado%20de%20la%20cuenta%20${encodeURIComponent(companyTitle)}.`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #4f46e5, #4338ca)',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '0.92rem',
+                textDecoration: 'none',
+                boxShadow: '0 4px 16px rgba(79, 70, 229, 0.35)',
+                transition: 'all 0.2s ease',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <MessageSquare size={17} />
+              Contactar a Soporte
+            </a>
+
+            <button
+              onClick={handleLogout}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#94a3b8',
+                fontWeight: 600,
+                fontSize: '0.92rem',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                e.currentTarget.style.color = '#ffffff'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                e.currentTarget.style.color = '#94a3b8'
+              }}
+            >
+              <LogOut size={17} />
+              Cerrar Sesión
+            </button>
+          </div>
+
+          {/* User Email Footer */}
+          {session?.user?.email && (
+            <div style={{
+              marginTop: '22px',
+              fontSize: '0.75rem',
+              color: '#64748b'
+            }}>
+              Sesión iniciada como: <span style={{ color: '#94a3b8' }}>{session.user.email}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app-layout">

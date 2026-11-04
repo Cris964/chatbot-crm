@@ -4,9 +4,7 @@ import { supabase } from './supabase'
 const TenantContext = createContext(null)
 
 // Super admin emails that can access the SuperAdmin panel
-const SUPER_ADMIN_EMAILS = ['admin@nexusia.com']
-
-
+const SUPER_ADMIN_EMAILS = ['admin@chekadmin.com', 'naturel@admin.com', 'admin@nexusia.com']
 
 export function TenantProvider({ session, children }) {
   const [tenantState, setTenantState] = useState({
@@ -16,6 +14,8 @@ export function TenantProvider({ session, children }) {
     membership: null,
     isAdmin: false,
     isSuperAdmin: false,
+    isSuspended: false,
+    suspensionReason: null,
     isLoading: true,
     error: null,
   })
@@ -35,7 +35,6 @@ export function TenantProvider({ session, children }) {
         .from('team_members')
         .select('*, clients(*)')
         .eq('user_id', session.user.id)
-        .eq('status', 'activo')
         .limit(1)
         .maybeSingle()
 
@@ -44,13 +43,35 @@ export function TenantProvider({ session, children }) {
       }
 
       if (membership) {
+        const clientObj = Array.isArray(membership.clients) ? membership.clients[0] : membership.clients
+        const isClientSuspended = clientObj && (clientObj.active === false || clientObj.status === 'inactivo')
+        const isMemberInactive = membership.status === 'inactivo'
+
+        if (!isSuperAdmin && (isClientSuspended || isMemberInactive)) {
+          setTenantState({
+            clientId: membership.client_id,
+            clientName: clientObj?.name || 'Mi Empresa',
+            role: membership.role,
+            membership,
+            isAdmin: membership.role?.toLowerCase() === 'admin',
+            isSuperAdmin: false,
+            isSuspended: true,
+            suspensionReason: isClientSuspended ? 'CLIENT_INACTIVE' : 'MEMBER_INACTIVE',
+            isLoading: false,
+            error: 'ACCOUNT_SUSPENDED',
+          })
+          return
+        }
+
         setTenantState({
           clientId: membership.client_id,
-          clientName: membership.clients?.name || 'Mi Empresa',
+          clientName: clientObj?.name || 'Mi Empresa',
           role: membership.role,
           membership,
           isAdmin: membership.role?.toLowerCase() === 'admin',
           isSuperAdmin,
+          isSuspended: false,
+          suspensionReason: null,
           isLoading: false,
           error: null,
         })
@@ -70,6 +91,22 @@ export function TenantProvider({ session, children }) {
       }
 
       if (legacyClient) {
+        if (!isSuperAdmin && (legacyClient.active === false || legacyClient.status === 'inactivo')) {
+          setTenantState({
+            clientId: legacyClient.id,
+            clientName: legacyClient.name || 'Mi Empresa',
+            role: 'admin',
+            membership: null,
+            isAdmin: true,
+            isSuperAdmin: false,
+            isSuspended: true,
+            suspensionReason: 'CLIENT_INACTIVE',
+            isLoading: false,
+            error: 'ACCOUNT_SUSPENDED',
+          })
+          return
+        }
+
         // Auto-migrate: create team_members entry for this legacy user
         const { error: migrateError } = await supabase
           .from('team_members')
@@ -93,6 +130,8 @@ export function TenantProvider({ session, children }) {
           membership: null,
           isAdmin: true,
           isSuperAdmin,
+          isSuspended: false,
+          suspensionReason: null,
           isLoading: false,
           error: null,
         })
@@ -108,6 +147,8 @@ export function TenantProvider({ session, children }) {
           membership: null,
           isAdmin: true,
           isSuperAdmin,
+          isSuspended: false,
+          suspensionReason: null,
           isLoading: false,
           error: null,
         })
@@ -119,6 +160,8 @@ export function TenantProvider({ session, children }) {
           membership: null,
           isAdmin: false,
           isSuperAdmin,
+          isSuspended: false,
+          suspensionReason: null,
           isLoading: false,
           error: 'NO_COMPANY',
         })
@@ -129,6 +172,7 @@ export function TenantProvider({ session, children }) {
       setTenantState(prev => ({
         ...prev,
         isLoading: false,
+        isSuspended: false,
         error: err.message,
       }))
     }
