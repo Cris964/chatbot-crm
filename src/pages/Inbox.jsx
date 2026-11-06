@@ -547,7 +547,8 @@ export default function Inbox() {
 
     let convTags = [];
     // Etiquetas automáticas de estado
-    if (conv.needs_human) convTags.push({ label: 'Pendiente', color: '#f59e0b' });
+    const lastFromClient = lastRaw?.role === 'user'
+    if (lastFromClient) convTags.push({ label: 'Pendiente', color: '#f59e0b' });
     if (lastFromBot) convTags.push({ label: 'Atendido por IA', color: '#8b5cf6' });
 
     // Etiquetas manuales guardadas en conversations.labels
@@ -570,7 +571,7 @@ export default function Inbox() {
     if (conv.assigned_to && conv.assigned_to !== tenant?.session?.user?.id) {
        const who = members.find(m => m.user_id === conv.assigned_to)?.full_name;
        convTags.push({ label: who ? `Asignado a ${who}` : 'Asignado', color: '#8b5cf6' });
-    } else if (!conv.assigned_to && conv.needs_human) {
+    } else if (!conv.assigned_to && lastFromClient) {
        convTags.push({ label: 'Sin asignar', color: '#6b7280' });
     }
 
@@ -1671,8 +1672,9 @@ export default function Inbox() {
         if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
         // Pendientes = requiere humano O la última respuesta fue del bot
         if (activeFolder === 'pending') {
+          // Pendiente = el cliente escribio de ultimo y nadie le respondio.
           const last = c.rawMessages?.[c.rawMessages.length - 1];
-          return !c.archived && (c.needs_human || last?.role === 'assistant');
+          return !c.archived && last?.role === 'user';
         }
         if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
         if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
@@ -1853,7 +1855,7 @@ export default function Inbox() {
                  <span style={{ fontWeight: activeFolder === 'pending' ? 600 : 500, fontSize: '0.9rem' }}>Pendientes</span>
                </div>
                <span style={{ fontSize: '0.7rem', fontWeight: 700, background: activeFolder === 'pending' ? 'rgba(255,255,255,0.25)' : 'rgba(var(--overlay-rgb), 0.1)', color: activeFolder === 'pending' ? '#fff' : 'var(--text-primary)', padding: '2px 8px', borderRadius: '12px' }}>
-                 {conversationsList.filter(c => !c.archived && (c.needs_human || c.rawMessages?.[c.rawMessages.length - 1]?.role === 'assistant')).length}
+                 {conversationsList.filter(c => !c.archived && c.rawMessages?.[c.rawMessages.length - 1]?.role === 'user').length}
                </span>
              </div>
 
