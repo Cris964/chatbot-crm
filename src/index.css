@@ -3244,3 +3244,7 @@ select.input option, select.form-control option {
 @media (prefers-reduced-motion: reduce) {
   .skeleton, .chart-skeleton, .spin { animation: none; }
 }
+
+/* Clases utilitarias con comportamiento real (el proyecto no usa Tailwind) */
+.hidden { display: none !important; }
+@media (min-width: 1600px) { .sm\:flex { display: flex !important; } }

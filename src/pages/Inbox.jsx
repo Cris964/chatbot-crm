@@ -137,6 +137,8 @@ export default function Inbox() {
   const [activeTab, setActiveTab] = useState('all');
     const [agentFilter, setAgentFilter] = useState('all');
   const [activeFolder, setActiveFolder] = useState('inbox');
+  const [labelFilter, setLabelFilter] = useState(null);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const [broadcastLists, setBroadcastLists] = useState([]);
   const [isListsExpanded, setIsListsExpanded] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
@@ -379,6 +381,7 @@ export default function Inbox() {
                         channel: newConvRaw.channel || newConvRaw.platform || newConvRaw.source || 'whatsapp',
                         assigned_to: newConvRaw.assigned_to,
                         rawMessages: dedupeMessages(msgs),
+                        labels: Array.isArray(newConvRaw.labels) ? newConvRaw.labels : [],
                         archived: newConvRaw.archived || false,
                         client_type: newConvRaw.client_type,
                         needs_human: newConvRaw.needs_human,
@@ -538,9 +541,22 @@ export default function Inbox() {
   const mapRawConversation = (conv, members = teamMembers) => {
     const displayName = conv.user_name || (conv.user_phone ? `Cl: ${conv.user_phone}` : 'Cliente Nuevo');
 
+    const rawMsgs = conv.messages || [];
+    const lastRaw = rawMsgs.length > 0 ? rawMsgs[rawMsgs.length - 1] : null;
+    const lastFromBot = lastRaw?.role === 'assistant';
+
     let convTags = [];
-    if (conv.needs_human) convTags.push({ label: 'Atención Req.', color: 'var(--accent-red, #ef4444)' });
-    
+    // Etiquetas automáticas de estado
+    if (conv.needs_human) convTags.push({ label: 'Pendiente', color: '#f59e0b' });
+    if (lastFromBot) convTags.push({ label: 'Atendido por IA', color: '#8b5cf6' });
+
+    // Etiquetas manuales guardadas en conversations.labels
+    if (Array.isArray(conv.labels)) {
+      for (const l of conv.labels) {
+        if (l && !convTags.some(t => t.label === l)) convTags.push({ label: l, color: '#0ea5e9' });
+      }
+    }
+
     if (conv.department) {
         const dept = conv.department.toUpperCase();
         let color = '#6b7280'; // gray
@@ -550,10 +566,12 @@ export default function Inbox() {
         convTags.push({ label: dept, color: color });
     }
 
-    if (conv.assigned_to) {
-       convTags.push({ label: 'Asignado', color: '#8b5cf6' }); // purple
-    } else if (conv.needs_human) {
-       convTags.push({ label: 'Sin Asignar', color: '#6b7280' });
+    // "Asignado" solo si es otra persona: en tu propia bandeja era ruido puro.
+    if (conv.assigned_to && conv.assigned_to !== tenant?.session?.user?.id) {
+       const who = members.find(m => m.user_id === conv.assigned_to)?.full_name;
+       convTags.push({ label: who ? `Asignado a ${who}` : 'Asignado', color: '#8b5cf6' });
+    } else if (!conv.assigned_to && conv.needs_human) {
+       convTags.push({ label: 'Sin asignar', color: '#6b7280' });
     }
 
     const msgs = conv.messages || [];
@@ -593,6 +611,7 @@ export default function Inbox() {
       phone: conv.user_phone,
       client: conv.clients,
       rawMessages: dedupeMessages(msgs),
+      labels: Array.isArray(conv.labels) ? conv.labels : [],
       needs_human: conv.needs_human,
       assigned_to: conv.assigned_to,
       department: conv.department,
@@ -737,6 +756,34 @@ export default function Inbox() {
       fetchConversations(true)
       setSelectedConv(prev => ({ ...prev, assigned_to: userId }))
     }
+  }
+
+  // Etiquetas manuales: se guardan en conversations.labels (text[]).
+  const saveLabels = async (conv, nextLabels) => {
+    if (!conv) return
+    const { error } = await supabase
+      .from('conversations')
+      .update({ labels: nextLabels })
+      .eq('id', conv.id)
+
+    if (error) {
+      alert(
+        'No se pudo guardar la etiqueta.\n\n' +
+        'Si es la primera vez, falta crear la columna en Supabase:\n' +
+        'docs/sql/conversation_labels.sql'
+      )
+      return
+    }
+
+    setSelectedConv(prev => (prev && prev.id === conv.id ? { ...prev, labels: nextLabels } : prev))
+    setConversationsList(prev => prev.map(c => (c.id === conv.id ? { ...c, labels: nextLabels } : c)))
+    fetchConversations(true)
+  }
+
+  const toggleLabel = (conv, label) => {
+    const current = Array.isArray(conv?.labels) ? conv.labels : []
+    const next = current.includes(label) ? current.filter(l => l !== label) : [...current, label]
+    saveLabels(conv, next)
   }
 
   const getSenderName = () => {
@@ -1587,6 +1634,22 @@ export default function Inbox() {
     return 0;
   };
 
+  // Catálogo de etiquetas presentes en la bandeja (auto + manuales)
+  const labelCatalog = useMemo(() => {
+    const map = new Map()
+    for (const c of conversationsList) {
+      for (const t of c.tags || []) {
+        const label = typeof t === 'string' ? t : t.label
+        if (!label) continue
+        map.set(label, (map.get(label) || 0) + 1)
+      }
+    }
+    return [...map.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+  }, [conversationsList])
+
   const displayedConversations = useMemo(() => {
     let list = conversationsList;
 
@@ -1606,7 +1669,11 @@ export default function Inbox() {
         const fId = getConversationFolder(c);
         if (activeFolder === 'assigned') return c.assigned_to === tenant.session?.user?.id && !c.archived;
         if (activeFolder === 'unassigned') return !c.assigned_to && !c.archived;
-        if (activeFolder === 'pending') return c.unread && !c.archived;
+        // Pendientes = requiere humano O la última respuesta fue del bot
+        if (activeFolder === 'pending') {
+          const last = c.rawMessages?.[c.rawMessages.length - 1];
+          return !c.archived && (c.needs_human || last?.role === 'assistant');
+        }
         if (activeFolder === 'mayoristas') return c.client_type === 'mayorista' && !c.archived;
         if (activeFolder === 'detal') return c.client_type === 'detal' && !c.archived;
         if (activeFolder === 'difusiones') return fId.startsWith('broadcast_');
@@ -1614,6 +1681,13 @@ export default function Inbox() {
         if (activeFolder.startsWith('broadcast_')) return fId === activeFolder;
         return fId === 'inbox' && !c.archived;
       });
+    }
+
+    // Filtro por etiqueta (grupo de la barra lateral)
+    if (labelFilter) {
+      list = list.filter(c =>
+        (c.tags || []).some(t => (typeof t === 'string' ? t : t.label) === labelFilter)
+      );
     }
 
     // Filter and score by search query
@@ -1631,7 +1705,7 @@ export default function Inbox() {
     }
 
     return list;
-  }, [conversationsList, activeTab, agentFilter, activeFolder, searchQuery, tenant.session?.user?.id, broadcastLists]);
+  }, [conversationsList, activeTab, agentFilter, activeFolder, searchQuery, tenant.session?.user?.id, broadcastLists, labelFilter]);
 
   return (
     <div className="inbox-container">
@@ -1779,7 +1853,7 @@ export default function Inbox() {
                  <span style={{ fontWeight: activeFolder === 'pending' ? 600 : 500, fontSize: '0.9rem' }}>Pendientes</span>
                </div>
                <span style={{ fontSize: '0.7rem', fontWeight: 700, background: activeFolder === 'pending' ? 'rgba(255,255,255,0.25)' : 'rgba(var(--overlay-rgb), 0.1)', color: activeFolder === 'pending' ? '#fff' : 'var(--text-primary)', padding: '2px 8px', borderRadius: '12px' }}>
-                 {conversationsList.filter(c => c.unread && !c.archived).length}
+                 {conversationsList.filter(c => !c.archived && (c.needs_human || c.rawMessages?.[c.rawMessages.length - 1]?.role === 'assistant')).length}
                </span>
              </div>
 
@@ -1797,6 +1871,35 @@ export default function Inbox() {
              </div>
 
              
+             {labelCatalog.length > 0 && (
+               <>
+                 <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', padding: '10px 12px 4px' }}>
+                   Etiquetas
+                 </div>
+                 {labelCatalog.map(l => {
+                   const active = labelFilter === l.label;
+                   return (
+                     <div
+                       key={l.label}
+                       onClick={() => { setLabelFilter(active ? null : l.label); setMobileView('list'); }}
+                       style={{
+                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                         padding: '7px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: 2,
+                         background: active ? 'rgba(99,102,241,0.18)' : 'transparent',
+                         color: active ? 'var(--primary-400)' : 'var(--text-secondary)'
+                       }}
+                     >
+                       <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                         <Tag size={13} opacity={0.8} />
+                         <span style={{ fontSize: '0.82rem', fontWeight: active ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.label}</span>
+                       </span>
+                       <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.85 }}>{l.count}</span>
+                     </div>
+                   );
+                 })}
+               </>
+             )}
+
              <div className="folder-divider" style={{ margin: '16px 0', borderBottom: '1px solid var(--glass-border)', opacity: 0.5 }}></div>
              <div 
                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', marginBottom: '4px', transition: 'all 0.2s', background: activeFolder === 'difusiones' ? 'var(--primary-color)' : 'transparent', color: activeFolder === 'difusiones' ? '#fff' : 'var(--text-primary)' }}
@@ -1984,29 +2087,29 @@ export default function Inbox() {
                  </div>
                  <div className="conv-content" style={{ marginLeft: 12, minWidth: 0, flex: 1 }}>
                     <div className="flex justify-between items-center">
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{c.name}</span>
                           {c.unreadCount > 0 && (
                              <div style={{ minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: 'var(--accent-emerald)', color: '#000', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                {c.unreadCount}
                              </div>
                            )}
                        </div>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: c.unread ? 'var(--accent-emerald)' : 'var(--text-tertiary)', fontWeight: c.unread ? 700 : 400, flexShrink: 0 }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, fontSize: '0.7rem', color: c.unread ? 'var(--accent-emerald)' : 'var(--text-tertiary)', fontWeight: c.unread ? 700 : 400, flexShrink: 0, whiteSpace: 'nowrap' }}>
                          {c.channel === 'instagram' ? <Instagram size={12} /> : c.channel === 'facebook' ? <Facebook size={12} /> : <MessageCircle size={12} />}
                          <span>{c.time}</span>
                        </div>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview?.includes('supabase.co/storage') ? ( (c.preview.includes('.mp4') || c.preview.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : c.preview}</p>
                     {c.tags && c.tags.length > 0 && (
-                      <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+                      <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap', rowGap: 4, minWidth: 0 }}>
                          {c.tags.map((t, i) => {
                             const isString = typeof t === 'string';
                             const label = isString ? t : t.label;
                             const color = isString ? '#f59e0b' : (t.color || '#f59e0b');
                             
                             return (
-                              <span key={i} className="badge" style={{ fontSize: '0.6rem', backgroundColor: `${color}20`, color: color, borderColor: `${color}40`, border: '1px solid' }}>
+                              <span key={i} className="badge" style={{ fontSize: '0.6rem', backgroundColor: `${color}20`, color: color, borderColor: `${color}40`, border: '1px solid', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                  {label === 'Asignado' ? `Asignado a: ${teamMembers.find(m => m.user_id === c.assigned_to)?.full_name || 'Asesor'}` : label}
                               </span>
                             );
@@ -2048,6 +2151,8 @@ export default function Inbox() {
                 alignItems: 'center', 
                 justifyContent: 'space-between',
                 gap: 12,
+                rowGap: 8,
+                flexWrap: 'wrap',
                 background: 'rgba(var(--overlay-rgb), 0.02)',
                 backdropFilter: 'blur(12px)',
                 minHeight: 64,
@@ -2125,8 +2230,69 @@ export default function Inbox() {
                 </div>
 
                 {/* Right Block: Controls & Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 1, marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   
+                  {/* Etiquetas */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setLabelMenuOpen(o => !o)}
+                      title="Etiquetar conversación"
+                      aria-label="Etiquetar conversación"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 10px',
+                        borderRadius: 20, cursor: 'pointer',
+                        background: labelMenuOpen ? 'rgba(99,102,241,0.18)' : 'rgba(var(--overlay-rgb), 0.04)',
+                        border: '1px solid var(--glass-border)',
+                        color: (selectedConv.labels || []).length ? 'var(--primary-400)' : 'var(--text-secondary)'
+                      }}
+                    >
+                      <Tag size={13} />
+                      {(selectedConv.labels || []).length > 0 && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{selectedConv.labels.length}</span>
+                      )}
+                    </button>
+
+                    {labelMenuOpen && (
+                      <div style={{
+                        position: 'absolute', top: '110%', right: 0, zIndex: 80, width: 240,
+                        background: 'var(--bg-elevated, #16161f)', border: '1px solid var(--glass-border)',
+                        borderRadius: 12, padding: 10, boxShadow: '0 16px 40px rgba(0,0,0,.45)'
+                      }}>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                          Etiquetas
+                        </div>
+                        <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {[...new Set([...labelCatalog.map(l => l.label), ...(selectedConv.labels || [])])].map(label => {
+                            const on = (selectedConv.labels || []).includes(label)
+                            return (
+                              <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', background: on ? 'rgba(99,102,241,0.14)' : 'transparent' }}>
+                                <input type="checkbox" checked={on} onChange={() => toggleLabel(selectedConv, label)} style={{ accentColor: '#6366f1' }} />
+                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            const value = e.target.elements.newLabel.value.trim()
+                            if (!value) return
+                            toggleLabel(selectedConv, value)
+                            e.target.reset()
+                          }}
+                          style={{ marginTop: 8 }}
+                        >
+                          <input
+                            name="newLabel"
+                            placeholder="Nueva etiqueta…"
+                            style={{ width: '100%', padding: '7px 9px', borderRadius: 8, border: '1px solid var(--glass-border)', background: 'rgba(var(--overlay-rgb), 0.05)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                          />
+                        </form>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Asesor Pill */}
                   <div className="hidden sm:flex" style={{ 
                     alignItems: 'center', 
