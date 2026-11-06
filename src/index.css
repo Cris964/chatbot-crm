@@ -3022,3 +3022,75 @@ select.input option, select.form-control option {
   color: var(--text-primary) !important;
 }
 
+
+/* ============================================================
+   Utilidades que faltaban (el proyecto no usa Tailwind)
+   ============================================================ */
+.mb-6 { margin-bottom: 24px; }
+.mb-8 { margin-bottom: 32px; }
+.mt-6 { margin-top: 24px; }
+.gap-1 { gap: 4px; }
+.flex-wrap { flex-wrap: wrap; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-end { justify-content: flex-end; }
+
+/* Cabecera de página: título a la izquierda, acciones a la derecha,
+   y en pantallas angostas las acciones bajan y se reparten. */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.page-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 12px);
+}
+.segmented-control .btn { padding: 6px 12px; font-size: 0.8rem; }
+
+/* Fila de pestañas/chips con scroll horizontal en móvil */
+.tabs-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tabs-scroll > * { flex: 0 0 auto; }
+
+@media (max-width: 767px) {
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .page-header .header-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .page-header .header-actions::-webkit-scrollbar { display: none; }
+  .page-header .header-actions .btn { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
+  .page-header .header-actions .segmented-control { flex: 0 0 auto; }
+  .page-content { padding: 16px !important; }
+  .stats-grid { grid-template-columns: 1fr !important; }
+  .reports-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Si la cabecera tiene un solo hijo (patrón antiguo), que ocupe todo el ancho */
+.page-header > *:only-child { flex: 1 1 auto; min-width: 0; }

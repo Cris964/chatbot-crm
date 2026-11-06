@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
+import { money, moneyCompact } from '../lib/format'
 import {
   DollarSign, TrendingUp, CreditCard, Calendar, Filter,
   Download, MoreHorizontal, ArrowUpRight, Eye, FileText, Search, Truck, UploadCloud
@@ -219,7 +220,7 @@ export default function Sales() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Ventas</h1>
-            <p className="page-subtitle">Control completo de facturación y revenue</p>
+            <p className="page-subtitle">Control completo de facturación e ingresos</p>
           </div>
           <div className="flex gap-2">
             <button className="btn btn-secondary" onClick={() => fetchSales()}><Download size={16} /> Refrescar</button>
@@ -233,10 +234,10 @@ export default function Sales() {
       <div className="stats-grid">
         <div className="stat-card emerald animate-slideUp stagger-1">
           <div className="stat-card-header">
-            <span className="stat-card-label">Revenue Total</span>
+            <span className="stat-card-label">Ingresos facturados</span>
             <div className="stat-card-icon emerald"><DollarSign size={20} /></div>
           </div>
-          <div className="stat-card-value">${totalRevenue.toLocaleString()}</div>
+          <div className="stat-card-value">{money(totalRevenue)}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> Actualizado hoy</div>
         </div>
         <div className="stat-card purple animate-slideUp stagger-2">
@@ -252,7 +253,7 @@ export default function Sales() {
             <span className="stat-card-label">Ticket Promedio</span>
             <div className="stat-card-icon cyan"><CreditCard size={20} /></div>
           </div>
-          <div className="stat-card-value">${ticketAvg.toLocaleString()}</div>
+          <div className="stat-card-value">{money(ticketAvg)}</div>
           <div className="stat-card-change positive"><ArrowUpRight size={14} /> Por venta</div>
         </div>
         <div className="stat-card amber animate-slideUp stagger-4">
@@ -273,10 +274,10 @@ export default function Sales() {
           <BarChart data={monthlyData} barSize={32}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--overlay-rgb), 0.04)" />
             <XAxis dataKey="month" stroke="#6b6b80" tick={{ fontSize: 12 }} />
-            <YAxis stroke="#6b6b80" tick={{ fontSize: 12 }} tickFormatter={v => `$${v/1000}k`} />
+            <YAxis stroke="#6b6b80" tick={{ fontSize: 12 }} tickFormatter={moneyCompact} />
             <Tooltip
               contentStyle={{ background: 'rgba(22,22,31,0.95)', border: '1px solid rgba(var(--overlay-rgb), 0.1)', borderRadius: 10 }}
-              formatter={(v) => [`$${v.toLocaleString()}`, 'Ventas']}
+              formatter={(v) => [money(v), 'Ventas']}
             />
             <Bar dataKey="ventas" fill="#6366f1" radius={[6, 6, 0, 0]} />
           </BarChart>
@@ -326,7 +327,7 @@ export default function Sales() {
                   </div>
                 </td>
                 <td style={{ fontSize: '0.85rem' }}>{sale.product}</td>
-                <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>${sale.amount.toLocaleString()}</td>
+                <td style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>{money(sale.amount)}</td>
                 <td style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>{sale.date}</td>
                 <td><span className={`badge ${getPaymentBadge(sale.payment)}`}>{sale.payment}</span></td>
                 <td>

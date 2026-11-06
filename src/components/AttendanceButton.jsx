@@ -2,7 +2,24 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
 import { LogIn, LogOut, Loader2, MapPin, Camera, ScanFace } from 'lucide-react'
-import * as faceapi from 'face-api.js'
+
+// face-api.js pesa ~700 KB y además descarga modelos desde /models.
+// Se carga solo cuando el usuario abre la cámara, no en cada visita al CRM.
+let faceApiPromise = null
+let faceApiModelsLoaded = false
+async function ensureFaceApi() {
+  if (!faceApiPromise) faceApiPromise = import('face-api.js')
+  const faceapi = await faceApiPromise
+  if (!faceApiModelsLoaded) {
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+    ])
+    faceApiModelsLoaded = true
+  }
+  return faceapi
+}
 
 export default function AttendanceButton({ session }) {
   const tenant = useTenant()
@@ -24,17 +41,12 @@ export default function AttendanceButton({ session }) {
 
   useEffect(() => {
     if (!session?.user?.id || !tenant?.clientId) return
-    loadModels()
     checkCurrentStatus()
   }, [session, tenant])
 
   const loadModels = async () => {
     try {
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
-        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('/models')
-      ])
+      await ensureFaceApi()
       setIsModelsLoaded(true)
     } catch (err) {
       console.error("Error cargando modelos de IA:", err)
@@ -88,15 +100,16 @@ export default function AttendanceButton({ session }) {
   }
 
   const startCamera = async () => {
-    if (!isModelsLoaded) {
-        alert("Los modelos de IA aún están cargando. Espera un momento y vuelve a intentar.")
-        return
-    }
     setCameraError('')
     setCapturedPhoto(null)
     setMatchStatus(null)
     setShowCameraModal(true)
     try {
+      if (!isModelsLoaded) {
+        setIsLoading(true)
+        await ensureFaceApi()
+        setIsModelsLoaded(true)
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'user' } 
       })
@@ -137,6 +150,7 @@ export default function AttendanceButton({ session }) {
 
       setTimeout(async () => {
       try {
+        const faceapi = await ensureFaceApi()
         const detection = await faceapi.detectSingleFace(canvas, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1 })).withFaceLandmarks().withFaceDescriptor();
         
         if (!detection) {

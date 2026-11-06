@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import {
   Search, Filter, Plus, Mail, Phone, MapPin, Calendar,
   MoreHorizontal, ExternalLink, DollarSign, ShoppingBag,
-  MessageSquare, Star, Building, ChevronDown, X
+  MessageSquare, Star, Building, ChevronDown, X, Users
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -173,7 +173,11 @@ export default function Clients() {
             ))}
             {filteredClients.length === 0 && (
               <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-tertiary)' }} className="card">
-                No hay clientes registrados aún.
+                <Users size={36} style={{ opacity: 0.4, marginBottom: 12 }} />
+                <p style={{ marginBottom: 16 }}>Aún no hay clientes registrados.</p>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+                  <Plus size={14} /> Crear el primero
+                </button>
               </div>
             )}
           </div>

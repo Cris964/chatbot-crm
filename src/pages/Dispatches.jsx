@@ -149,10 +149,10 @@ export default function Dispatches() {
           {isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
                <div className="spinner" style={{ margin: '0 auto 12px' }} />
-               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Loading logistics...</p>
+               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Cargando despachos…</p>
             </div>
           ) : shipments.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No trends found.</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)' }}>Todavía no hay despachos registrados.<br /><span style={{ fontSize: '0.8rem' }}>Cuando registres una venta con envío aparecerá aquí.</span></div>
           ) : shipments.map(s => (
             <div 
               key={s.id}

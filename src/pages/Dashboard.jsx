@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
+import { money, moneyCompact } from '../lib/format'
 
 class DashboardErrorBoundary extends Component {
   constructor(props) {
@@ -98,17 +99,9 @@ function DashboardContent() {
     return Number(String(v).replace(/[^0-9.-]+/g, "")) || 0;
   };
 
-  const formatCOP = (num) => {
-    if (!num && num !== 0) return '$0';
-    return '$' + Math.round(num).toLocaleString('es-CO');
-  };
-
-  const formatCompactCOP = (num) => {
-    if (!num) return '$0';
-    if (num >= 1000000) return '$' + (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return '$' + (num / 1000).toFixed(0) + 'k';
-    return '$' + Math.round(num);
-  };
+  // Formato único de moneda y cifras (ver src/lib/format.js)
+  const formatCOP = (num) => money(num);
+  const formatCompactCOP = (num) => moneyCompact(num);
 
   const fetchDashboardData = async () => {
     setIsLoading(true)
@@ -467,7 +460,7 @@ function DashboardContent() {
       )}
 
       {/* Header Principal */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
+      <div className="page-header">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#4318FF', background: 'rgba(67, 24, 255, 0.1)', padding: '2px 10px', borderRadius: '12px' }}>
@@ -482,11 +475,11 @@ function DashboardContent() {
           </p>
         </div>
 
-        {/* Acciones y Pestañas */}
-        <div className="flex items-center gap-3">
+        {/* Acciones */}
+        <div className="header-actions">
           <button 
             onClick={() => navigate('/pipeline')}
-            style={{ background: '#4318FF', color: 'white', borderRadius: '14px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8, border: 'none', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(67, 24, 255, 0.3)', fontSize: '0.85rem' }}
+            style={{ background: '#4318FF', color: 'white', borderRadius: '14px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8, border: 'none', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(67, 24, 255, 0.3)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
           >
             <TrendingUp size={16} />
             <span>Ver Pipeline Automatizado</span>
@@ -495,7 +488,7 @@ function DashboardContent() {
       </div>
 
       {/* Píldoras de Filtro de Módulos */}
-      <div className="flex flex-wrap items-center gap-2 mb-6 p-2 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)' }}>
+      <div className="tabs-scroll mb-6 p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)', borderRadius: 16 }}>
         {[
           { id: 'all', label: '📊 Todas las Métricas' },
           { id: 'finance', label: '💰 Finanzas & Proyección' },
@@ -558,8 +551,7 @@ function DashboardContent() {
             {formatCompactCOP(stats.pipelineValueProjected)}
           </div>
           <div className="flex items-center gap-1 mt-2" style={{ fontSize: '0.75rem', color: '#4318FF', fontWeight: 600 }}>
-            <span>Sobre la mesa: {formatCompactCOP(stats.pipelineValueNegotiation)}</span>
-            <span style={{ color: 'var(--text-tertiary)' }}>en Negoc.</span>
+            <span>Sobre la mesa: {formatCompactCOP(stats.pipelineValueNegotiation)} en negociación</span>
           </div>
         </div>
 
@@ -593,8 +585,7 @@ function DashboardContent() {
             {formatCompactCOP(stats.ltv)}
           </div>
           <div className="flex items-center gap-1 mt-2" style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 600 }}>
-            <span>Recompra: {stats.repeatRate}%</span>
-            <span style={{ color: 'var(--text-tertiary)' }}>recurrente</span>
+            <span>Recompra: {stats.repeatRate}% de la base</span>
           </div>
         </div>
 

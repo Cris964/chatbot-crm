@@ -342,6 +342,11 @@ export default function Products() {
                   <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>
                     {searchQuery ? `Sin resultados para "${searchQuery}"` : 'No hay productos. Agrega el primero para activar el agente IA.'}
                   </p>
+                  {!searchQuery && !tenant.isAdmin && (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 12 }}>
+                      Pide a un administrador que agregue los productos del catálogo.
+                    </p>
+                  )}
                   {!searchQuery && tenant.isAdmin && (
                     <button className="btn btn-primary btn-sm" style={{ marginTop: 16 }} onClick={openCreate}>
                       <Plus size={14} /> Agregar Primer Producto

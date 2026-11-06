@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTenant } from '../lib/useTenant'
+import { money } from '../lib/format'
 
 function getSourceBadge(source) {
   const map = { 'WhatsApp': 'emerald', 'Instagram': 'pink', 'Facebook': 'cyan', 'Formulario': 'purple', 'Email': 'amber' }
@@ -186,12 +187,12 @@ export default function Leads() {
       <div className="page-header animate-slideUp">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>Leads Management</h1>
-            <p className="page-subtitle">Track and nurture your sales opportunities</p>
+            <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>Leads</h1>
+            <p className="page-subtitle">Gestiona y da seguimiento a tus oportunidades de venta</p>
           </div>
           <div className="flex gap-3">
-             <button className="btn btn-secondary" onClick={exportLeads}><Download size={18} /> Export</button>
-             <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={18} /> Create Lead</button>
+             <button className="btn btn-secondary" onClick={exportLeads}><Download size={18} /> Exportar</button>
+             <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={18} /> Nuevo lead</button>
           </div>
         </div>
       </div>
@@ -200,7 +201,7 @@ export default function Leads() {
         <div className="header-search" style={{ flex: 1, maxWidth: 400 }}>
           <Search size={18} />
           <input 
-            type="text" placeholder="Search by name, company or email..." 
+            type="text" placeholder="Buscar por nombre, empresa o correo…" 
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
@@ -224,13 +225,13 @@ export default function Leads() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
            <thead>
              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--glass-border)' }}>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>LEAD INFO</th>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>SOURCE</th>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>STAGE</th>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>SCORE</th>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ASSIGNED TO</th>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>DEAL VALUE</th>
-                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ACTIONS</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>LEAD</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ORIGEN</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ETAPA</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>CALIFICACIÓN</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ASIGNADO A</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>VALOR</th>
+                <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>ACCIONES</th>
              </tr>
            </thead>
            <tbody>
@@ -238,7 +239,7 @@ export default function Leads() {
                <tr>
                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center' }}>
                    <div className="spinner" style={{ margin: '0 auto 12px' }} />
-                   <p style={{ color: 'var(--text-tertiary)' }}>Fetching your real leads from Naturel...</p>
+                   <p style={{ color: 'var(--text-tertiary)' }}>Cargando tus leads…</p>
                  </td>
                </tr>
              ) : leads.filter(l => {
@@ -252,7 +253,7 @@ export default function Leads() {
              }).length === 0 ? (
                <tr>
                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center' }}>
-                    <p style={{ color: 'var(--text-tertiary)' }}>No leads found.</p>
+                    <p style={{ color: 'var(--text-tertiary)' }}>No hay leads con estos filtros.</p>
                  </td>
                </tr>
              ) : (
@@ -320,7 +321,7 @@ export default function Leads() {
                             ))}
                         </select>
                       </td>
-                     <td style={{ fontWeight: 800, color: 'var(--accent-emerald)' }}>{l.value || '$0'}</td>
+                     <td style={{ fontWeight: 800, color: 'var(--accent-emerald)' }}>{money(l.value)}</td>
                      <td>
                         <div className="flex gap-2">
                            <button 
@@ -345,41 +346,41 @@ export default function Leads() {
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(8px)' }}>
           <div className="card animate-scaleIn" style={{ width: '100%', maxWidth: 540, padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Create New Lead</h1>
+              <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Nuevo lead</h1>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleAddLead} style={{ padding: '24px', overflowY: 'auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Full Name</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Nombre completo</label>
                   <input 
-                    type="text" required className="input" placeholder="e.g. John Doe" 
+                    type="text" required className="input" placeholder="Ej. María Gómez" 
                     value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Email Address</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Correo electrónico</label>
                   <input 
-                    type="email" required className="input" placeholder="john@company.com" 
+                    type="email" required className="input" placeholder="nombre@empresa.com" 
                     value={newLead.email} onChange={e => setNewLead({...newLead, email: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Phone Number</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Teléfono</label>
                   <input 
                     type="text" className="input" placeholder="+57..." 
                     value={newLead.phone} onChange={e => setNewLead({...newLead, phone: e.target.value})}
                   />
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Company</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Empresa</label>
                   <input 
-                    type="text" className="input" placeholder="Organization name" 
+                    type="text" className="input" placeholder="Nombre de la empresa" 
                     value={newLead.company} onChange={e => setNewLead({...newLead, company: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Source</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Origen</label>
                   <select className="input" value={newLead.source} onChange={e => setNewLead({...newLead, source: e.target.value})}>
                     <option>WhatsApp</option>
                     <option>Instagram</option>
@@ -389,9 +390,9 @@ export default function Leads() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Estimated Value</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Valor estimado</label>
                   <input 
-                    type="text" className="input" placeholder="$0.00" 
+                    type="text" className="input" placeholder="$0" 
                     value={newLead.value} onChange={e => setNewLead({...newLead, value: e.target.value})}
                   />
                 </div>
@@ -410,9 +411,9 @@ export default function Leads() {
                 </div>
               </div>
               <div className="flex justify-end gap-3" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 24, margin: '0 -24px -8px', paddingRight: 24 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={isAddingLead}>
-                  {isAddingLead ? 'Saving...' : 'Create Lead'}
+                  {isAddingLead ? 'Guardando…' : 'Crear lead'}
                 </button>
               </div>
             </form>
