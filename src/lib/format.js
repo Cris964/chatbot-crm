@@ -73,9 +73,11 @@ export function count(value) {
 /** 42,5% */
 export function percent(value, decimals = 1) {
   const n = toNumber(value)
+  // Con valores < 1 % un decimal redondea a 0 %: usamos dos.
+  const digits = Math.abs(n) > 0 && Math.abs(n) < 1 ? 2 : decimals
   return `${n.toLocaleString('es-CO', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: decimals,
+    maximumFractionDigits: digits,
   })}%`
 }
 

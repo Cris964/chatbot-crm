@@ -8,6 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend
 } from 'recharts'
 import { supabase } from '../lib/supabase'
+import { fetchAll } from '../lib/query'
 import { useTenant } from '../lib/useTenant'
 import { money, moneyCompact, count, percent, toNumber } from '../lib/format'
 
@@ -89,6 +90,7 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([])
   const [avgFirstReply, setAvgFirstReply] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [truncated, setTruncated] = useState(false)
 
   const days = PERIODS.find(p => p.id === period)?.days || 90
 
@@ -98,42 +100,55 @@ export default function Dashboard() {
     setLoadError(null)
 
     try {
-      // Solo el último año de órdenes y leads: suficiente para comparar periodos
-      // y mucho más liviano que traer toda la historia.
       const from = startOf(365).toISOString()
 
-      const [ordersRes, leadsRes] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('*')
-          .eq('client_id', tenant.clientId)
-          .gte('created_at', from)
-          .order('created_at', { ascending: false })
-          .limit(3000),
-        supabase
-          .from('leads')
-          .select('*')
-          .eq('client_id', tenant.clientId)
-          .gte('created_at', from)
-          .limit(4000),
-      ])
+      // Órdenes: son pocas (decenas), no necesitan paginación.
+      const orderQuery = supabase
+        .from('orders')
+        .select('id, total, product, status, created_at, user_phone, user_name')
+        .eq('client_id', tenant.clientId)
+        .gte('created_at', from)
+        .order('created_at', { ascending: false })
+        .limit(2000)
+
+      // Leads: Supabase corta en 1.000 filas, así que se pagina hasta traerlas todas.
+      const leadsQuery = fetchAll(supabase, 'leads', 'id, stage, source, value, created_at', (q) =>
+        q.eq('client_id', tenant.clientId).gte('created_at', from).order('created_at', { ascending: false })
+      )
+
+      const [ordersRes, leadsAll] = await Promise.all([orderQuery, leadsQuery])
 
       if (ordersRes.error) throw ordersRes.error
-      if (leadsRes.error) throw leadsRes.error
 
       setOrders((ordersRes.data || []).filter(o => (o.status || '').toLowerCase() !== 'cancelado'))
-      setLeads(leadsRes.data || [])
+      setLeads(leadsAll.rows)
+      setTruncated(leadsAll.truncated)
+      setIsLoading(false)
 
-      // Tiempo de primera respuesta (mediana) sobre conversaciones recientes.
-      const { data: convs } = await supabase
+      // El tiempo de respuesta NO bloquea el panel: se resuelve aparte.
+      loadFirstReply()
+    } catch (err) {
+      console.error('Dashboard load error:', err)
+      setLoadError(err.message || 'No se pudieron cargar las métricas')
+      setIsLoading(false)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [tenant.clientId, tenant.isLoading])
+
+  // Mediana del primer reply. Consulta pesada (JSON de mensajes): va aparte y
+  // nunca bloquea las tarjetas; si falla, simplemente se muestra "sin datos".
+  const loadFirstReply = useCallback(async () => {
+    try {
+      const { data } = await supabase
         .from('conversations')
         .select('messages')
         .eq('client_id', tenant.clientId)
         .order('updated_at', { ascending: false })
-        .limit(40)
+        .limit(12)
 
       const gaps = []
-      for (const c of convs || []) {
+      for (const c of data || []) {
         const msgs = Array.isArray(c.messages) ? c.messages : []
         const firstUser = msgs.find(m => m.role === 'user' && m.timestamp)
         if (!firstUser) continue
@@ -149,14 +164,10 @@ export default function Dashboard() {
       } else {
         setAvgFirstReply(null)
       }
-    } catch (err) {
-      console.error('Dashboard load error:', err)
-      setLoadError(err.message || 'No se pudieron cargar las métricas')
-    } finally {
-      setIsLoading(false)
-      setRefreshing(false)
+    } catch {
+      setAvgFirstReply(null)
     }
-  }, [tenant.clientId, tenant.isLoading])
+  }, [tenant.clientId])
 
   useEffect(() => { load() }, [load])
 
@@ -334,7 +345,9 @@ export default function Dashboard() {
 
       {loadError && (
         <div className="alert-inline">
-          <AlertTriangle size={16} /> No pudimos cargar las métricas: {loadError}
+          <AlertTriangle size={16} />
+          <span style={{ flex: 1 }}>No pudimos cargar las métricas: {loadError}</span>
+          <button className="btn btn-sm btn-secondary" onClick={() => load()}>Reintentar</button>
         </div>
       )}
 
@@ -585,6 +598,7 @@ export default function Dashboard() {
         Datos de <code>orders</code> y <code>leads</code> del periodo seleccionado.
         El pipeline ponderado usa las probabilidades por etapa (10 / 20 / 40 / 70 %).
         Cada métrica ignora órdenes canceladas y leads sin valor declarado.
+        {truncated && ' · Los leads superan las 20.000 filas: se muestran las más recientes.'}
       </p>
     </div>
   )
