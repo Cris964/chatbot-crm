@@ -120,7 +120,7 @@ export default function Layout({ session }) {
     { label: 'SISTEMA', items: [
       ...(tenant.isAdmin ? [{ to: '/usuarios', icon: Users, label: 'Usuarios' }] : []),
       ...(tenant.isAdmin ? [{ to: '/pagos', icon: DollarSign, label: 'Pagos' }] : []),
-      { to: '/configuracion', icon: Settings, label: 'Ajustes' },
+      ...(tenant.isAdmin || tenant.isSuperAdmin ? [{ to: '/configuracion', icon: Settings, label: 'Ajustes' }] : []),
       ...(tenant.isSuperAdmin ? [{ to: '/super-admin', icon: ShieldCheck, label: 'Super Admin' }] : []),
     ]},
   ]

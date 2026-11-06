@@ -6,7 +6,7 @@ import { useTenant } from '../lib/useTenant'
 import {
   Building, Users, Shield, Link2, Bell, Palette, Globe,
   Mail, Save, Plus, MoreHorizontal, Trash2, Edit, Crown,
-  MessageSquare, Key, Database, Zap, CheckCircle2, UserPlus, X
+  MessageSquare, Key, Database, Zap, CheckCircle2, UserPlus, X, ShieldAlert
 } from 'lucide-react'
 
 const settingsNav = [
@@ -73,6 +73,7 @@ export default function Settings() {
     timezone: 'America/Bogota (UTC-5)'
   })
   const [noWorkspace, setNoWorkspace] = useState(false)
+  const [settingsError, setSettingsError] = useState(null)
 
   useEffect(() => {
     if (tenant.clientId && !tenant.isLoading) {
@@ -105,8 +106,18 @@ export default function Settings() {
         timezone: client.timezone || 'America/Bogota (UTC-5)'
       })
       setNoWorkspace(false)
-    } else {
+      setSettingsError(null)
+    } else if (!tenant.clientId) {
+      // Sin empresa asignada: aquí sí corresponde ofrecer crearla (solo admin).
       setNoWorkspace(true)
+    } else {
+      // La cuenta SÍ tiene workspace, pero no se pudo leer (rol sin permiso o RLS).
+      // Nunca ofrecer "crear empresa" en este caso: duplicaría el workspace.
+      setNoWorkspace(false)
+      setSettingsError(
+        error?.message ||
+        'No tienes permisos para ver la configuración de este workspace. Pide a un administrador que revise tu rol.'
+      )
     }
     setIsLoading(false)
   }
@@ -124,6 +135,10 @@ export default function Settings() {
   }
 
   const handleInitializeWorkspace = async () => {
+    if (!(tenant.isAdmin || tenant.isSuperAdmin)) {
+      alert('Solo un administrador puede crear un workspace.')
+      return
+    }
     setIsSaving(true)
     const payload = {
       name: 'Nueva Empresa',
@@ -275,16 +290,32 @@ export default function Settings() {
                 <p>Configura la información general de tu empresa en la plataforma</p>
 
                 {noWorkspace ? (
-                  <div className="card" style={{ padding: 32, textAlign: 'center', background: 'rgba(99, 102, 241, 0.05)', border: '1px dashed var(--primary-400)' }}>
-                    <Database size={40} style={{ color: 'var(--primary-400)', marginBottom: 16 }} />
-                    <h4 style={{ marginBottom: 8 }}>Workspace no inicializado</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 24 }}>
-                      Detectamos que tu cuenta aún no tiene un espacio de trabajo configurado. 
-                      Haz clic abajo para crear tu empresa y habilitar el CRM.
-                    </p>
-                    <button className="btn btn-primary" onClick={handleInitializeWorkspace} disabled={isSaving}>
+                  (tenant.isAdmin || tenant.isSuperAdmin) ? (
+                    <div className="card" style={{ padding: 32, textAlign: 'center', background: 'rgba(99, 102, 241, 0.05)', border: '1px dashed var(--primary-400)' }}>
+                      <Database size={40} style={{ color: 'var(--primary-400)', marginBottom: 16 }} />
+                      <h4 style={{ marginBottom: 8 }}>Workspace no inicializado</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 24 }}>
+                        Tu cuenta aún no está vinculada a un espacio de trabajo.
+                        Al crearlo se habilita el CRM con tu usuario como administrador.
+                      </p>
+                      <button className="btn btn-primary" onClick={handleInitializeWorkspace} disabled={isSaving}>
                         {isSaving ? 'Creando entorno...' : 'Crear mi Empresa'}
-                    </button>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+                      <Database size={40} style={{ color: 'var(--text-tertiary)', marginBottom: 16 }} />
+                      <h4 style={{ marginBottom: 8 }}>Sin empresa asignada</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', margin: 0 }}>
+                        Tu usuario todavía no está vinculado a una empresa. Pide a tu administrador que te asigne al workspace.
+                      </p>
+                    </div>
+                  )
+                ) : settingsError ? (
+                  <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+                    <ShieldAlert size={40} style={{ color: 'var(--warning-500, #f59e0b)', marginBottom: 16 }} />
+                    <h4 style={{ marginBottom: 8 }}>Configuración restringida</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', margin: 0 }}>{settingsError}</p>
                   </div>
                 ) : (
                   <>

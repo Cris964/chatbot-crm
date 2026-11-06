@@ -1,32 +1,55 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
-import { TenantProvider } from './lib/useTenant'
+import { TenantProvider, useTenant } from './lib/useTenant'
 import Layout from './components/Layout'
-import Dashboard from './pages/Dashboard'
-import Inbox from './pages/Inbox'
-import Leads from './pages/Leads'
-import Pipeline from './pages/Pipeline'
-import Clients from './pages/Clients'
-import Sales from './pages/Sales'
-import Dispatches from './pages/Dispatches'
-import Remarketing from './pages/Remarketing'
-import Lists from './pages/Lists'
-import Automations from './pages/Automations'
-import Reports from './pages/Reports'
-import Settings from './pages/Settings'
-import UsersPage from './pages/Users'
 import Login from './pages/Login'
-import Calendar from './pages/Calendar'
-import Marketing from './pages/Marketing'
-import Products from './pages/Products'
-import SuperAdmin from './pages/SuperAdmin'
-import Billing from './pages/Billing'
+
+// Cada módulo se carga solo cuando se visita: el login no arrastra el CRM entero.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Inbox = lazy(() => import('./pages/Inbox'))
+const Leads = lazy(() => import('./pages/Leads'))
+const Pipeline = lazy(() => import('./pages/Pipeline'))
+const Clients = lazy(() => import('./pages/Clients'))
+const Sales = lazy(() => import('./pages/Sales'))
+const Dispatches = lazy(() => import('./pages/Dispatches'))
+const Remarketing = lazy(() => import('./pages/Remarketing'))
+const Lists = lazy(() => import('./pages/Lists'))
+const Automations = lazy(() => import('./pages/Automations'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
+const UsersPage = lazy(() => import('./pages/Users'))
+const Calendar = lazy(() => import('./pages/Calendar'))
+const Marketing = lazy(() => import('./pages/Marketing'))
+const Products = lazy(() => import('./pages/Products'))
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'))
+const Billing = lazy(() => import('./pages/Billing'))
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, isLoading, session }) => {
   if (isLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando...</div>
   if (!session) return <Navigate to="/login" replace />
+  return children
+}
+
+// Guards por rol. Deben vivir DENTRO de TenantProvider para poder leer el rol.
+const LoadingScreen = () => (
+  <div style={{ height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    Cargando...
+  </div>
+)
+
+const AdminRoute = ({ children }) => {
+  const { isLoading, isAdmin, isSuperAdmin } = useTenant()
+  if (isLoading) return <LoadingScreen />
+  if (!isAdmin && !isSuperAdmin) return <Navigate to="/dashboard" replace />
+  return children
+}
+
+const SuperAdminRoute = ({ children }) => {
+  const { isLoading, isSuperAdmin } = useTenant()
+  if (isLoading) return <LoadingScreen />
+  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -56,7 +79,8 @@ function App() {
   }, [])
 
   return (
-    <Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
       <Route 
         path="/login" 
         element={
@@ -103,13 +127,13 @@ function App() {
         <Route path="calendario" element={<Calendar />} />
         <Route path="marketing" element={<Marketing />} />
         
-        <Route path="usuarios" element={<UsersPage />} />
-        <Route path="pagos" element={<Billing />} />
-        
-        <Route path="configuracion" element={<Settings />} />
+        <Route path="usuarios" element={<AdminRoute><UsersPage /></AdminRoute>} />
+        <Route path="pagos" element={<AdminRoute><Billing /></AdminRoute>} />
+
+        <Route path="configuracion" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="settings" element={<Navigate to="/configuracion" replace />} />
 
-        <Route path="super-admin" element={<SuperAdmin />} />
+        <Route path="super-admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
 
         {/* Catch-all for internal routes */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -117,7 +141,8 @@ function App() {
       
       {/* Absolute Catch-all */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }
 

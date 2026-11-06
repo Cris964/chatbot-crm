@@ -10,6 +10,24 @@ import {
 , PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings, Reply } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/apiFetch'
+
+// Evita burbujas idénticas consecutivas: doble clic en enviar, reintentos del
+// webhook o ecos del backend. Solo afecta la vista, nunca borra datos.
+const dedupeMessages = (msgs) => {
+  if (!Array.isArray(msgs)) return []
+  const out = []
+  for (const m of msgs) {
+    const prev = out[out.length - 1]
+    if (prev) {
+      const sameRole = (prev.role || '') === (m.role || '')
+      const sameContent = (prev.content || '') === (m.content || '')
+      const dt = Math.abs(new Date(prev.timestamp || 0) - new Date(m.timestamp || 0))
+      if (sameRole && sameContent && dt < 120000) continue
+    }
+    out.push(m)
+  }
+  return out
+}
 import { useTenant } from '../lib/useTenant'
 
 const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
@@ -130,6 +148,7 @@ export default function Inbox() {
   const [mobileView, setMobileView] = useState('list') // 'list' | 'chat' | 'info'
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
+  const sendingRef = useRef(false)
     const [isEditingName, setIsEditingName] = useState(false)
     const [editedName, setEditedName] = useState('')
   const [botActive, setBotActive] = useState(true)
@@ -246,7 +265,7 @@ export default function Inbox() {
           bg: '#6366f1',
           tags: [],
           phone: conv.user_phone,
-          rawMessages: conv.messages || [],
+          rawMessages: dedupeMessages(conv.messages),
           needs_human: false
         }
         setSelectedConv(newConv)
@@ -359,7 +378,7 @@ export default function Inbox() {
                         unread: msgs.length > 0 && msgs[msgs.length - 1].role === 'user',
                         channel: newConvRaw.channel || newConvRaw.platform || newConvRaw.source || 'whatsapp',
                         assigned_to: newConvRaw.assigned_to,
-                        rawMessages: msgs,
+                        rawMessages: dedupeMessages(msgs),
                         archived: newConvRaw.archived || false,
                         client_type: newConvRaw.client_type,
                         needs_human: newConvRaw.needs_human,
@@ -481,7 +500,7 @@ export default function Inbox() {
 
             setSelectedConv(prev => {
                if (prev && prev.id === updatedConv.id) {
-                  return { ...prev, ...updatedConv, rawMessages: updatedConv.messages }
+                  return { ...prev, ...updatedConv, rawMessages: dedupeMessages(updatedConv.messages) }
                }
                return prev
             })
@@ -573,7 +592,7 @@ export default function Inbox() {
       botHandled: !conv.needs_human,
       phone: conv.user_phone,
       client: conv.clients,
-      rawMessages: msgs,
+      rawMessages: dedupeMessages(msgs),
       needs_human: conv.needs_human,
       assigned_to: conv.assigned_to,
       department: conv.department,
@@ -751,6 +770,10 @@ export default function Inbox() {
       }
     }
     
+    // Candado anti doble envío: Enter + clic, doble clic o reintentos.
+    if (sendingRef.current) return
+    sendingRef.current = true
+
     const isSim = selectedConv.phone.startsWith('SIM_')
     const messageRole = isSim ? 'user' : 'agent'
     const textMsg = newMessage
@@ -776,6 +799,9 @@ export default function Inbox() {
     setNewMessage('')
     setReplyingTo(null)
     setSelectedConv(prev => { if (!prev) return prev; return { ...prev, rawMessages: [...(prev.rawMessages || []), messageObj] }; });
+
+    // El candado se libera solo: evita envíos dobles sin dejarlo bloqueado.
+    setTimeout(() => { sendingRef.current = false }, 3000)
 
     const { error } = await supabase
       .from('conversations')
@@ -978,10 +1004,12 @@ export default function Inbox() {
         mediaUrlToSend = publicUrlData.publicUrl;
       }
       
-      const textMsg = `[Plantilla Enviada: ${templateName}]`
+      const textMsg = `📋 Plantilla enviada: ${templateName}`
       const messageObj = {
         role: 'agent', sender_name: getSenderName(),
         content: textMsg,
+        type: 'template',
+        template_name: templateName,
         timestamp: new Date().toISOString()
       }
 
