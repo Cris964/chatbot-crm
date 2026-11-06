@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTenant } from '../lib/useTenant'
 import { supabase } from '../lib/supabase'
+import { fetchAll } from '../lib/query'
 import {
   Download, Clock, Users, DollarSign, Target, ArrowUpRight,
   TrendingUp, Inbox as InboxIcon, FileSpreadsheet
@@ -91,13 +92,15 @@ export default function Reports() {
     setIsLoading(true)
     const from = startOfPeriod(period).toISOString()
 
-    const [ordersRes, leadsRes] = await Promise.all([
-      supabase.from('orders').select('*').eq('client_id', clientId).gte('created_at', from),
-      supabase.from('leads').select('id, stage, source, value, created_at, assigned_to').eq('client_id', clientId).gte('created_at', from),
+    const [ordersRes, leadsAll] = await Promise.all([
+      supabase.from('orders').select('id, total, status, product, created_at, user_name').eq('client_id', clientId).gte('created_at', from),
+      fetchAll(supabase, 'leads', 'id, stage, source, value, created_at', (q) =>
+        q.eq('client_id', clientId).gte('created_at', from)
+      ),
     ])
 
     if (!ordersRes.error) setOrders(ordersRes.data || [])
-    if (!leadsRes.error) setLeads(leadsRes.data || [])
+    setLeads(leadsAll.rows)
 
     // Tiempo de respuesta: primera respuesta del asesor tras el primer mensaje del cliente.
     try {
