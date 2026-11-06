@@ -2333,7 +2333,6 @@ export default function Inbox() {
 
                   {/* AI Copilot Toggle Pill */}
                   <div 
-                    className="hidden sm:flex"
                     onClick={async () => {
                       const newState = !botActive;
                       setBotActive(newState);
@@ -2344,6 +2343,7 @@ export default function Inbox() {
                       }
                     }}
                     style={{ 
+                      display: 'flex',
                       alignItems: 'center', 
                       gap: 7, 
                       padding: '4px 12px', 
