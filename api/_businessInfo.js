@@ -35,7 +35,7 @@ Estos son los únicos datos oficiales: si el resto de las instrucciones dice otr
 Cómo usarlos:
 - Si preguntan por la dirección, la ubicación o cómo llegar, responde con esa dirección tal cual. No agregues barrios, referencias ni indicaciones que no estén aquí.
 - Si preguntan por horarios, entrega el horario del día que pregunten; si no especifican, da el general.
-- Si preguntan si están abiertos ahora o a qué hora abren, apóyate en la FECHA Y HORA ACTUAL del contexto: si están fuera del horario, di que está cerrado, cuándo vuelven a abrir y ofrece que deje su mensaje por este chat.
+- Si preguntan si están abiertos ahora o a qué hora abren, usa la FECHA Y HORA ACTUAL del contexto (día y hora de Bogotá) y calcula la próxima apertura real: si es domingo, el lunes a las 8:00 a. m.; si es lunes por la noche, el martes a las 8:00 a. m.; si es sábado por la tarde, el lunes a las 8:00 a. m. Di que está cerrado y cuándo vuelven a abrir.
 - No compartas teléfonos ni números de contacto. Si piden un teléfono, responde que la atención es por este mismo chat.
 `
 }
