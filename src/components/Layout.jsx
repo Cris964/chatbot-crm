@@ -378,30 +378,6 @@ export default function Layout({ session }) {
         onClick={() => setMobileOpen(false)}
       ></div>
 
-      {/* Rail de iconos */}
-      <aside className="sidebar-rail">
-        <NavLink to="/dashboard" className="rail-mark" title="NexusCRM">
-          <NexusLogo size={26} />
-        </NavLink>
-        <nav className="rail-nav">
-          {navItems.flatMap((s) => s.items).slice(0, 5).map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              title={item.label}
-              className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
-            >
-              <item.icon size={19} />
-            </NavLink>
-          ))}
-        </nav>
-        <div className="rail-foot">
-          <NavLink to="/settings" title={tenant.membership?.full_name || 'Mi perfil'} className="rail-avatar">
-            {tenant.membership?.full_name?.substring(0, 2).toUpperCase() || session?.user?.email?.substring(0, 2).toUpperCase()}
-          </NavLink>
-        </div>
-      </aside>
-
       <aside className={`sidebar ${isSidebarCollapsed && !mobileOpen ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="nexus-logo-wrapper">
