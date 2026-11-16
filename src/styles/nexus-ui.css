@@ -348,3 +348,98 @@
 }
 [data-theme='light'] .sidebar-user .user-role,
 [data-theme='light'] .sidebar-user small { color: #98A2B3 !important; }
+
+/* ============================================================================
+   Ajuste hacia la referencia: más aire, sidebar-panel, topbar ligera
+   ========================================================================== */
+[data-theme='light'] {
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --border-default: #F0F1F5;
+  --glass-border: #F0F1F5;
+  --sidebar-width: 248px;
+}
+
+/* lienzo y contenedores */
+[data-theme='light'] .page-content { padding: 28px 32px 40px !important; }
+
+/* sidebar tipo panel (Uko) */
+[data-theme='light'] .sidebar {
+  background: #FFFFFF;
+  width: var(--sidebar-width);
+  padding: 18px 14px !important;
+  border-right: 1px solid #F0F1F5;
+}
+[data-theme='light'] .sidebar .nav-section,
+[data-theme='light'] .sidebar h4,
+[data-theme='light'] .sidebar .section-label {
+  font-size: 0.66rem !important;
+  letter-spacing: 0.09em !important;
+  color: #A5ADBA !important;
+  padding: 16px 10px 6px !important;
+}
+[data-theme='light'] .sidebar .nav-item,
+[data-theme='light'] .sidebar a {
+  height: 40px;
+  padding: 0 10px !important;
+  border-radius: 10px !important;
+  font-size: 0.845rem !important;
+  font-weight: 500 !important;
+  color: #5B6474 !important;
+  gap: 10px !important;
+}
+[data-theme='light'] .sidebar .nav-item svg { width: 18px; height: 18px; opacity: 0.85; }
+[data-theme='light'] .sidebar .nav-item:hover { background: #F7F8FB !important; color: #101828 !important; }
+[data-theme='light'] .sidebar .nav-item.active,
+[data-theme='light'] .sidebar a.active {
+  background: #F3F4FF !important;
+  color: #4353FF !important;
+  font-weight: 600 !important;
+}
+[data-theme='light'] .sidebar .nav-item.active svg { opacity: 1; }
+
+/* topbar fina con título */
+[data-theme='light'] .top-header {
+  height: 64px !important;
+  padding: 0 28px !important;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F0F1F5;
+}
+[data-theme='light'] .top-header h1,
+[data-theme='light'] .top-header .page-title { font-size: 1.05rem !important; font-weight: 700 !important; }
+
+/* tarjetas más aireadas */
+[data-theme='light'] .card,
+[data-theme='light'] .chart-card,
+[data-theme='light'] .stat-card,
+[data-theme='light'] .mini-card {
+  border-radius: 20px !important;
+  border: 1px solid #F0F1F5 !important;
+  box-shadow: none !important;
+}
+[data-theme='light'] .chart-card { padding: 22px 24px !important; }
+[data-theme='light'] .card-header { border-bottom: 0 !important; padding-bottom: 4px !important; }
+[data-theme='light'] .card-title { font-size: 0.98rem !important; font-weight: 700 !important; }
+[data-theme='light'] .card-hint { font-size: 0.72rem; color: #98A2B3; }
+
+/* KPI al estilo referencia: número grande, etiqueta pequeña arriba */
+[data-theme='light'] .stat-card { padding: 22px !important; border-radius: 20px !important; }
+[data-theme='light'] .stat-card-label { font-size: 0.68rem !important; letter-spacing: 0.02em !important; text-transform: none !important; color: #98A2B3 !important; font-weight: 600 !important; }
+[data-theme='light'] .stat-card-value { font-size: 1.9rem !important; font-weight: 700 !important; letter-spacing: -0.035em !important; }
+[data-theme='light'] .stat-card-icon { width: 34px !important; height: 34px !important; border-radius: 10px !important; background: #F7F8FB !important; }
+
+/* botones tipo referencia: 40px, radio 8 */
+[data-theme='light'] .btn { height: 40px; padding: 0 16px; border-radius: 8px !important; font-size: 0.82rem !important; font-weight: 600 !important; }
+[data-theme='light'] .btn-sm { height: 32px; padding: 0 12px; font-size: 0.78rem !important; }
+[data-theme='light'] .btn-primary { background: #4353FF !important; border-color: #4353FF !important; box-shadow: none !important; }
+
+/* tablas con aire */
+[data-theme='light'] .data-table th { background: transparent !important; border-bottom: 1px solid #F0F1F5 !important; padding: 10px 14px !important; font-size: 0.68rem !important; letter-spacing: 0.03em !important; text-transform: none !important; }
+[data-theme='light'] .data-table td { padding: 16px 14px !important; border-bottom: 1px solid #F5F6F9 !important; font-size: 0.83rem !important; }
+
+/* badges más pequeños y suaves */
+[data-theme='light'] .badge { font-size: 0.68rem !important; padding: 3px 9px !important; font-weight: 600 !important; }
+
+/* gráficas: fondo y grid muy suaves */
+[data-theme='light'] .recharts-cartesian-grid line { stroke: #F4F5F8 !important; }
+[data-theme='light'] .recharts-text { fill: #98A2B3 !important; font-size: 11px; }
