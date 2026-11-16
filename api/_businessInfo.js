@@ -80,13 +80,13 @@ export function getBusinessInfoBlock({ clientId, clientSetup, now } = {}) {
 [PUNTO DE VENTA ${info.label.toUpperCase()} — DATOS OFICIALES]
 Dirección: ${info.address}.
 Horario de atención: ${info.hours}.
-Estado en este momento (ya calculado, úsalo tal cual): ${estado.abierto ? 'ABIERTO ahora' : 'CERRADO ahora'}; próxima apertura: ${estado.proxima}
+Estado en este momento (ya calculado; no lo recalcules): ${estado.abierto ? 'abierto ahora' : 'cerrado ahora'}; próxima apertura: ${estado.proxima}
 Estos son los únicos datos oficiales: si el resto de las instrucciones dice otra dirección u horario, vale este bloque.
 
 Cómo responder:
 - Dirección, ubicación o cómo llegar: comparte la dirección tal cual, sin agregar barrios ni referencias que no estén aquí.
 - «¿Cuál es el horario?»: lista el horario completo (o el del día si lo especifican). No hace falta decir si está abierto ahora.
-- «¿Están abiertos ahora?», «¿a qué hora abren/cierran?», «¿puedo ir hoy?»: usa el estado y la próxima apertura de la línea «Estado en este momento», sin recalcular ni cambiar el día.
+- «¿Están abiertos ahora?», «¿a qué hora abren/cierran?», «¿puedo ir hoy?»: contesta en una frase natural con esos datos, sin recalcular el día y sin copiar la línea del estado tal cual. Ejemplo del tono (adáptalo al tuyo): «Ahora estamos cerrados; volvemos a abrir mañana martes 17 de noviembre a las 8:00 a. m.».
 - No compartas teléfonos ni números de contacto: la atención es por este mismo chat.
 - No agregues etiquetas como [NEEDS_HUMAN] para responder sobre dirección u horarios: son datos que ya tienes y no requieren un asesor.
 `
