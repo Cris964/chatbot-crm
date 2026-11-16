@@ -537,3 +537,25 @@
 /* el panel colapsado se oculta: el rail ya cumple esa función */
 [data-theme='light'] .sidebar.collapsed,
 .sidebar.collapsed { display: none !important; }
+
+/* ---------- burbujas del chat (clases reales del DOM) ---------- */
+[data-theme='light'] .chat-messages { background: #FDFDFE; }
+[data-theme='light'] .chat-msg-bubble {
+  border-radius: 12px;
+  font-size: 0.805rem;
+  line-height: 1.55;
+  padding: 10px 14px;
+  box-shadow: none;
+  border: 1px solid transparent;
+}
+[data-theme='light'] .chat-msg-bubble.msg-client {
+  background: #F6F6FA;
+  color: #2B2E3B;
+  border-color: #F0F1F5;
+}
+[data-theme='light'] .chat-msg-bubble.msg-agent {
+  background: #F1F0FC;
+  color: #2B2E3B;
+  border-color: #E9E7FB;
+}
+[data-theme='light'] .chat-msg-bubble a { color: #4353FF; }
