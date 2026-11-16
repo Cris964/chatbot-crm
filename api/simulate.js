@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getBusinessInfoBlock } from './_businessInfo.js';
 
 export default async function handler(req, res) {
   // CORS
@@ -94,7 +95,7 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
         body: JSON.stringify({
             model: 'openai/gpt-4o-mini',
             messages: [
-                { role: 'system', content: `${clientSetup.prompt}\n\n${inventoryContext}` },
+                { role: 'system', content: `${clientSetup.prompt}${getBusinessInfoBlock({ clientId: clientSetup.id, clientSetup })}\n\n${inventoryContext}` },
                 ...chat.messages.slice(-10).map(m => ({
                     role: m.role === 'agent' ? 'assistant' : 'user',
                     content: m.content

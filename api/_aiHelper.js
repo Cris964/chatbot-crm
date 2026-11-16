@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { getBusinessInfoBlock } from './_businessInfo.js';
 
 export async function dispatchToAI({
   supabase,
@@ -163,7 +164,7 @@ INSTRUCCIÓN FINAL CRÍTICA (OBLIGATORIA): SIEMPRE, AL FINAL DE TU MENSAJE, DEBE
   }
 
   const aiMessages = [
-      { role: 'system', content: `${clientSetup.prompt}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", hour12: true })}]\n\n${inventoryContext}` },
+      { role: 'system', content: `${clientSetup.prompt}${getBusinessInfoBlock({ clientId, clientSetup })}\n\n[DATOS DEL CLIENTE ACTUAL: Nombre: ${senderName}]\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", hour12: true })}]\n\n${inventoryContext}` },
       
       ...finalMessages.slice(-30).map(m => {
 
