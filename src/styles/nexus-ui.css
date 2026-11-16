@@ -443,3 +443,30 @@
 /* gráficas: fondo y grid muy suaves */
 [data-theme='light'] .recharts-cartesian-grid line { stroke: #F4F5F8 !important; }
 [data-theme='light'] .recharts-text { fill: #98A2B3 !important; font-size: 11px; }
+
+/* --- correcciones tras ver la captura en producción --- */
+[data-theme='light'] h1,
+[data-theme='light'] h2,
+[data-theme='light'] h3,
+[data-theme='light'] .page-title,
+[data-theme='light'] .stat-card-value,
+[data-theme='light'] .card-title { color: #101828 !important; }
+
+/* tarjeta de usuario del sidebar: el texto quedaba blanco sobre blanco */
+[data-theme='light'] .sidebar > div:last-child,
+[data-theme='light'] .sidebar > div:last-child *,
+[data-theme='light'] .sidebar [class*='user'],
+[data-theme='light'] .sidebar [class*='profile'] { color: #344054 !important; }
+[data-theme='light'] .sidebar [class*='user'] small,
+[data-theme='light'] .sidebar [class*='user'] span,
+[data-theme='light'] .sidebar [class*='profile'] small { color: #98A2B3 !important; }
+
+/* el botón violeta con destello: a neutro, como el resto de la barra */
+[data-theme='light'] .top-header button[style*='linear-gradient'],
+[data-theme='light'] .top-header button[style*='box-shadow'],
+[data-theme='light'] .header-action-btn.active {
+  background: #F7F8FB !important;
+  color: #5B6474 !important;
+  box-shadow: none !important;
+  border: 1px solid #EFF1F5 !important;
+}
