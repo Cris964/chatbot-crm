@@ -470,3 +470,21 @@
   box-shadow: none !important;
   border: 1px solid #EFF1F5 !important;
 }
+
+/* --- pie del sidebar: forzar legibilidad y devolver los acentos --- */
+[data-theme='light'] aside,
+[data-theme='light'] .sidebar { background: #FFFFFF; }
+[data-theme='light'] aside *,
+[data-theme='light'] .sidebar * { color: #344054; }
+[data-theme='light'] aside small,
+[data-theme='light'] aside [class*='role'],
+[data-theme='light'] .sidebar small,
+[data-theme='light'] .sidebar [class*='role'] { color: #98A2B3 !important; }
+/* re-afirmar lo que la regla amplia pudo pisar */
+[data-theme='light'] .sidebar .nav-item.active,
+[data-theme='light'] .sidebar a.active,
+[data-theme='light'] .sidebar .active { color: #4353FF !important; font-weight: 600 !important; }
+[data-theme='light'] .sidebar .nav-item:not(.active) { color: #5B6474 !important; }
+[data-theme='light'] .sidebar [class*='section'],
+[data-theme='light'] .sidebar .nav-section { color: #A5ADBA !important; }
+[data-theme='light'] .sidebar svg { color: inherit; }
