@@ -19,7 +19,7 @@ export default function Layout({ session }) {
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
+  const [theme, setTheme] = useState(localStorage.getItem('theme_v2') || 'light')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showAIModal, setShowAIModal] = useState(false)
   const location = useLocation()
@@ -94,7 +94,7 @@ export default function Layout({ session }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
+    localStorage.setItem('theme_v2', theme)
   }, [theme])
 
   const handleLogout = async () => {
