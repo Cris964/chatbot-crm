@@ -559,3 +559,26 @@
   border-color: #E9E7FB;
 }
 [data-theme='light'] .chat-msg-bubble a { color: #4353FF; }
+
+/* las burbujas del asesor venían con estilo inline: forzar el color */
+[data-theme='light'] .chat-msg-bubble.msg-client,
+[data-theme='light'] .chat-msg-bubble.msg-agent {
+  background: #F1F0FC !important;
+  color: #2B2E3B !important;
+  border: 1px solid #E9E7FB !important;
+}
+[data-theme='light'] .chat-msg-bubble.msg-client {
+  background: #F6F6FA !important;
+  border-color: #F0F1F5 !important;
+}
+[data-theme='light'] .chat-msg-bubble * { color: inherit !important; }
+
+/* item activo del menu: el texto quedaba casi invisible */
+[data-theme='light'] .sidebar .nav-item.active,
+[data-theme='light'] .sidebar .nav-item.active span,
+[data-theme='light'] .sidebar .nav-item.active svg,
+[data-theme='light'] .sidebar a.active,
+[data-theme='light'] .sidebar a.active span {
+  color: #3F3FE0 !important;
+}
+[data-theme='light'] .sidebar .nav-item.active { background: #EEEFFF !important; }
