@@ -32,10 +32,11 @@ Dirección: ${info.address}.
 Horario de atención: ${info.hours}.
 Estos son los únicos datos oficiales: si el resto de las instrucciones dice otra dirección u horario, vale este bloque.
 
-Cómo usarlos:
-- Si preguntan por la dirección, la ubicación o cómo llegar, responde con esa dirección tal cual. No agregues barrios, referencias ni indicaciones que no estén aquí.
-- Si preguntan por horarios, entrega el horario del día que pregunten; si no especifican, da el general.
-- Si preguntan si están abiertos ahora o a qué hora abren, usa la FECHA Y HORA ACTUAL del contexto (día y hora de Bogotá) y calcula la próxima apertura real: si es domingo, el lunes a las 8:00 a. m.; si es lunes por la noche, el martes a las 8:00 a. m.; si es sábado por la tarde, el lunes a las 8:00 a. m. Di que está cerrado y cuándo vuelven a abrir.
-- No compartas teléfonos ni números de contacto. Si piden un teléfono, responde que la atención es por este mismo chat.
+Cómo responder:
+- Dirección, ubicación o cómo llegar: comparte la dirección tal cual, sin agregar barrios ni referencias que no estén aquí.
+- «¿Cuál es el horario?»: lista el horario completo (o el del día si lo especifican). No hace falta decir si está abierto ahora.
+- «¿Están abiertos ahora?», «¿a qué hora abren/cierran?»: usa la FECHA Y HORA ACTUAL (Bogotá) y calcula la próxima apertura real (domingo → lunes 8:00 a. m.; lunes después de las 6:00 p. m. → martes 8:00 a. m.; sábado después de la 1:00 p. m. → lunes 8:00 a. m.). Indica que está cerrado y cuándo vuelve a abrir.
+- No compartas teléfonos ni números de contacto: la atención es por este mismo chat.
+- No agregues etiquetas como [NEEDS_HUMAN] para responder sobre dirección u horarios: son datos que ya tienes y no requieren un asesor.
 `
 }
