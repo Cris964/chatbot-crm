@@ -582,3 +582,11 @@
   color: #3F3FE0 !important;
 }
 [data-theme='light'] .sidebar .nav-item.active { background: #EEEFFF !important; }
+
+/* etiquetas bajo el nombre en la cabecera del chat */
+.chat-head-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.chat-head-tag {
+  font-size: 9.5px; font-weight: 600; line-height: 1;
+  padding: 3px 8px; border-radius: 99px; border: 1px solid transparent;
+  white-space: nowrap;
+}

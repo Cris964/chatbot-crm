@@ -2228,6 +2228,19 @@ export default function Inbox() {
                       <span>•</span>
                       <span style={{ textTransform: 'capitalize' }}>{selectedConv.channel || 'Chat'}</span>
                     </div>
+                    {(selectedConv.tags || []).length > 0 && (
+                      <div className="chat-head-tags">
+                        {(selectedConv.tags || []).slice(0, 3).map((t, i) => {
+                          const label = typeof t === 'string' ? t : t.label
+                          const color = typeof t === 'string' ? '#8b5cf6' : (t.color || '#8b5cf6')
+                          return (
+                            <span key={i} className="chat-head-tag" style={{ color, borderColor: `${color}55`, background: `${color}14` }}>
+                              {label}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
 
