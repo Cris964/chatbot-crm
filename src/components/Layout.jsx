@@ -384,7 +384,7 @@ export default function Layout({ session }) {
           <NexusLogo size={26} />
         </NavLink>
         <nav className="rail-nav">
-          {navItems.flatMap((s) => s.items).slice(0, 7).map((item) => (
+          {navItems.flatMap((s) => s.items).slice(0, 5).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
