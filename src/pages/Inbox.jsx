@@ -1,12 +1,12 @@
 import Recorder from 'opus-recorder';
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, Fragment } from 'react'
 import { useOutletContext, useLocation } from 'react-router-dom'
 import {
   Search, Filter, MoreVertical, Send, Paperclip, Smile,
   Phone, Video, Star, Tag, AlertTriangle, Bot, UserCheck,
   Mail, MapPin, Calendar, Clock, ChevronDown, CheckCheck, MessageSquare,
   Sparkles, Check, X as Close, User, Globe, History, CheckCircle2, ChevronRight, ChevronLeft,
-  Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, DollarSign, CheckSquare, FileText
+  Mic, Square, Trash2, UserPlus, Facebook, Edit2, Check as CheckIcon, Instagram, MessageCircle, Archive, Download, Megaphone, DollarSign, FileText
 , PanelRightClose, PanelRightOpen, ArrowRightFromLine, Menu, Building2, Settings, Reply } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/apiFetch'
@@ -29,6 +29,32 @@ const dedupeMessages = (msgs) => {
   return out
 }
 import { useTenant } from '../lib/useTenant'
+
+// Iniciales para avatares diminutos ("Leonardo Sierra" -> "LS").
+const initialsOf = (name) => {
+  const parts = String(name || 'CL').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'CL'
+  return parts.slice(0, 2).map((w) => w[0]).join('').toUpperCase()
+}
+
+// "hace 2 h" / "ayer" / "12 de nov" a partir de un timestamp de Supabase.
+const relativeTime = (iso) => {
+  if (!iso) return ''
+  const raw = typeof iso === 'string' && iso.includes('T') && !iso.endsWith('Z') ? iso + 'Z' : iso
+  const then = new Date(raw).getTime()
+  if (Number.isNaN(then)) return ''
+  const mins = Math.round((Date.now() - then) / 60000)
+  if (mins < 1) return 'hace un momento'
+  if (mins < 60) return `hace ${mins} min`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `hace ${hours} h`
+  const days = Math.round(hours / 24)
+  if (days === 1) return 'ayer'
+  if (days < 7) return `hace ${days} días`
+  return new Date(then).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
+}
+
+
 
 const VoiceNotePlayer = ({ src, sender, durationText = "0:00", avatar }) => {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -138,7 +164,10 @@ export default function Inbox() {
     const [agentFilter, setAgentFilter] = useState('all');
   const [activeFolder, setActiveFolder] = useState('inbox');
   const [labelFilter, setLabelFilter] = useState(null);
-  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false)
+  const [showListFilters, setShowListFilters] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('all');
   const [broadcastLists, setBroadcastLists] = useState([]);
   const [isListsExpanded, setIsListsExpanded] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
@@ -458,14 +487,29 @@ export default function Inbox() {
 
         const dateStr = dateObj.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        const timeOnly = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const dayKey = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`;
+        const today = new Date();
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+        const dayLabel = sameDay(dateObj, today)
+          ? `Hoy · ${dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}`
+          : sameDay(dateObj, yesterday)
+            ? `Ayer · ${dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}`
+            : dateObj.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
 
         return {
           id: i,
           sender: m.role === 'user' ? 'client' : (m.role === 'system' ? 'system' : (m.role === 'assistant' ? 'bot' : 'agent')),
+          // Marca de IA: respuestas del bot (role 'assistant' o 'agent' sin autor humano).
+          isAi: m.role === 'assistant' || (m.role === 'agent' && !m.sender_name),
           text: finalContent,
           type: m.media_type || finalType,
           media_url: mediaUrl,
           time: `${dateStr} ${timeStr}`,
+          timeOnly,
+          dayKey,
+          dayLabel,
           raw: m,
           reply_to: m.reply_to || null,
           meta_id: m.meta_id || m.sent_meta?.[0]?.id || null,
@@ -543,7 +587,9 @@ export default function Inbox() {
 
     const rawMsgs = conv.messages || [];
     const lastRaw = rawMsgs.length > 0 ? rawMsgs[rawMsgs.length - 1] : null;
-    const lastFromBot = lastRaw?.role === 'assistant';
+    // El backend guarda las respuestas del bot como role 'agent' SIN sender_name:
+    // las que llevan sender_name son de un asesor humano.
+    const lastFromBot = lastRaw?.role === 'assistant' || (lastRaw?.role === 'agent' && !lastRaw?.sender_name);
 
     let convTags = [];
     // Etiquetas automáticas de estado
@@ -600,7 +646,15 @@ export default function Inbox() {
          const safeDateStr = (typeof conv.updated_at === 'string' && conv.updated_at.includes('T') && !conv.updated_at.endsWith('Z')) 
             ? conv.updated_at + 'Z' 
             : conv.updated_at;
-         return new Date(safeDateStr).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+         const d = new Date(safeDateStr);
+         if (Number.isNaN(d.getTime())) return '';
+         const now = new Date();
+         const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+         const yest = new Date(); yest.setDate(yest.getDate() - 1);
+         const isYesterday = d.getFullYear() === yest.getFullYear() && d.getMonth() === yest.getMonth() && d.getDate() === yest.getDate();
+         if (sameDay) return d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+         if (isYesterday) return 'Ayer';
+         return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' });
       })(),
       channel: conv.channel || conv.platform || conv.source || 'whatsapp', 
       unread: msgs.length > 0 && msgs[msgs.length - 1].role === 'user',
@@ -1657,6 +1711,16 @@ export default function Inbox() {
     // Filter by tab
     list = list.filter(c => activeTab === 'archived' ? c.archived === true : (c.archived !== true && (activeTab === 'all' || c.channel === activeTab)));
 
+    // Filtros subrayados de la lista: Todos / Pendientes / IA / Míos
+    if (statusFilter !== 'all') {
+      list = list.filter(c => {
+        if (statusFilter === 'pending') return !!c.unread;
+        if (statusFilter === 'ai') return c.needs_human !== true;
+        if (statusFilter === 'mine') return c.assigned_to === tenant.session?.user?.id;
+        return true;
+      });
+    }
+
     // Filter by agent
     list = list.filter(c => {
       if (agentFilter === 'all') return true;
@@ -1707,7 +1771,7 @@ export default function Inbox() {
     }
 
     return list;
-  }, [conversationsList, activeTab, agentFilter, activeFolder, searchQuery, tenant.session?.user?.id, broadcastLists, labelFilter]);
+  }, [conversationsList, activeTab, agentFilter, activeFolder, searchQuery, tenant.session?.user?.id, broadcastLists, labelFilter, statusFilter]);
 
   return (
     <div className="inbox-container">
@@ -1920,119 +1984,129 @@ export default function Inbox() {
   
           {/* Sidebar */}
           <div className={`inbox-sidebar inbox-panel-container ${mobileView !== 'list' ? 'mobile-hidden' : ''}`} style={{ width: '100%', flexShrink: 0 }}>
-          <div className="inbox-sidebar-header" style={{ padding: '20px' }}>
-             <div className="flex justify-between items-center mb-4">
-               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                 <button className="mobile-only" onClick={() => setMobileView('folders')} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }}>
-                   <Menu size={24} />
-                 </button>
-                 <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Inbox</h2>
-               </div>
-             </div>
-             <div className="search-bar" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-               {isSearchingServer ? (
-                 <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2, flexShrink: 0 }} />
-               ) : (
-                 <Search size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
-               )}
-               <input 
-                  type="text" 
-                  placeholder="Buscar cliente, teléfono o mensaje..." 
-                  style={{ fontSize: '0.85rem', flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }} 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-               />
-               {searchQuery && (
-                 <button 
-                   onClick={() => setSearchQuery('')} 
-                   style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
-                   title="Limpiar búsqueda"
-                 >
-                   <Close size={14} />
-                 </button>
-               )}
-             </div>
-             <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
-                {['all', 'whatsapp', 'instagram', 'messenger', 'archived'].map(tab => (
-                   <button 
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      style={{ 
-                         background: activeTab === tab ? 'var(--primary-600)' : 'rgba(var(--overlay-rgb), 0.05)',
-                         border: 'none', borderRadius: 12, padding: '4px 10px', fontSize: '0.7rem',
-                         color: activeTab === tab ? 'white' : 'var(--text-secondary)', cursor: 'pointer',
-                         textTransform: 'capitalize', whiteSpace: 'nowrap'
-                      }}
-                   >
-                      {tab === 'all' ? 'Todos' : tab === 'archived' ? 'Archivados' : tab}
-                   </button>
-                ))}
-             
-               </div>
-               
-               {/* Asesor Filter (visible if teamMembers > 1 and only for admins) */}
-               {tenant.isAdmin && teamMembers && teamMembers.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                     <select 
-                        value={agentFilter}
-                        onChange={(e) => setAgentFilter(e.target.value)}
-                        style={{
-                           width: '100%',
-                           padding: '8px 12px',
-                           borderRadius: '12px',
-                           background: 'rgba(var(--overlay-rgb), 0.05)',
-                           border: '1px solid var(--glass-border)',
-                           color: 'var(--text-secondary)',
-                           fontSize: '0.8rem',
-                           outline: 'none',
-                           cursor: 'pointer'
-                        }}
-                     >
-                        <option value="all">Filtro: Todos los chats</option>
-                        <option value="unassigned">Sin asignar</option>
-                        {teamMembers.map(member => (
-                           <option key={member.user_id} value={member.user_id}>
-                              Asignado a: {member.full_name || member.email}
-                           </option>
-                        ))}
-                     </select>
-                  </div>
-               )}
+            <div className="inbox-sidebar-header">
+            <div className="list-account">
+              <button className="mobile-only list-account-menu" onClick={() => setMobileView('folders')} aria-label="Carpetas">
+                <Menu size={20} />
+              </button>
+              <div className="list-account-avatar">{initialsOf(getSenderName() || 'Nexus')}</div>
+              <div className="list-account-id">
+                <b>{getSenderName() || 'Mi cuenta'}</b>
+                <span>Mi cuenta</span>
+              </div>
+              <button
+                type="button"
+                className={`icon-btn ${showListFilters ? 'is-active' : ''}`}
+                onClick={() => setShowListFilters(v => !v)}
+                title="Más filtros y selección"
+                aria-label="Más filtros y selección"
+                aria-expanded={showListFilters}
+              >
+                <Filter size={14} />
+              </button>
+            </div>
 
-               {selectedChats.length > 0 && (
-                 <div style={{ marginTop: 12, padding: '8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-400)', textAlign: 'center' }}>
-                       {selectedChats.length} chat(s) seleccionados
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                       <button className="btn btn-secondary btn-sm" style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }} onClick={handleExportChats}>
-                          <Download size={14} style={{ marginRight: 4 }} /> Exportar
-                       </button>
-                       <button className="btn btn-primary btn-sm" style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }} onClick={handleMoveToRemarketing}>
-                          <Megaphone size={14} style={{ marginRight: 4 }} /> Re-marketing
-                       </button>
-                    </div>
-                 </div>
+            {teamMembers.length > 0 && (
+              <div className="list-online">
+                <h5>En línea <span className="count">{teamMembers.length}</span></h5>
+                <div className="list-online-avatars">
+                  {teamMembers.slice(0, 6).map((m, i) => (
+                    <i key={m.user_id || i} title={m.full_name || m.email}>{initialsOf(m.full_name || m.email)}</i>
+                  ))}
+                  {teamMembers.length > 6 && <i className="more">+{teamMembers.length - 6}</i>}
+                </div>
+              </div>
+            )}
+
+            <div className="list-conv-head">
+              <h5>Conversaciones <span className="count">{displayedConversations.length}</span></h5>
+            </div>
+
+            <div className="list-filters" role="tablist">
+              {[['all', 'Todos'], ['pending', 'Pendientes'], ['ai', 'IA'], ['mine', 'Míos']].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === key}
+                  className={statusFilter === key ? 'on' : ''}
+                  onClick={() => setStatusFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="list-search">
+              {isSearchingServer
+                ? <div className="spinner" style={{ width: 13, height: 13, borderWidth: 2, flexShrink: 0 }} />
+                : <Search size={14} style={{ flexShrink: 0 }} />}
+              <input
+                type="text"
+                placeholder="Buscar cliente, teléfono o mensaje…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
+                  <Close size={13} />
+                </button>
               )}
-             <button 
-               className="btn btn-primary btn-sm" 
-               style={{ 
-                 width: '100%', 
-                 marginTop: 12, 
-                 background: isSelectMode ? 'rgba(var(--overlay-rgb), 0.1)' : 'var(--primary-600)',
-                 color: isSelectMode ? 'var(--text-secondary)' : 'white',
-                 fontWeight: 700,
-                 border: isSelectMode ? '1px solid var(--glass-border)' : 'none'
-               }}
-               onClick={() => {
-                 setIsSelectMode(!isSelectMode);
-                 if (isSelectMode) setSelectedChats([]); // clear selection when canceling
-               }}
-             >
-               {isSelectMode ? <Close size={14} /> : <CheckSquare size={14} />} {isSelectMode ? 'Cancelar selección' : 'Seleccionar chats'}
-             </button>
+            </div>
+
+            {showListFilters && (
+              <div className="list-extra">
+                <div className="list-extra-chips">
+                  {['all', 'whatsapp', 'instagram', 'messenger', 'archived'].map(tab => (
+                    <button
+                      key={tab}
+                      type="button"
+                      className={activeTab === tab ? 'on' : ''}
+                      onClick={() => setActiveTab(tab)}
+                    >
+                      {tab === 'all' ? 'Todos los canales' : tab === 'archived' ? 'Archivados' : tab}
+                    </button>
+                  ))}
+                </div>
+                {tenant.isAdmin && teamMembers.length > 0 && (
+                  <select className="list-extra-select" value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
+                    <option value="all">Asesor: todos</option>
+                    <option value="unassigned">Sin asignar</option>
+                    {teamMembers.map(member => (
+                      <option key={member.user_id} value={member.user_id}>
+                        Asignado a: {member.full_name || member.email}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  className={`list-extra-action ${isSelectMode ? 'is-on' : ''}`}
+                  onClick={() => {
+                    setIsSelectMode(!isSelectMode);
+                    if (isSelectMode) setSelectedChats([]);
+                  }}
+                >
+                  {isSelectMode ? 'Salir de la selección' : 'Seleccionar chats para exportar o re-marketing'}
+                </button>
+              </div>
+            )}
+
+            {selectedChats.length > 0 && (
+              <div className="list-bulk">
+                <div className="list-bulk-count">{selectedChats.length} chat(s) seleccionados</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={handleExportChats}>
+                    <Download size={14} style={{ marginRight: 4 }} /> Exportar
+                  </button>
+                  <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={handleMoveToRemarketing}>
+                    <Megaphone size={14} style={{ marginRight: 4 }} /> Re-marketing
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          
+
           <div className="conversation-list" style={{ padding: '0 12px 12px', flex: 1, overflowY: 'auto' }}>
             {isLoading ? (
               <div style={{ padding: '40px', textAlign: 'center' }}>
@@ -2048,27 +2122,18 @@ export default function Inbox() {
             ) : (
               <>
                 {displayedConversations.map(c => (
-              <div 
-                key={c.id} 
+              <div
+                key={c.id}
                 className={`conversation-item ${selectedConv?.id === c.id ? 'active' : ''}`}
                 onClick={() => { setSelectedConv(c); setMobileView('chat'); }}
-                style={{ padding: '12px', borderRadius: 12, marginBottom: 4, display: 'flex', alignItems: 'center' }}
               >
+                 {c.unread && <span className="conv-dot" title="Pendiente" />}
                  {isSelectMode && (
-                   <div 
-                     style={{ 
-                       marginRight: 10, 
-                       display: 'flex', 
-                       alignItems: 'center', 
-                       justifyContent: 'center',
-                       width: 20, 
-                       height: 20, 
-                       borderRadius: '50%',
-                       border: `2px solid ${selectedChats.includes(c.id) ? 'var(--primary-400)' : 'var(--glass-border)'}`,
-                       background: selectedChats.includes(c.id) ? 'var(--primary-400)' : 'transparent',
-                       cursor: 'pointer',
-                       flexShrink: 0,
-                       transition: 'all 0.2s ease'
+                   <div
+                     className="conv-check"
+                     style={{
+                       border: `2px solid ${selectedChats.includes(c.id) ? 'var(--primary-600)' : 'var(--border-default)'}`,
+                       background: selectedChats.includes(c.id) ? 'var(--primary-600)' : 'transparent'
                      }}
                      onClick={(e) => {
                         e.stopPropagation();
@@ -2079,47 +2144,25 @@ export default function Inbox() {
                      {selectedChats.includes(c.id) && <Check size={12} color="white" strokeWidth={3} />}
                    </div>
                  )}
-                 <div className="avatar sm" style={{ background: c.bg, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
-                    {c.avatar?.startsWith('http') ? <img src={c.avatar} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="avatar" /> : c.avatar}
+                 <div className="conv-avatar">
+                    {c.avatar?.startsWith('http') ? <img src={c.avatar} alt="avatar" /> : c.avatar}
                     {c.assigned_to && (
-                       <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--primary-600)', width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--bg-secondary)', fontSize: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: "var(--text-primary)" }}>
+                       <div className="conv-owner">
                           {teamMembers.find(m => m.user_id === c.assigned_to)?.full_name?.substring(0, 2).toUpperCase()}
                        </div>
                     )}
                  </div>
-                 <div className="conv-content" style={{ marginLeft: 12, minWidth: 0, flex: 1 }}>
+                 <div className="conv-content">
                     <div className="flex justify-between items-center">
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{c.name}</span>
-                          {c.unreadCount > 0 && (
-                             <div style={{ minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: 'var(--accent-emerald)', color: '#000', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                               {c.unreadCount}
-                             </div>
-                           )}
-                       </div>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, fontSize: '0.7rem', color: c.unread ? 'var(--accent-emerald)' : 'var(--text-tertiary)', fontWeight: c.unread ? 700 : 400, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                         {c.channel === 'instagram' ? <Instagram size={12} /> : c.channel === 'facebook' ? <Facebook size={12} /> : <MessageCircle size={12} />}
+                       <span className={`conv-name ${c.unread ? 'is-unread' : ''}`}>{c.name}</span>
+                       <div className="conv-time">
+                         {c.channel === 'instagram' ? <Instagram size={11} /> : c.channel === 'facebook' ? <Facebook size={11} /> : <MessageCircle size={11} />}
                          <span>{c.time}</span>
                        </div>
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.preview?.includes('supabase.co/storage') ? ( (c.preview.includes('.mp4') || c.preview.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : c.preview}</p>
-                    {c.tags && c.tags.length > 0 && (
-                      <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap', rowGap: 4, minWidth: 0 }}>
-                         {c.tags.map((t, i) => {
-                            const isString = typeof t === 'string';
-                            const label = isString ? t : t.label;
-                            const color = isString ? '#f59e0b' : (t.color || '#f59e0b');
-                            
-                            return (
-                              <span key={i} className="badge" style={{ fontSize: '0.6rem', backgroundColor: `${color}20`, color: color, borderColor: `${color}40`, border: '1px solid', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                 {label === 'Asignado' ? `Asignado a: ${teamMembers.find(m => m.user_id === c.assigned_to)?.full_name || 'Asesor'}` : label}
-                              </span>
-                            );
-                         })}
-                      </div>
-                    )}
-                  </div>
-               </div>
+                    <p className="conv-preview">{c.preview?.includes('supabase.co/storage') ? ( (c.preview.includes('.mp4') || c.preview.includes('.webm')) ? '🎥 Video enviado' : '📷 Imagen enviada') : c.preview}</p>
+                 </div>
+              </div>
             ))}
                 {!searchQuery && conversationsList.length >= fetchLimit && (
                   <div style={{ padding: '16px 8px', textAlign: 'center' }}>
@@ -2145,43 +2188,41 @@ export default function Inbox() {
         <div className={`chat-area inbox-panel-container ${mobileView !== 'chat' ? 'mobile-hidden' : ''}`} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           {selectedConv ? (
             <>
-              
-              <div className="chat-header" style={{ 
-                padding: '12px 20px', 
-                borderBottom: '1px solid var(--glass-border)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                gap: 12,
-                rowGap: 8,
+
+              <div className="chat-header" style={{
+                padding: '14px 20px',
+                borderBottom: '1px solid var(--border-default)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 14,
+                rowGap: 10,
                 flexWrap: 'wrap',
-                background: 'rgba(var(--overlay-rgb), 0.02)',
-                backdropFilter: 'blur(12px)',
-                minHeight: 64,
+                background: 'var(--bg-secondary)',
+                minHeight: 72,
                 position: 'relative'
               }}>
-                {/* Left Block: Client Identity */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto' }}>
-                  <button 
+                {/* Identidad del cliente */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0, flex: '1 1 260px' }}>
+                  <button
                     className="mobile-only"
                     onClick={() => { setSelectedConv(null); setMobileView('list'); }}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 8 }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 8, marginTop: 6 }}
+                    aria-label="Volver a la lista"
                   >
                     <ChevronLeft size={22} />
                   </button>
 
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{ 
-                      width: 40, 
-                      height: 40, 
-                      borderRadius: '50%', 
-                      background: selectedConv.bg || '#6366f1', 
-                      overflow: 'hidden', 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                  <div style={{ position: 'relative', flexShrink: 0, marginTop: 2 }}>
+                    <div style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: '50%',
+                      background: selectedConv.bg || '#6366f1',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
-                      border: '2px solid rgba(255,255,255,0.1)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                      border: '1px solid var(--border-default)'
                     }}>
                       {selectedConv.avatar?.startsWith('http') ? (
                         <img src={selectedConv.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="avatar" />
@@ -2191,42 +2232,43 @@ export default function Inbox() {
                         </span>
                       )}
                     </div>
-                    {/* Live Channel Indicator */}
-                    <div style={{ 
-                      position: 'absolute', 
-                      bottom: -2, 
-                      right: -2, 
-                      width: 16, 
-                      height: 16, 
-                      borderRadius: '50%', 
-                      background: selectedConv.channel === 'instagram' ? '#e1306c' : (selectedConv.channel === 'facebook' ? '#1877f2' : '#22c55e'), 
-                      border: '2px solid var(--bg-primary, #0f172a)',
+                    {/* Indicador de canal */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: -2,
+                      right: -2,
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: selectedConv.channel === 'instagram' ? '#e1306c' : (selectedConv.channel === 'facebook' ? '#1877f2' : '#22c55e'),
+                      border: '2px solid var(--bg-secondary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: '#fff',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
                     }}>
                       {selectedConv.channel === 'instagram' ? <Instagram size={9} /> : (selectedConv.channel === 'facebook' ? <Facebook size={9} /> : <MessageCircle size={9} />)}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {selectedConv.name}
-                      </span>
+                  <div className="chat-head-id">
+                    <div className="chat-head-name">
+                      <span className="name">{selectedConv.name}</span>
                       <CheckCircle2 size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
                       {selectedConv.client_type === 'mayorista' && (
-                        <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 6, background: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-400)', fontWeight: 700, border: '1px solid rgba(99, 102, 241, 0.3)', flexShrink: 0 }}>
-                          Mayorista
-                        </span>
+                        <span className="chat-head-tag" style={{ color: '#5925DC', borderColor: '#E9E7FE', background: '#F4F3FF' }}>Mayorista</span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
-                      <span style={{ fontFamily: 'monospace', letterSpacing: 0.2 }}>{selectedConv.phone || 'Sin número'}</span>
-                      <span>•</span>
+                    <div className="chat-head-meta">
+                      <span style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: 0.1 }}>{selectedConv.phone || 'Sin número'}</span>
+                      <span className="sep">·</span>
                       <span style={{ textTransform: 'capitalize' }}>{selectedConv.channel || 'Chat'}</span>
+                      {selectedConv.updated_at && (
+                        <span className="meta-activity">
+                          <span className="sep">·</span> última actividad {relativeTime(selectedConv.updated_at)}
+                        </span>
+                      )}
                     </div>
                     {(selectedConv.tags || []).length > 0 && (
                       <div className="chat-head-tags">
@@ -2244,35 +2286,47 @@ export default function Inbox() {
                   </div>
                 </div>
 
-                {/* Right Block: Controls & Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 1, marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  
+                {/* Acciones */}
+                <div className="chat-head-actions">
+
+                  {/* IA: escribe needs_human en conversations */}
+                  <button
+                    type="button"
+                    className={`pill-ia ${botActive ? 'on' : ''}`}
+                    onClick={async () => {
+                      const newState = !botActive;
+                      setBotActive(newState);
+                      if (selectedConv) {
+                        selectedConv.needs_human = !newState;
+                        const { error } = await supabase.from('conversations').update({ needs_human: !newState }).eq('id', selectedConv.id);
+                        if (error) console.error("Error updating AI status", error);
+                      }
+                    }}
+                    title={botActive ? "IA respondiendo automáticamente (Clic para pausar)" : "IA pausada, en modo asesor humano (Clic para activar)"}
+                    aria-pressed={botActive}
+                  >
+                    <i />
+                    <Bot size={12} />
+                    <span>{botActive ? 'IA activa' : 'IA en pausa'}</span>
+                  </button>
+
                   {/* Etiquetas */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ position: 'relative' }}>
                     <button
                       type="button"
                       onClick={() => setLabelMenuOpen(o => !o)}
                       title="Etiquetar conversación"
                       aria-label="Etiquetar conversación"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 10px',
-                        borderRadius: 20, cursor: 'pointer',
-                        background: labelMenuOpen ? 'rgba(99,102,241,0.18)' : 'rgba(var(--overlay-rgb), 0.04)',
-                        border: '1px solid var(--glass-border)',
-                        color: (selectedConv.labels || []).length ? 'var(--primary-400)' : 'var(--text-secondary)'
-                      }}
+                      className={`icon-btn ${labelMenuOpen ? 'is-active' : ''} ${(selectedConv.labels || []).length ? 'has-labels' : ''}`}
                     >
-                      <Tag size={13} />
-                      {(selectedConv.labels || []).length > 0 && (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{selectedConv.labels.length}</span>
-                      )}
+                      <Tag size={15} />
                     </button>
 
                     {labelMenuOpen && (
                       <div style={{
                         position: 'absolute', top: '110%', right: 0, zIndex: 80, width: 240,
-                        background: 'var(--bg-elevated, #16161f)', border: '1px solid var(--glass-border)',
-                        borderRadius: 12, padding: 10, boxShadow: '0 16px 40px rgba(0,0,0,.45)'
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+                        borderRadius: 12, padding: 10, boxShadow: 'var(--shadow-pop)'
                       }}>
                         <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
                           Etiquetas
@@ -2281,8 +2335,8 @@ export default function Inbox() {
                           {[...new Set([...labelCatalog.map(l => l.label), ...(selectedConv.labels || [])])].map(label => {
                             const on = (selectedConv.labels || []).includes(label)
                             return (
-                              <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', background: on ? 'rgba(99,102,241,0.14)' : 'transparent' }}>
-                                <input type="checkbox" checked={on} onChange={() => toggleLabel(selectedConv, label)} style={{ accentColor: '#6366f1' }} />
+                              <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', background: on ? 'rgba(67, 83, 255, 0.10)' : 'transparent' }}>
+                                <input type="checkbox" checked={on} onChange={() => toggleLabel(selectedConv, label)} style={{ accentColor: '#4353FF' }} />
                                 <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
                               </label>
                             )
@@ -2301,313 +2355,137 @@ export default function Inbox() {
                           <input
                             name="newLabel"
                             placeholder="Nueva etiqueta…"
-                            style={{ width: '100%', padding: '7px 9px', borderRadius: 8, border: '1px solid var(--glass-border)', background: 'rgba(var(--overlay-rgb), 0.05)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                            style={{ width: '100%', padding: '7px 9px', borderRadius: 8, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                           />
                         </form>
                       </div>
                     )}
                   </div>
 
-                  {/* Asesor Pill */}
-                  <div className="hidden sm:flex" style={{ 
-                    alignItems: 'center', 
-                    gap: 5, 
-                    background: 'rgba(var(--overlay-rgb), 0.04)', 
-                    border: '1px solid var(--glass-border)', 
-                    borderRadius: 20, 
-                    padding: '4px 10px',
-                    height: 32
-                  }}>
-                    <User size={12} style={{ color: selectedConv.assigned_to ? 'var(--primary-400)' : 'var(--text-tertiary)', flexShrink: 0 }} />
-                    <select 
-                      value={selectedConv.assigned_to || ''} 
-                      onChange={async (e) => {
-                        const val = e.target.value || null;
-                        assignAdvisor(selectedConv.id, val);
-                      }}
-                      style={{ 
-                        background: 'transparent', 
-                        border: 'none', 
-                        color: selectedConv.assigned_to ? 'var(--text-primary)' : 'var(--text-secondary)', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 600, 
-                        outline: 'none', 
-                        cursor: 'pointer',
-                        paddingRight: 4,
-                        maxWidth: 110
-                      }}
-                    >
-                      <option value="" style={{ background: '#181824', color: '#999' }}>Sin asignar</option>
-                      {teamMembers.map(m => (
-                        <option key={m.user_id} value={m.user_id} style={{ background: '#181824', color: '#fff' }}>
-                          {m.full_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* AI Copilot Toggle Pill */}
-                  <div 
-                    onClick={async () => {
-                      const newState = !botActive;
-                      setBotActive(newState);
-                      if (selectedConv) {
-                        selectedConv.needs_human = !newState;
-                        const { error } = await supabase.from('conversations').update({ needs_human: !newState }).eq('id', selectedConv.id);
-                        if (error) console.error("Error updating AI status", error);
-                      }
-                    }}
-                    style={{ 
-                      display: 'flex',
-                      alignItems: 'center', 
-                      gap: 7, 
-                      padding: '4px 12px', 
-                      borderRadius: 20, 
-                      background: botActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(var(--overlay-rgb), 0.04)', 
-                      border: `1px solid ${botActive ? 'rgba(16, 185, 129, 0.4)' : 'var(--glass-border)'}`, 
-                      cursor: 'pointer',
-                      height: 32,
-                      transition: 'all 0.2s ease',
-                      userSelect: 'none'
-                    }}
-                    title={botActive ? "IA respondiendo automáticamente (Clic para pausar)" : "IA pausada, en modo asesor humano (Clic para activar)"}
-                  >
-                    <div style={{ 
-                      width: 7, 
-                      height: 7, 
-                      borderRadius: '50%', 
-                      background: botActive ? 'var(--accent-emerald, #10b981)' : '#6b7280', 
-                      boxShadow: botActive ? '0 0 8px rgba(16, 185, 129, 0.8)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }} />
-                    <Bot size={13} style={{ color: botActive ? 'var(--accent-emerald)' : 'var(--text-tertiary)' }} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: botActive ? 'var(--accent-emerald)' : 'var(--text-secondary)' }}>
-                      {botActive ? 'IA Activa' : 'IA Pausa'}
-                    </span>
-                  </div>
-
-                  {/* Status Button: Atendido / Pendiente */}
-                  <button 
-                    className="btn btn-sm"
-                    onClick={handleTogglePending}
-                    style={{ 
-                      background: selectedConv?.unread ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.1)', 
-                      color: selectedConv?.unread ? '#ef4444' : 'var(--accent-emerald)', 
-                      border: `1px solid ${selectedConv?.unread ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.25)'}`, 
-                      borderRadius: 20, 
-                      padding: '5px 12px', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 700, 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: 5,
-                      height: 32,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    title={selectedConv?.unread ? "Clic para marcar como Atendido" : "Clic para marcar como Pendiente"}
-                  >
-                    {selectedConv?.unread ? (
-                      <>
-                        <Clock size={13} />
-                        <span className="mobile-hidden">Pendiente</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCheck size={13} />
-                        <span className="mobile-hidden">Atendido</span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* Primary CTA: $ Venta */}
-                  <button 
-                    className="btn btn-sm"
-                    onClick={() => setShowSaleModal(true)}
-                    style={{ 
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', 
-                      color: '#ffffff', 
-                      border: 'none', 
-                      borderRadius: 20, 
-                      padding: '6px 14px', 
-                      fontSize: '0.78rem', 
-                      fontWeight: 800, 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: 5,
-                      height: 32,
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
-                      transition: 'all 0.2s ease'
-                    }}
-                    title="Registrar Venta para este cliente"
-                  >
-                    <DollarSign size={13} strokeWidth={3} />
-                    <span>Venta</span>
-                  </button>
-
-                  {/* Quick Call Icon (if phone exists) */}
-                  {selectedConv?.phone && (
-                    <a 
+                  {/* Llamar */}
+                  {selectedConv?.phone ? (
+                    <a
+                      className="icon-btn"
                       href={`tel:${selectedConv.phone}`}
-                      style={{ 
-                        width: 32, 
-                        height: 32, 
-                        borderRadius: 10, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        background: 'rgba(var(--overlay-rgb), 0.04)', 
-                        border: '1px solid var(--glass-border)', 
-                        color: 'var(--text-secondary)', 
-                        cursor: 'pointer', 
-                        transition: 'all 0.2s ease',
-                        textDecoration: 'none'
-                      }}
                       title={`Llamar a ${selectedConv.name} (${selectedConv.phone})`}
+                      aria-label="Llamar"
                     >
-                      <Phone size={14} />
+                      <Phone size={15} />
                     </a>
+                  ) : (
+                    <button type="button" className="icon-btn" disabled title="Sin número de teléfono" aria-label="Llamar">
+                      <Phone size={15} />
+                    </button>
                   )}
 
-                  {/* Contact Settings Button */}
-                  <button 
-                    onClick={() => setShowContactSettings(true)}
-                    style={{ 
-                      width: 32, 
-                      height: 32, 
-                      borderRadius: 10, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      background: 'rgba(var(--overlay-rgb), 0.04)', 
-                      border: '1px solid var(--glass-border)', 
-                      color: 'var(--text-secondary)', 
-                      cursor: 'pointer', 
-                      transition: 'all 0.2s ease'
-                    }}
-                    title="Configuración y datos del cliente"
-                  >
-                    <Settings size={14} />
-                  </button>
-
-                  {/* More Options Dropdown (...) */}
+                  {/* Más opciones */}
                   <div style={{ position: 'relative' }} ref={chatMenuRef}>
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => setShowChatMenu(prev => !prev)}
-                      style={{ 
-                        width: 32, 
-                        height: 32, 
-                        borderRadius: 10, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        background: showChatMenu ? 'rgba(var(--overlay-rgb), 0.1)' : 'rgba(var(--overlay-rgb), 0.04)', 
-                        border: '1px solid var(--glass-border)', 
-                        color: 'var(--text-secondary)', 
-                        cursor: 'pointer', 
-                        transition: 'all 0.2s ease'
-                      }}
+                      className={`icon-btn ${showChatMenu ? 'is-active' : ''}`}
                       title="Más opciones"
+                      aria-label="Más opciones"
+                      aria-expanded={showChatMenu}
                     >
-                      <MoreVertical size={15} />
+                      <MoreVertical size={16} />
                     </button>
 
                     {showChatMenu && (
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 38, 
-                        right: 0, 
-                        minWidth: 190, 
-                        background: 'var(--bg-secondary, #181824)', 
-                        border: '1px solid var(--glass-border)', 
-                        borderRadius: 12, 
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4)', 
-                        padding: '6px', 
-                        zIndex: 60,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2
-                      }}>
-                        <button 
-                          className="mobile-only"
+                      <div className="chat-menu">
+                        <button
+                          type="button"
+                          className="chat-menu-item mobile-only"
                           onClick={() => { setShowChatMenu(false); setMobileView('info'); }}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 10, 
-                            padding: '8px 10px', 
-                            borderRadius: 8, 
-                            border: 'none', 
-                            background: 'transparent', 
-                            color: 'var(--text-primary)', 
-                            fontSize: '0.8rem', 
-                            fontWeight: 500, 
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%'
-                          }}
                         >
-                          <User size={14} /> Ver Perfil del Cliente
+                          <User size={14} /> Ver perfil del cliente
                         </button>
 
-                        <button 
+                        <button
+                          type="button"
+                          className="chat-menu-item"
+                          onClick={() => { setShowChatMenu(false); handleTogglePending(); }}
+                        >
+                          {selectedConv?.unread
+                            ? <CheckCheck size={14} style={{ color: 'var(--accent-emerald)' }} />
+                            : <Clock size={14} style={{ color: 'var(--accent-amber)' }} />}
+                          {selectedConv?.unread ? 'Marcar como atendido' : 'Marcar como pendiente'}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="chat-menu-item"
+                          onClick={() => { setShowChatMenu(false); setShowSaleModal(true); }}
+                        >
+                          <DollarSign size={14} style={{ color: 'var(--primary-600)' }} /> Registrar venta
+                        </button>
+
+                        {selectedConv?.channel === 'whatsapp' && !selectedConv?.phone?.startsWith('SIM_') && (
+                          <button
+                            type="button"
+                            className="chat-menu-item"
+                            onClick={() => { setShowChatMenu(false); setShowTemplateModal(true); }}
+                          >
+                            <FileText size={14} /> Enviar plantilla
+                          </button>
+                        )}
+
+                        <div className="chat-menu-sep" />
+
+                        <div className="chat-menu-field">
+                          <span className="chat-menu-label"><UserCheck size={12} /> Asignar a</span>
+                          <select
+                            className="chat-menu-select"
+                            value={selectedConv.assigned_to || ''}
+                            onChange={(e) => assignAdvisor(selectedConv.id, e.target.value || null)}
+                          >
+                            <option value="">Sin asignar</option>
+                            {teamMembers.map(m => (
+                              <option key={m.user_id} value={m.user_id}>{m.full_name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="chat-menu-item"
+                          onClick={() => { setShowChatMenu(false); setShowContactSettings(true); }}
+                        >
+                          <Settings size={14} /> Datos del cliente
+                        </button>
+
+                        <div className="chat-menu-sep" />
+
+                        <button
+                          type="button"
+                          className="chat-menu-item"
                           onClick={async () => {
                             setShowChatMenu(false);
                             const newArchivedState = !selectedConv.archived;
                             const { error } = await supabase.from('conversations').update({ archived: newArchivedState }).eq('id', selectedConv.id);
                             if (!error) {
-                              setSelectedConv({...selectedConv, archived: newArchivedState});
+                              setSelectedConv({ ...selectedConv, archived: newArchivedState });
                               fetchConversations(true);
                             }
                           }}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 10, 
-                            padding: '8px 10px', 
-                            borderRadius: 8, 
-                            border: 'none', 
-                            background: 'transparent', 
-                            color: 'var(--text-primary)', 
-                            fontSize: '0.8rem', 
-                            fontWeight: 500, 
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%'
-                          }}
                         >
                           <Archive size={14} style={{ color: selectedConv?.archived ? 'var(--accent-amber)' : 'inherit' }} />
-                          <span>{selectedConv?.archived ? 'Desarchivar conversación' : 'Archivar conversación'}</span>
+                          {selectedConv?.archived ? 'Desarchivar conversación' : 'Archivar conversación'}
                         </button>
 
                         {tenant.isAdmin && (
                           <>
-                            <div style={{ height: 1, background: 'var(--glass-border)', margin: '4px 0' }} />
-                            <button 
+                            <div className="chat-menu-sep" />
+                            <button
+                              type="button"
+                              className="chat-menu-item danger"
                               onClick={() => {
                                 setShowChatMenu(false);
                                 setChatToDelete(selectedConv);
                                 setShowDeleteModal(true);
                               }}
-                              style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: 10, 
-                                padding: '8px 10px', 
-                                borderRadius: 8, 
-                                border: 'none', 
-                                background: 'rgba(239, 68, 68, 0.08)', 
-                                color: '#ef4444', 
-                                fontSize: '0.8rem', 
-                                fontWeight: 600, 
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                width: '100%'
-                              }}
                             >
-                              <Trash2 size={14} />
-                              <span>Eliminar conversación</span>
+                              <Trash2 size={14} /> Eliminar conversación
                             </button>
                           </>
                         )}
@@ -2617,8 +2495,10 @@ export default function Inbox() {
                 </div>
               </div>
 
-              <div className="chat-messages" style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {messages.map(m => {
+              <div className="chat-messages" style={{ padding: '22px 26px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {messages.map((m, index) => {
+                    const prevMsg = index > 0 ? messages[index - 1] : null;
+                    const showDay = m.dayKey && (!prevMsg || prevMsg.dayKey !== m.dayKey);
                     if (m.sender === 'system' || (m.text && (m.text.startsWith('✓ Atendido por') || m.text.startsWith('[Marcado como pendiente')))) {
                       return (
                         <div key={m.id} style={{ display: 'flex', justifyContent: 'center', margin: '12px 0' }}>
@@ -2646,7 +2526,14 @@ export default function Inbox() {
                       );
                     }
                     return (
-                    <div key={m.id} className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`} style={{ opacity: m.isUploading ? 0.6 : 1 }}>
+                    <Fragment key={m.id}>
+                    {showDay && <div className="chat-day-pill">{m.dayLabel}</div>}
+                    <div className={`chat-line ${m.sender === 'client' ? 'in' : 'out'}`}>
+                      {m.sender === 'client' && (
+                        <div className="msg-avatar" title={selectedConv.name}>{initialsOf(selectedConv.name)}</div>
+                      )}
+                      <div className="chat-line-body">
+                    <div className={`chat-msg-bubble ${m.sender === 'client' ? 'msg-client' : 'msg-agent'}`} style={{ opacity: m.isUploading ? 0.6 : 1 }}>
                         {m.reply_to && (
                           <div style={{
                             display: 'flex',
@@ -2758,32 +2645,38 @@ export default function Inbox() {
                             })()}
                           </div>
                         )}
-                        <div style={{ fontSize: '0.6rem', opacity: 0.6, marginTop: 4, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
-                          {m.sender === 'agent' && m.sender_name && (
-        <span style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.8, marginRight: 'auto', background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
-            {m.sender_name}
-        </span>
-    )}
-    {m.sender === 'agent' && (
-      <>
-                              <span title="Editar en CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleEditMessage(messages.indexOf(m), m.text || m.content || '')}>✏️</span>
+                        </div>
+                        <div className="msg-meta">
+                          <span>{m.timeOnly}</span>
+                          {m.isAi && <span className="msg-ai">· IA</span>}
+                          {m.sender === 'agent' && m.sender_name && <span className="msg-sender">· {m.sender_name}</span>}
+                          <button
+                            type="button"
+                            className="msg-action"
+                            title="Responder a este mensaje"
+                            aria-label="Responder a este mensaje"
+                            onClick={() => handleStartReply(m)}
+                          >
+                            <Reply size={11} />
+                          </button>
+                          {m.sender === 'agent' && (
+                            <>
+                              <button type="button" className="msg-action" title="Editar en el CRM" aria-label="Editar mensaje" onClick={() => handleEditMessage(index, m.text || m.content || '')}>✏️</button>
                               {tenant.isAdmin && (
-                                <span title="Eliminar del CRM" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={() => handleDeleteMessage(messages.indexOf(m))}>🗑️</span>
+                                <button type="button" className="msg-action" title="Eliminar del CRM" aria-label="Eliminar mensaje" onClick={() => handleDeleteMessage(index)}>🗑️</button>
                               )}
                             </>
                           )}
-                          <span title="Responder a este mensaje" style={{ cursor: 'pointer', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: 2 }} onClick={() => handleStartReply(m)}>
-                            <Reply size={11} />
-                          </span>
-                          {m.time}
                         </div>
+                      </div>
                     </div>
+                    </Fragment>
                   );
                 })}
                  <div ref={messagesEndRef} />
               </div>
 
-              <div className="chat-input-area" style={{ padding: '12px 0', background: 'rgba(0,0,0,0.2)', width: '100%' }}>
+              <div className="chat-input-area" style={{ padding: 0, background: 'var(--bg-secondary)', width: '100%' }}>
                   {isUploadingMedia && (
                     <div style={{
                       display: 'flex',
@@ -2839,68 +2732,109 @@ export default function Inbox() {
                       </button>
                     </div>
                   )}
-                  <form onSubmit={handleSendMessage} style={{ background: 'rgba(var(--overlay-rgb), 0.03)', border: '1px solid var(--glass-border)', borderRadius: '0', padding: '4px 16px', display: 'flex', alignItems: 'center', width: '100%' }}>
-                     {isRecording ? (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px' }}>
-                           <div className="pulse-red" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
-                           <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>Grabando... {formatTime(recordingTime)}</span>
-                        </div>
+                                    <form onSubmit={handleSendMessage} className="composer">
+                     {!isRecording ? (
+                       <>
+                         <button
+                           type="button"
+                           className="circle-btn"
+                           onClick={() => fileInputRef.current.click()}
+                           title="Adjuntar archivo"
+                           aria-label="Adjuntar archivo"
+                         >
+                           <Paperclip size={16} />
+                         </button>
+                         <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" multiple />
+
+                         <textarea
+                           ref={textInputRef}
+                           className="composer-input"
+                           placeholder="Escribe un mensaje…"
+                           rows={1}
+                           value={newMessage}
+                           onChange={e => {
+                               setNewMessage(e.target.value);
+                               e.target.style.height = 'auto';
+                               e.target.style.height = (e.target.scrollHeight) + 'px';
+                           }}
+                           onKeyDown={e => {
+                               if (e.key === 'Enter' && !e.shiftKey) {
+                                   e.preventDefault();
+                                   if (newMessage.trim()) {
+                                       handleSendMessage(e);
+                                       e.target.style.height = 'auto';
+                                   }
+                               }
+                           }}
+                           onPaste={(e) => {
+                             const items = e.clipboardData?.items;
+                             if (items) {
+                               const files = [];
+                               for (let i = 0; i < items.length; i++) {
+                                 if (items[i].type.indexOf('image') !== -1) {
+                                   const file = items[i].getAsFile();
+                                   if (file) files.push(file);
+                                 }
+                               }
+                               if (files.length > 0) {
+                                 e.preventDefault();
+                                 handleFileUpload(files);
+                               }
+                             }
+                           }}
+                         />
+
+                         <div style={{ position: 'relative', flexShrink: 0 }}>
+                           <button
+                             type="button"
+                             className="circle-btn"
+                             onClick={() => setShowEmoji(v => !v)}
+                             title="Emojis"
+                             aria-label="Emojis"
+                           >
+                             <Smile size={16} />
+                           </button>
+                           {showEmoji && (
+                             <div className="emoji-pop">
+                               {['😀','😄','😊','👍','🙏','👋','🔥','✅','❤️','🎉','🙌','😉','📷','🚚','💰','📦','⏰','🤝','😅','🙂','⭐','📌','💡','🛠️'].map(em => (
+                                 <button
+                                   key={em}
+                                   type="button"
+                                   onClick={() => {
+                                     setNewMessage(prev => prev + em)
+                                     setShowEmoji(false)
+                                     setTimeout(() => textInputRef.current?.focus(), 0)
+                                   }}
+                                 >
+                                   {em}
+                                 </button>
+                               ))}
+                             </div>
+                           )}
+                         </div>
+
+                         <button type="button" className="circle-btn" onClick={startRecording} title="Grabar nota de voz" aria-label="Grabar nota de voz">
+                           <Mic size={16} />
+                         </button>
+
+                         <button type="submit" className="send-btn" disabled={!newMessage.trim()} title="Enviar mensaje" aria-label="Enviar mensaje">
+                           <Send size={16} />
+                         </button>
+                       </>
                      ) : (
-                          <textarea 
-                            ref={textInputRef}
-                            placeholder="Escribe un mensaje o pega una imagen (Ctrl+V)..." style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: "var(--text-primary)", outline: 'none', fontSize: '0.9rem', resize: 'none', minHeight: '36px', maxHeight: '120px', overflowY: 'auto', lineHeight: '20px', alignSelf: 'center', fontFamily: 'inherit' }} 
-                            rows={1}
-                            value={newMessage} 
-                            onChange={e => {
-                                setNewMessage(e.target.value);
-                                e.target.style.height = 'auto';
-                                e.target.style.height = (e.target.scrollHeight) + 'px';
-                            }}
-                            onKeyDown={e => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    if (newMessage.trim()) {
-                                        handleSendMessage(e);
-                                        e.target.style.height = 'auto';
-                                    }
-                                }
-                            }}
-                            onPaste={(e) => {
-                            const items = e.clipboardData?.items;
-                            if (items) {
-                              const files = [];
-                              for (let i = 0; i < items.length; i++) {
-                                if (items[i].type.indexOf('image') !== -1) {
-                                  const file = items[i].getAsFile();
-                                  if (file) files.push(file);
-                                }
-                              }
-                              if (files.length > 0) {
-                                e.preventDefault();
-                                handleFileUpload(files);
-                              }
-                            }
-                          }}
-                        />
+                       <>
+                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 4 }}>
+                            <div className="pulse-red" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+                            <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>Grabando... {formatTime(recordingTime)}</span>
+                         </div>
+                         <button type="button" className="circle-btn" onClick={() => stopRecording(true)} title="Descartar grabación" aria-label="Descartar grabación">
+                           <Trash2 size={16} />
+                         </button>
+                         <button type="button" className="send-btn" onClick={() => stopRecording(false)} title="Enviar audio" aria-label="Enviar audio">
+                           <Send size={16} />
+                         </button>
+                       </>
                      )}
-                     <div className="flex gap-1">
-                        {!isRecording ? (
-                          <>
-                            {selectedConv?.channel === 'whatsapp' && !selectedConv?.phone?.startsWith('SIM_') && (
-                               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowTemplateModal(true)} title="Enviar Plantilla (Template)"><FileText size={18} /></button>
-                            )}
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current.click()}><Paperclip size={18} /></button>
-                            <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf" multiple />
-                            <button type="submit" className="btn btn-primary btn-sm" disabled={!newMessage.trim()}><Send size={16} /></button>
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={startRecording}><Mic size={18} /></button>
-                          </>
-                        ) : (
-                          <>
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => stopRecording(true)}><Trash2 size={18} /></button>
-                            <button type="button" className="btn btn-primary btn-sm" onClick={() => stopRecording(false)} style={{ background: '#ef4444' }}>Enviar</button>
-                          </>
-                        )}
-                     </div>
                   </form>
               </div>
             </>
