@@ -488,3 +488,17 @@
 [data-theme='light'] .sidebar [class*='section'],
 [data-theme='light'] .sidebar .nav-section { color: #A5ADBA !important; }
 [data-theme='light'] .sidebar svg { color: inherit; }
+
+/* foco: solo teclado, sin anillo al hacer clic */
+[data-theme='light'] .sidebar a:focus,
+[data-theme='light'] .sidebar .nav-item:focus,
+[data-theme='light'] .sidebar a:focus-visible,
+[data-theme='light'] .sidebar .nav-item:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-theme='light'] a:not(:focus-visible),
+[data-theme='light'] button:not(:focus-visible),
+[data-theme='light'] .btn:not(:focus-visible) {
+  outline: none;
+}
