@@ -116,6 +116,11 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
       const imageMatch = aiReply.match(/\[SEND_IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
       const imageUrl = imageMatch ? imageMatch[1].trim() : null;
       aiReply = aiReply.replace(/\[SEND_IMAGE:.*?\]/i, '').trim();
+      // El bot real limpia estas etiquetas antes de enviar; el simulador también.
+      aiReply = aiReply
+        .replace(/\[NEEDS_HUMAN(?:\s*:.*?)?\]/gi, '')
+        .replace(/\[LEAD_STATE:.*?\]/gi, '')
+        .trim();
       
       const newMessages = [...chat.messages, {
         role: 'agent',
