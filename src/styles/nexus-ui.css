@@ -533,3 +533,7 @@
 [data-theme='light'] .rail-item { color: #98A2B3; }
 [data-theme='light'] .rail-item.active { background: #F3F4FF; color: #4353FF; }
 @media (max-width: 767px) { .sidebar-rail { display: none; } }
+
+/* el panel colapsado se oculta: el rail ya cumple esa función */
+[data-theme='light'] .sidebar.collapsed,
+.sidebar.collapsed { display: none !important; }
