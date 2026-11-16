@@ -84,6 +84,10 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
     }
 
     // 4. Call OpenRouter
+    const bogotaNow = new Date().toLocaleString('es-CO', {
+        timeZone: 'America/Bogota', weekday: 'long', year: 'numeric', month: 'long',
+        day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true,
+    });
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -95,7 +99,7 @@ SI EL CLIENTE CONFIRMA LA COMPRA DE UN PRODUCTO ESPECÍFICO, INCLUYE EL TAG '[SA
         body: JSON.stringify({
             model: 'openai/gpt-4o-mini',
             messages: [
-                { role: 'system', content: `${clientSetup.prompt}${getBusinessInfoBlock({ clientId: clientSetup.id, clientSetup })}\n\n${inventoryContext}` },
+                { role: 'system', content: `${clientSetup.prompt}${getBusinessInfoBlock({ clientId: clientSetup.id, clientSetup })}\n[FECHA Y HORA ACTUAL (BOGOTÁ): ${bogotaNow}]\n\n${inventoryContext}` },
                 ...chat.messages.slice(-10).map(m => ({
                     role: m.role === 'agent' ? 'assistant' : 'user',
                     content: m.content
