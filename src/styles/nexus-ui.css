@@ -502,3 +502,34 @@
 [data-theme='light'] .btn:not(:focus-visible) {
   outline: none;
 }
+
+/* ---------- rail de iconos ---------- */
+.sidebar-rail {
+  width: 64px; flex: 0 0 64px;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 0 16px; gap: 4px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-default);
+  z-index: 3;
+}
+.rail-mark { width: 36px; height: 36px; display: grid; place-items: center; margin-bottom: 14px; border-radius: 10px; }
+.rail-nav { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.rail-item {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: grid; place-items: center;
+  color: var(--text-tertiary);
+  transition: background .15s ease, color .15s ease;
+}
+.rail-item:hover { background: var(--bg-hover); color: var(--text-secondary); }
+.rail-item.active { background: rgba(67, 83, 255, .1); color: var(--primary-600); }
+.rail-foot { margin-top: auto; }
+.rail-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 700;
+  background: rgba(67, 83, 255, .12); color: var(--primary-600);
+}
+[data-theme='light'] .sidebar-rail { background: #fff; border-right-color: #F0F1F5; }
+[data-theme='light'] .rail-item { color: #98A2B3; }
+[data-theme='light'] .rail-item.active { background: #F3F4FF; color: #4353FF; }
+@media (max-width: 767px) { .sidebar-rail { display: none; } }
