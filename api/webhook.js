@@ -174,7 +174,25 @@ export default async function handler(req, res) {
             const whatsappToken = tempClient?.data?.whatsapp_token;
             const openAiKey = tempClient?.data?.openai_key || process.env.OPENAI_API_KEY;
             
-            if (whatsappToken) {
+            // Ahorro de Whisper: si el asesor está atendiendo (IA en pausa),
+            // no se transcribe el audio; el chat muestra una nota neutra.
+            let manualMode = tempClient?.data?.active === false;
+            if (!manualMode && senderPhone) {
+              const { data: convState } = await supabase
+                .from('conversations')
+                .select('needs_human')
+                .eq('client_id', tempClient?.data?.id || '')
+                .eq('user_phone', senderPhone)
+                .maybeSingle();
+              manualMode = convState?.needs_human === true;
+            }
+
+            const isAudio = messageObj.type === 'audio' || messageObj.type === 'voice';
+
+            if (whatsappToken && manualMode && isAudio) {
+               textResponse = '"🎙 Nota de voz"';
+               messageObj._mediaType = 'audio';
+            } else if (whatsappToken) {
                const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey, supabase, recipientId);
                if (typeof mediaResult === 'object' && mediaResult !== null) {
                   textResponse = mediaResult.text;
