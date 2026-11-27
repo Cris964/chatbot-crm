@@ -1,4 +1,4 @@
-export async function processMediaMessage(messageObj, whatsappToken, openAiKey, supabase, phoneNumberId) {
+export async function processMediaMessage(messageObj, whatsappToken, openAiKey, supabase, phoneNumberId, options = {}) {
   try {
     const type = messageObj.type;
     let mediaId = null;
@@ -56,19 +56,33 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
 
     // 3. Process based on type
     if (type === 'audio' || type === 'voice') {
-      // Audios muy largos: se evita transcribir (Whisper cobra por minuto).
-      if (buffer.length > 2500000) {
-        console.log(`[WHISPER] audio omitido por tamaño: ${Math.round(buffer.length / 1024)} KB`);
-        return { text: '🎙 Nota de voz', mediaUrl: null, mediaType: 'audio' };
-      }
       const finalOpenAiKey = openAiKey || process.env.OPENAI_API_KEY;
-      if (!finalOpenAiKey) {
-        return `[DEBUG NO KEY: openAiKey=${!!openAiKey}, env=${typeof process.env.OPENAI_API_KEY}, len=${process.env.OPENAI_API_KEY?.length || 0}]`;
+      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'ogg';
+      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+
+      // El audio se sube SIEMPRE para que el asesor pueda escucharlo en el CRM.
+      let audioUrl = null;
+      try {
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('whatsapp_media')
+          .upload(fileName, buffer, { contentType: mimeType, upsert: true });
+        if (!uploadErr && uploadData) {
+          const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
+          audioUrl = publicUrlData.publicUrl;
+        }
+      } catch (err) {
+        console.error('Error uploading audio:', err);
       }
 
-      // Use native FormData (Node 18+)
+      // Solo se transcribe si la IA va a responder, si hay clave y si no es enorme.
+      const tooBig = buffer.length > 2500000;
+      const shouldTranscribe = options.transcribe !== false && !tooBig && !!finalOpenAiKey;
+      if (!shouldTranscribe) {
+        if (tooBig) console.log(`[WHISPER] omitido por tamaño: ${Math.round(buffer.length / 1024)} KB`);
+        return { text: '🎙 Nota de voz', mediaUrl: audioUrl, mediaType: 'audio' };
+      }
+
       const blob = new Blob([buffer], { type: mimeType });
-      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'ogg';
       const formData = new FormData();
       formData.append('file', blob, `audio.${ext}`);
       formData.append('model', 'whisper-1');
@@ -82,35 +96,12 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
 
       if (!whisperRes.ok) {
         const e = await whisperRes.text();
-        // Nunca exponer el error al cliente: solo log interno y nota neutra.
         console.error(`[WHISPER] ${whisperRes.status}: ${e.slice(0, 200)}`);
-        return { text: '🎙 Nota de voz', mediaUrl: null, mediaType: 'audio' };
+        return { text: '🎙 Nota de voz', mediaUrl: audioUrl, mediaType: 'audio' };
       }
 
       const whisperData = await whisperRes.json();
-      const transcribedText = `"${whisperData.text}"`;
-
-      // Upload audio to Supabase
-      const fileName = `${Date.now()}-${mediaId}.${ext}`;
-      let audioUrl = null;
-      try {
-        const { data: uploadData, error: uploadErr } = await supabase.storage.from('whatsapp_media').upload(fileName, buffer, {
-           contentType: mimeType,
-           upsert: true
-        });
-        if (!uploadErr && uploadData) {
-           const { data: publicUrlData } = supabase.storage.from('whatsapp_media').getPublicUrl(fileName);
-           audioUrl = publicUrlData.publicUrl;
-        }
-      } catch (err) {
-        console.error("Error uploading to supabase storage:", err);
-      }
-
-      return {
-          text: transcribedText,
-          mediaUrl: audioUrl,
-          mediaType: 'audio'
-      };
+      return { text: `"${whisperData.text}"`, mediaUrl: audioUrl, mediaType: 'audio' };
 
     } else if (type === 'image') {
       const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpeg';
