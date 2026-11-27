@@ -190,7 +190,7 @@ export default async function handler(req, res) {
             const isAudio = messageObj.type === 'audio' || messageObj.type === 'voice';
 
             if (whatsappToken && manualMode && isAudio) {
-               textResponse = '"🎙 Nota de voz"';
+               textResponse = '🎙 Nota de voz';
                messageObj._mediaType = 'audio';
             } else if (whatsappToken) {
                const mediaResult = await processMediaMessage(messageObj, whatsappToken, openAiKey, supabase, recipientId);
