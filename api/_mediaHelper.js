@@ -56,6 +56,11 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
 
     // 3. Process based on type
     if (type === 'audio' || type === 'voice') {
+      // Audios muy largos: se evita transcribir (Whisper cobra por minuto).
+      if (buffer.length > 2500000) {
+        console.log(`[WHISPER] audio omitido por tamaño: ${Math.round(buffer.length / 1024)} KB`);
+        return { text: '"🎙 Nota de voz"', mediaUrl: null, mediaType: 'audio' };
+      }
       const finalOpenAiKey = openAiKey || process.env.OPENAI_API_KEY;
       if (!finalOpenAiKey) {
         return `[DEBUG NO KEY: openAiKey=${!!openAiKey}, env=${typeof process.env.OPENAI_API_KEY}, len=${process.env.OPENAI_API_KEY?.length || 0}]`;
@@ -77,7 +82,9 @@ export async function processMediaMessage(messageObj, whatsappToken, openAiKey, 
 
       if (!whisperRes.ok) {
         const e = await whisperRes.text();
-        return `[Nota de Voz: Error Whisper ${whisperRes.status}: ${e.slice(0, 200)}]`;
+        // Nunca exponer el error al cliente: solo log interno y nota neutra.
+        console.error(`[WHISPER] ${whisperRes.status}: ${e.slice(0, 200)}`);
+        return { text: '"🎙 Nota de voz"', mediaUrl: null, mediaType: 'audio' };
       }
 
       const whisperData = await whisperRes.json();
