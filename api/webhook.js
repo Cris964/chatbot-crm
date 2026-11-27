@@ -2,6 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import { processMediaMessage } from './_mediaHelper.js';
 
 export default async function handler(req, res) {
+  // Sub-API de soporte montada aquí para no exceder el límite de funciones de Vercel.
+  if (req.query?.route === 'support' || req.query?.route === 'kanba') {
+    const { default: routeSubApi } = await import('./_supportRouter.js');
+    return routeSubApi(req.query.route, req, res);
+  }
+
   // CORS Definitions
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
